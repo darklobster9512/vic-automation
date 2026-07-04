@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -245,13 +245,29 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   );
 }
 
+const PAGE_SIZE = 20;
+const PROVIDER_STORAGE_KEY = "admin.telefonnummern.provider";
+
 export default function AdminTelefonnummern() {
-  const [provider, setProvider] = useState<"anosim" | "smsbot">("anosim");
+  const [provider, setProviderState] = useState<"anosim" | "smsbot">(() => {
+    if (typeof window === "undefined") return "anosim";
+    const saved = localStorage.getItem(PROVIDER_STORAGE_KEY);
+    return saved === "smsbot" ? "smsbot" : "anosim";
+  });
+  const [page, setPage] = useState(1);
+  const setProvider = (p: "anosim" | "smsbot") => {
+    setProviderState(p);
+    setPage(1);
+    try { localStorage.setItem(PROVIDER_STORAGE_KEY, p); } catch { /* ignore */ }
+  };
   const [url, setUrl] = useState("");
   const [rentalId, setRentalId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+
+  useEffect(() => { setPage(1); }, [activeBrandingId]);
+
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers", activeBrandingId],
@@ -368,35 +384,54 @@ export default function AdminTelefonnummern() {
         )}
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Laden…</div>
-      ) : entries.length === 0 ? (
-        <p className="text-muted-foreground">Noch keine Telefonnummern hinzugefügt.</p>
-      ) : (
-        <div className="premium-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8" />
-                <TableHead>Nummer</TableHead>
-                <TableHead>Land</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead>Zugewiesen an</TableHead>
-                <TableHead>Start</TableHead>
-                <TableHead>Ende</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((entry) => (
-                <PhoneRow key={entry.id} entry={entry} onDelete={(id) => deleteMutation.mutate(id)} />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      {(() => {
+        if (isLoading) {
+          return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Laden…</div>;
+        }
+        const filtered = entries.filter((e) => e.provider === provider);
+        if (filtered.length === 0) {
+          return <p className="text-muted-foreground">Keine {provider === "smsbot" ? "SMSBot" : "Anosim"}-Nummern vorhanden.</p>;
+        }
+        const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+        const currentPage = Math.min(page, totalPages);
+        const pageEntries = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+        return (
+          <div className="space-y-3">
+            <div className="premium-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8" />
+                    <TableHead>Nummer</TableHead>
+                    <TableHead>Land</TableHead>
+                    <TableHead>Typ</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Zugewiesen an</TableHead>
+                    <TableHead>Start</TableHead>
+                    <TableHead>Ende</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-12" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pageEntries.map((entry) => (
+                    <PhoneRow key={entry.id} entry={entry} onDelete={(id) => deleteMutation.mutate(id)} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {filtered.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Seite {currentPage} von {totalPages} · {filtered.length} Nummern</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Zurück</Button>
+                  <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>Weiter</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
