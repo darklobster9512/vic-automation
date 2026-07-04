@@ -138,11 +138,12 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
     onError: () => toast({ title: "Fehler", variant: "destructive" }),
   });
 
-  const sortedSms = anosimData?.sms
-    ? [...anosimData.sms]
+  const sortedSms = displayData?.sms
+    ? [...displayData.sms]
         .sort((a, b) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime())
         .slice(0, 10)
     : [];
+
 
   const latestSms = sortedSms[0];
   const newCount = sortedSms.length - lastSeenCount;
