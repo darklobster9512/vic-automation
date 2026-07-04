@@ -15,7 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User, Mail, Send, CreditCard } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User, Mail, Send, CreditCard, Check, ChevronsUpDown, Phone } from "lucide-react";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
