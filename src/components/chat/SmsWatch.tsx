@@ -88,7 +88,9 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 
   const { data: smsbotEntries = [] } = useQuery<PhoneEntry[]>({
     queryKey: ["smsbot_rentals"],
-    refetchInterval: 15000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
       if (error) throw error;
@@ -98,18 +100,30 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
         api_url: null,
         provider: "smsbot" as const,
         rental_id: r.rentalId as string,
+        data: r as AnosimData,
       }));
     },
   });
 
   const entries = [...anosimEntries, ...smsbotEntries];
 
+  // Resolve the currently-selected entry against the latest smsbot list so we
+  // always render the freshest SMS data without triggering per-row detail calls.
+  const resolvedSelected = selectedEntry?.provider === "smsbot"
+    ? smsbotEntries.find((e) => e.rental_id === selectedEntry.rental_id) ?? selectedEntry
+    : selectedEntry;
+
   const { data: anosimData, isLoading } = useQuery<AnosimData>({
-    queryKey: ["sms-watch", selectedEntry?.id],
-    queryFn: () => fetchPhoneData(selectedEntry!),
-    enabled: !!selectedEntry,
+    queryKey: ["sms-watch", resolvedSelected?.id],
+    queryFn: () => fetchPhoneData(resolvedSelected!),
+    enabled: !!resolvedSelected && resolvedSelected.provider === "anosim",
     refetchInterval: 5000,
+    initialData: resolvedSelected?.provider === "smsbot" ? resolvedSelected.data : undefined,
   });
+
+  // For smsbot, keep the displayed data in sync with the polled list.
+  const displayData = resolvedSelected?.provider === "smsbot" ? resolvedSelected.data : anosimData;
+
 
   const addMutation = useMutation({
     mutationFn: async (apiUrl: string) => {
