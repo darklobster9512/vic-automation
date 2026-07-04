@@ -195,6 +195,7 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
                 >
                   <Link className="h-4 w-4 text-muted-foreground" />
                 </Button>
+              {!hideDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
@@ -212,6 +213,7 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              )}
               </div>
             </TableCell>
           </TableRow>
