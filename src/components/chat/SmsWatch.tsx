@@ -23,7 +23,24 @@ interface AnosimData {
 
 interface PhoneEntry {
   id: string;
-  api_url: string;
+  api_url: string | null;
+  provider: "anosim" | "smsbot";
+  rental_id: string | null;
+}
+
+async function fetchPhoneData(entry: PhoneEntry): Promise<AnosimData> {
+  if (entry.provider === "smsbot") {
+    const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
+      body: { rentalId: entry.rental_id },
+    });
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.functions.invoke("anosim-proxy", {
+    body: { url: entry.api_url },
+  });
+  if (error) throw error;
+  return data;
 }
 
 interface SmsWatchProps {
@@ -58,22 +75,16 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers")
-        .select("id, api_url")
+        .select("id, api_url, provider, rental_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as unknown as PhoneEntry[];
     },
   });
 
   const { data: anosimData, isLoading } = useQuery<AnosimData>({
     queryKey: ["sms-watch", selectedEntry?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("anosim-proxy", {
-        body: { url: selectedEntry!.api_url },
-      });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchPhoneData(selectedEntry!),
     enabled: !!selectedEntry,
     refetchInterval: 5000,
   });
@@ -250,14 +261,8 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 
 function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: PhoneEntry) => void }) {
   const { data, isLoading } = useQuery<AnosimData>({
-    queryKey: ["anosim", entry.api_url],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("anosim-proxy", {
-        body: { url: entry.api_url },
-      });
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ["phone-data", entry.provider, entry.provider === "smsbot" ? entry.rental_id : entry.api_url],
+    queryFn: () => fetchPhoneData(entry),
   });
 
   return (

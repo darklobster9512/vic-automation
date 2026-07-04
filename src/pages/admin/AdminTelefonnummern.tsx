@@ -31,7 +31,10 @@ interface AnosimData {
 
 interface PhoneEntry {
   id: string;
-  api_url: string;
+  api_url: string | null;
+  provider: "anosim" | "smsbot";
+  rental_id: string | null;
+  label: string | null;
   created_at: string;
 }
 
@@ -44,10 +47,18 @@ interface IdentAssignment {
 function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const identifier = entry.provider === "smsbot" ? `smsbot://${entry.rental_id}` : (entry.api_url ?? "");
 
   const { data, isLoading, isError } = useQuery<AnosimData>({
-    queryKey: ["anosim", entry.api_url],
+    queryKey: ["phone-data", entry.provider, identifier],
     queryFn: async () => {
+      if (entry.provider === "smsbot") {
+        const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
+          body: { rentalId: entry.rental_id },
+        });
+        if (error) throw error;
+        return data;
+      }
       const { data, error } = await supabase.functions.invoke("anosim-proxy", {
         body: { url: entry.api_url },
       });
@@ -58,12 +69,12 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   });
 
   const { data: assignments = [] } = useQuery<IdentAssignment[]>({
-    queryKey: ["phone_assignments", entry.api_url],
+    queryKey: ["phone_assignments", identifier],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ident_sessions")
         .select("id, employment_contracts:contract_id(first_name, last_name), orders:order_id(title)")
-        .eq("phone_api_url", entry.api_url);
+        .eq("phone_api_url", identifier);
       if (error) throw error;
       return (data as any) ?? [];
     },
@@ -136,9 +147,14 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
               {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </TableCell>
             <TableCell>
-              <button onClick={copyNumber} className="flex items-center gap-1 hover:text-primary transition-colors" title="Kopieren">
-                {data.number} <Copy className="h-3 w-3 text-muted-foreground" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={copyNumber} className="flex items-center gap-1 hover:text-primary transition-colors" title="Kopieren">
+                  {data.number} <Copy className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {entry.provider}
+                </Badge>
+              </div>
             </TableCell>
             <TableCell>{data.country}</TableCell>
             <TableCell>{data.rentalType}</TableCell>
@@ -171,10 +187,11 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigator.clipboard.writeText(entry.api_url);
-                    toast({ title: "Link kopiert", description: "API-Link wurde in die Zwischenablage kopiert." });
+                    const val = entry.provider === "smsbot" ? (entry.rental_id ?? "") : (entry.api_url ?? "");
+                    navigator.clipboard.writeText(val);
+                    toast({ title: "Kopiert", description: entry.provider === "smsbot" ? "Rental-ID wurde kopiert." : "API-Link wurde kopiert." });
                   }}
-                  title="Original-Link kopieren"
+                  title={entry.provider === "smsbot" ? "Rental-ID kopieren" : "Original-Link kopieren"}
                 >
                   <Link className="h-4 w-4 text-muted-foreground" />
                 </Button>
@@ -229,7 +246,9 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
 }
 
 export default function AdminTelefonnummern() {
+  const [provider, setProvider] = useState<"anosim" | "smsbot">("anosim");
   const [url, setUrl] = useState("");
+  const [rentalId, setRentalId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
@@ -249,16 +268,22 @@ export default function AdminTelefonnummern() {
   });
 
   const addMutation = useMutation({
-    mutationFn: async (apiUrl: string) => {
-      const { error } = await supabase.from("phone_numbers" as any).insert({ api_url: apiUrl, branding_id: activeBrandingId } as any);
+    mutationFn: async (payload: { provider: "anosim" | "smsbot"; api_url: string | null; rental_id: string | null }) => {
+      const { error } = await supabase.from("phone_numbers" as any).insert({
+        provider: payload.provider,
+        api_url: payload.api_url,
+        rental_id: payload.rental_id,
+        branding_id: activeBrandingId,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phone_numbers"] });
       setUrl("");
+      setRentalId("");
       toast({ title: "Hinzugefügt", description: "Telefonnummer wurde hinzugefügt." });
     },
-    onError: () => toast({ title: "Fehler", description: "Konnte nicht hinzugefügt werden.", variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Fehler", description: e?.message ?? "Konnte nicht hinzugefügt werden.", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -272,34 +297,75 @@ export default function AdminTelefonnummern() {
     },
   });
 
-  const isValidUrl = (u: string) => {
+  const isValidAnosim = (u: string) => {
     const l = u.toLowerCase();
     return l.includes("anosim.net/api/v1/orderbookingshare?token=") || l.includes("anosim.net/share/orderbooking?token=");
   };
 
   const handleAdd = () => {
-    if (!isValidUrl(url)) {
-      toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
-      return;
+    if (provider === "anosim") {
+      if (!isValidAnosim(url)) {
+        toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
+        return;
+      }
+      const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+      addMutation.mutate({ provider: "anosim", api_url: apiUrl, rental_id: null });
+    } else {
+      const id = rentalId.trim();
+      if (!id) {
+        toast({ title: "Rental-ID fehlt", description: "Bitte die SMSBot Rental-ID eintragen.", variant: "destructive" });
+        return;
+      }
+      addMutation.mutate({ provider: "smsbot", api_url: `smsbot://${id}`, rental_id: id });
     }
-    const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
-    addMutation.mutate(apiUrl);
   };
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold tracking-tight text-foreground">Telefonnummern</h2>
 
-      <div className="flex gap-2 max-w-2xl">
-        <Input
-          placeholder="https://anosim.net/api/v1/orderbookingshare?token=..."
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-        />
-        <Button onClick={handleAdd} disabled={addMutation.isPending}>
-          <Plus className="h-4 w-4 mr-1" /> Hinzufügen
-        </Button>
+      <div className="flex flex-col gap-2 max-w-2xl">
+        <div className="flex gap-2">
+          <Button
+            variant={provider === "anosim" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setProvider("anosim")}
+          >
+            Anosim
+          </Button>
+          <Button
+            variant={provider === "smsbot" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setProvider("smsbot")}
+          >
+            SMSBot
+          </Button>
+        </div>
+        {provider === "anosim" ? (
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://anosim.net/api/v1/orderbookingshare?token=..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            />
+            <Button onClick={handleAdd} disabled={addMutation.isPending}>
+              <Plus className="h-4 w-4 mr-1" /> Hinzufügen
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              placeholder="SMSBot Rental-ID (z. B. cmnajdcob000vlakbmc9y9xj2)"
+              value={rentalId}
+              onChange={(e) => setRentalId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            />
+            <Button onClick={handleAdd} disabled={addMutation.isPending}>
+              <Plus className="h-4 w-4 mr-1" /> Hinzufügen
+            </Button>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
