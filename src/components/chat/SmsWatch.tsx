@@ -75,22 +75,16 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers")
-        .select("id, api_url")
+        .select("id, api_url, provider, rental_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as unknown as PhoneEntry[];
     },
   });
 
   const { data: anosimData, isLoading } = useQuery<AnosimData>({
     queryKey: ["sms-watch", selectedEntry?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("anosim-proxy", {
-        body: { url: selectedEntry!.api_url },
-      });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchPhoneData(selectedEntry!),
     enabled: !!selectedEntry,
     refetchInterval: 5000,
   });
