@@ -156,6 +156,10 @@ function IdentDetailContent({
   onEnd: () => void;
 }) {
   const [phoneUrl, setPhoneUrl] = useState(session.phone_api_url ?? "");
+  const [provider, setProvider] = useState<"anosim" | "smsbot">(
+    (session.phone_api_url ?? "").startsWith("smsbot://") ? "smsbot" : "anosim"
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [testData, setTestData] = useState<Array<{ label: string; value: string }>>(
     session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" }))
   );
@@ -173,6 +177,7 @@ function IdentDetailContent({
   const [addToBranding, setAddToBranding] = useState(false);
   const [infoNotes, setInfoNotes] = useState((session as any).info_notes ?? "");
   const queryClient = useQueryClient();
+
 
   // Fetch contract details for Mitarbeiterdaten card
   const { data: contractDetails } = useQuery({
