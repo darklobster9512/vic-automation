@@ -245,13 +245,29 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   );
 }
 
+const PAGE_SIZE = 20;
+const PROVIDER_STORAGE_KEY = "admin.telefonnummern.provider";
+
 export default function AdminTelefonnummern() {
-  const [provider, setProvider] = useState<"anosim" | "smsbot">("anosim");
+  const [provider, setProviderState] = useState<"anosim" | "smsbot">(() => {
+    if (typeof window === "undefined") return "anosim";
+    const saved = localStorage.getItem(PROVIDER_STORAGE_KEY);
+    return saved === "smsbot" ? "smsbot" : "anosim";
+  });
+  const [page, setPage] = useState(1);
+  const setProvider = (p: "anosim" | "smsbot") => {
+    setProviderState(p);
+    setPage(1);
+    try { localStorage.setItem(PROVIDER_STORAGE_KEY, p); } catch { /* ignore */ }
+  };
   const [url, setUrl] = useState("");
   const [rentalId, setRentalId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+
+  useEffect(() => { setPage(1); }, [activeBrandingId]);
+
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers", activeBrandingId],
