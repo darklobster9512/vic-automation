@@ -261,14 +261,8 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 
 function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: PhoneEntry) => void }) {
   const { data, isLoading } = useQuery<AnosimData>({
-    queryKey: ["anosim", entry.api_url],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("anosim-proxy", {
-        body: { url: entry.api_url },
-      });
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ["phone-data", entry.provider, entry.provider === "smsbot" ? entry.rental_id : entry.api_url],
+    queryFn: () => fetchPhoneData(entry),
   });
 
   return (
