@@ -147,9 +147,14 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
               {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </TableCell>
             <TableCell>
-              <button onClick={copyNumber} className="flex items-center gap-1 hover:text-primary transition-colors" title="Kopieren">
-                {data.number} <Copy className="h-3 w-3 text-muted-foreground" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={copyNumber} className="flex items-center gap-1 hover:text-primary transition-colors" title="Kopieren">
+                  {data.number} <Copy className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {entry.provider}
+                </Badge>
+              </div>
             </TableCell>
             <TableCell>{data.country}</TableCell>
             <TableCell>{data.rentalType}</TableCell>
