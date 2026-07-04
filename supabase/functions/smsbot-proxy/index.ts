@@ -5,6 +5,9 @@ const corsHeaders = {
 };
 
 const BASE = "https://cabinet.smsbot.cc/api/v1";
+const LIST_TTL_MS = 15_000;
+let listCache: { t: number; data: unknown } | null = null;
+let inflight: Promise<Response> | null = null;
 
 function mapState(raw: string | undefined | null): string {
   const s = (raw ?? "").toLowerCase();
@@ -59,20 +62,54 @@ Deno.serve(async (req) => {
     const headers = { Authorization: `Bearer ${apiKey}`, Accept: "application/json" };
 
     if (action === "list") {
-      const res = await fetch(`${BASE}/rentals`, { headers });
-      const text = await res.text();
-      let raw: any;
-      try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
-      if (!res.ok) {
-        return new Response(JSON.stringify({ error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status }), {
-          status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Serve from module-scope cache to avoid hammering SMSBot when several
+      // clients / components poll in parallel.
+      const now = Date.now();
+      if (listCache && now - listCache.t < LIST_TTL_MS) {
+        return new Response(JSON.stringify(listCache.data), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
         });
       }
-      const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.rentals ?? raw?.items ?? []);
-      const normalized = (Array.isArray(arr) ? arr : []).map(normRental).filter((r) => r.rentalId);
-      return new Response(JSON.stringify(normalized), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (inflight) {
+        // A concurrent request is already fetching; wait for it and reuse.
+        const shared = await inflight;
+        return shared.clone();
+      }
+
+      inflight = (async () => {
+        const res = await fetch(`${BASE}/rentals`, { headers });
+        const text = await res.text();
+        let raw: any;
+        try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
+        if (!res.ok) {
+          const retryAfter = res.headers.get("retry-after");
+          const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+          if (retryAfter) respHeaders["Retry-After"] = retryAfter;
+          return new Response(
+            JSON.stringify({
+              error: raw?.message || `SMSBot HTTP ${res.status}`,
+              code: raw?.code,
+              statusCode: res.status,
+            }),
+            { status: res.status, headers: respHeaders },
+          );
+        }
+        const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.rentals ?? raw?.items ?? []);
+        const normalized = (Array.isArray(arr) ? arr : []).map(normRental).filter((r) => r.rentalId);
+        listCache = { t: Date.now(), data: normalized };
+        return new Response(JSON.stringify(normalized), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
+        });
+      })();
+
+      try {
+        const res = await inflight;
+        return res.clone();
+      } finally {
+        inflight = null;
+      }
     }
 
     // detail
@@ -87,8 +124,11 @@ Deno.serve(async (req) => {
     let raw: any;
     try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
     if (!res.ok) {
+      const retryAfter = res.headers.get("retry-after");
+      const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+      if (retryAfter) respHeaders["Retry-After"] = retryAfter;
       return new Response(JSON.stringify({ error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status }), {
-        status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: res.status, headers: respHeaders,
       });
     }
     const r = raw?.data ?? raw?.rental ?? raw;
