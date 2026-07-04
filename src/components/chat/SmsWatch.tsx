@@ -300,18 +300,25 @@ function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: Pho
   const { data, isLoading } = useQuery<AnosimData>({
     queryKey: ["phone-data", entry.provider, entry.provider === "smsbot" ? entry.rental_id : entry.api_url],
     queryFn: () => fetchPhoneData(entry),
+    // SMSBot data already lives in the shared list – skip the extra call.
+    enabled: entry.provider === "anosim" || !entry.data,
+    initialData: entry.data,
+    staleTime: entry.provider === "smsbot" ? 60_000 : 0,
   });
+
+  const shown = entry.data ?? data;
 
   return (
     <button
       onClick={() => onSelect(entry)}
       className="w-full text-left rounded-md border px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center justify-between"
     >
-      {isLoading ? (
+      {isLoading && !shown ? (
         <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Laden…</span>
       ) : (
-        <span>{data?.number || "Unbekannt"}</span>
+        <span>{shown?.number || "Unbekannt"}</span>
       )}
     </button>
   );
 }
+
