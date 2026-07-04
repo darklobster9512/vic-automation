@@ -26,10 +26,12 @@ interface PhoneEntry {
   api_url: string | null;
   provider: "anosim" | "smsbot";
   rental_id: string | null;
+  data?: AnosimData;
 }
 
 async function fetchPhoneData(entry: PhoneEntry): Promise<AnosimData> {
   if (entry.provider === "smsbot") {
+    if (entry.data) return entry.data;
     const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
       body: { rentalId: entry.rental_id },
     });
@@ -42,6 +44,7 @@ async function fetchPhoneData(entry: PhoneEntry): Promise<AnosimData> {
   if (error) throw error;
   return data;
 }
+
 
 interface SmsWatchProps {
   contractId: string | null;
