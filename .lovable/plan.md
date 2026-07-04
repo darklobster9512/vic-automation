@@ -1,57 +1,42 @@
+
 ## Problem
 
-- Bei SMSBot **reicht der API-Key** — die API listet alle Rentals des Accounts via `GET /rentals` (aktive) bzw. `GET /rentals/history` (alle). Es ist **falsch, dass wir bisher eine Rental-ID pro Nummer manuell eintragen lassen**. Die "ID", die du eingetragen hast, ist deine Account-ID — die passt nicht auf `GET /rentals/:id` und liefert deshalb nichts.
-- Anosim hat kein Account-Listing (jede Nummer ist ein einzelner Share-Link) → dort bleibt der bisherige Add-Flow richtig.
-
-## Ziel
-
-SMSBot-Tab lädt Nummern **automatisch aus dem Account** — kein manuelles Anlegen mehr.
-
-## Änderungen
-
-### 1. Edge Function `smsbot-proxy` — neue Action `list`
-
-Body-Varianten:
-- `{ action: "list" }` → `GET https://cabinet.smsbot.cc/api/v1/rentals` (aktive Rentals des Accounts).
-- `{ rentalId: "…" }` (bestehend) → Detailabfrage `GET /rentals/:id`.
-
-Response `list` gibt ein Array normalisierter Einträge im gleichen Anosim-Schema zurück (mit zusätzlichem `rentalId`, damit das Frontend Identifier bauen kann):
-
-```json
-[{ "rentalId": "cmn…", "number": "+34…", "country": "ES", "service": "…", "state": "active", "startDate": "…", "endDate": "…", "sms": [...] }]
+Der Runtime-Error zeigt eindeutig:
+```
+Edge function returned 429: ThrottlerException: Too Many Requests
 ```
 
-### 2. Frontend `AdminTelefonnummern`
+SMSBot ratelimitet uns aggressiv. Grund: Bei jeder gemieteten Nummer feuern wir parallel Requests:
+- `list` alle **10 s** (AdminTelefonnummern) + alle **15 s** (SmsWatch)
+- **pro Zeile** zusätzlich ein `detail`-Call alle **5 s** (`PhoneRow`)
 
-- Wenn Tab **SMSBot** aktiv ist:
-  - Tabelle kommt aus `useQuery(['smsbot-rentals'], … invoke('smsbot-proxy', {action:'list'}))` mit `refetchInterval: 10000`.
-  - **Add-Formular versteckt**, stattdessen Hinweisbox: „Nummern werden automatisch aus deinem SMSBot-Account geladen. Miete Nummern direkt im SMSBot Cabinet." mit Link auf `https://cabinet.smsbot.cc`.
-  - Delete-Button ausblenden (Kündigung/Refund gehört ins Cabinet, out of scope).
-- Wenn Tab **Anosim** aktiv ist: bisheriges Verhalten (DB-Query + manuelles Add + Delete).
-- Pagination (20 pro Seite) und Live-SMS-Anzeige bleiben — Zeilen bekommen ihre Detaildaten bereits aus dem `list`-Response, keine weitere Einzelabfrage nötig für SMSBot.
-- Identifier für `ident_sessions.phone_api_url` bleibt `smsbot://<rentalId>`, damit bestehende Ident-Zuordnungen weiter matchen.
+Bei z. B. 10 aktiven Nummern = ~130 Requests/Minute → Throttler schlägt zu.
 
-### 3. Frontend `SmsWatch`
+## Lösung
 
-`entries` = Kombination aus:
-- DB-Query auf `phone_numbers` gefiltert `provider='anosim'` (wie bisher).
-- Live `smsbot-proxy` mit `action:'list'` → auf gleiches `PhoneEntry`-Shape gemappt (id = `smsbot-<rentalId>`, provider = `smsbot`).
+Radikal weniger Requests, und die bereits im `list`-Response enthaltenen SMS wiederverwenden statt zusätzlicher Detail-Calls.
 
-Auswahl, TAN-Extraktion, Detail-Polling funktionieren unverändert (`fetchPhoneData` case `smsbot` → Detail-RPC).
+### 1. `smsbot-proxy` (edge function)
+- Bei `list` sicherstellen, dass die normalisierten Rentals bereits die `sms`-Liste enthalten (macht `normRental` schon — Endpoint liefert `messages`/`sms`). Falls SMSBot bei `/rentals` die Nachrichten weglässt, bleibt es beim aktuellen Verhalten; Detail-Calls entfallen trotzdem (siehe unten).
+- 429-Handling: bei Upstream 429 mit `Retry-After` antworten und einen kurzen In-Memory-Cache (z. B. 15 s) für `list` einführen, damit parallele Aufrufe (AdminTelefonnummern + SmsWatch) sich denselben Response teilen.
 
-### 4. Aufräumen
+### 2. `AdminTelefonnummern.tsx`
+- `smsbot list`-Query: `refetchInterval` **10 s → 60 s**, `refetchOnWindowFocus: false`.
+- `PhoneRow` bei `provider === "smsbot"`:
+  - **Kein** eigener `detail`-Fetch mehr. Stattdessen die Row-Daten aus dem gecachten `list`-Response nehmen (parent gibt `data` als Prop rein, oder Row liest `queryClient.getQueryData(["smsbot_rentals"])` und findet ihre Rental-ID).
+- Anosim-Zeilen bleiben unverändert (5 s Polling), da separate API.
 
-- Bestehende SMSBot-DB-Zeilen (deine gerade angelegte mit Account-ID) werden im SMSBot-Tab schlicht ignoriert — sie stören nicht, können aber via SQL/UI gelöscht werden. Kein Migrations-Zwang.
-- Anosim-Tab und -Flow bleiben unangetastet.
+### 3. `SmsWatch.tsx`
+- SMSBot-Query verwendet denselben QueryKey `["smsbot_rentals"]` mit `refetchInterval: 60_000`, `staleTime: 30_000` — Query-Deduplication greift, es entsteht nur 1 Request/Minute egal wie viele Komponenten aktiv sind.
+- Für die TAN-Extraktion die SMS direkt aus dem List-Response nehmen (kein Detail-Call).
 
-## So funktioniert es danach
+## Erwartete Wirkung
 
-1. Du mietest Nummern im **SMSBot Cabinet**.
-2. Im Panel öffnest du `/admin/telefonnummern`, Tab **SMSBot** — alle aktiven Rentals erscheinen automatisch.
-3. Kein Rental-ID-Eintippen nötig, kein Anlegen im Panel. Der einzige Vorgang im Panel: Nummer aus der Liste per Klick einer Ident-Session zuweisen (wie bei Anosim).
+Vorher: ~130 Requests/min bei 10 Nummern.  
+Nachher: **1 Request/min** an `/rentals` (list, gecacht), unabhängig von der Anzahl Nummern oder offenen Panels. → 429 verschwindet.
 
-## Nicht Teil davon
+## Technisches Detail
 
-- History-Ansicht `/rentals/history` (bei Bedarf später als Toggle).
-- Cancel / Extend / Buy via UI.
-- Webhooks — Polling bleibt (10 s Liste, 5 s Detail).
+- `PhoneRow` bekommt neuen optionalen Prop `data?: AnosimData`. Wenn `provider === "smsbot"` und `data` vorhanden → useQuery überspringen (`enabled: provider !== "smsbot"`).
+- Parent iteriert über `smsbotEntries` und reicht das jeweils bereits normalisierte Rental als `data` durch.
+- In-Memory-Cache im Edge-Function-Module-Scope: `let cache: {t: number; data: any} | null = null;` mit 15 s TTL für `action=list`.
