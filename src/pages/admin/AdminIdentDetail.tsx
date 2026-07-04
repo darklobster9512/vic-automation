@@ -15,7 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User, Mail, Send, CreditCard } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User, Mail, Send, CreditCard, Check, ChevronsUpDown, Phone } from "lucide-react";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
@@ -154,6 +156,10 @@ function IdentDetailContent({
   onEnd: () => void;
 }) {
   const [phoneUrl, setPhoneUrl] = useState(session.phone_api_url ?? "");
+  const [provider, setProvider] = useState<"anosim" | "smsbot">(
+    (session.phone_api_url ?? "").startsWith("smsbot://") ? "smsbot" : "anosim"
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [testData, setTestData] = useState<Array<{ label: string; value: string }>>(
     session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" }))
   );
@@ -171,6 +177,7 @@ function IdentDetailContent({
   const [addToBranding, setAddToBranding] = useState(false);
   const [infoNotes, setInfoNotes] = useState((session as any).info_notes ?? "");
   const queryClient = useQueryClient();
+
 
   // Fetch contract details for Mitarbeiterdaten card
   const { data: contractDetails } = useQuery({
@@ -198,7 +205,20 @@ function IdentDetailContent({
     },
   });
 
-  // Resolve phone numbers to display numbers
+  // Fetch SMSBot rentals (shared cache with SmsWatch/AdminTelefonnummern)
+  const { data: smsbotRentals = [] } = useQuery<Array<{ rentalId: string; number: string; service: string; country: string; state: string; sms: AnosimSms[] }>>({
+    queryKey: ["smsbot_rentals"],
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+
+  // Resolve Anosim phone numbers to display numbers
   const [phoneDisplayMap, setPhoneDisplayMap] = useState<Record<string, string>>({});
   useEffect(() => {
     phoneEntries.forEach(async (entry) => {
@@ -212,15 +232,28 @@ function IdentDetailContent({
     });
   }, [phoneEntries]);
 
-  // Fetch SMS
+  // Helper: resolve any identifier to a display number
+  const resolveDisplayNumber = (identifier: string): string | undefined => {
+    if (identifier.startsWith("smsbot://")) {
+      const rentalId = identifier.slice("smsbot://".length);
+      return smsbotRentals.find(r => r.rentalId === rentalId)?.number;
+    }
+    return phoneDisplayMap[identifier];
+  };
+
+  // Fetch SMS (works for both Anosim URLs and smsbot:// identifiers)
   useEffect(() => {
     const apiUrl = phoneUrl || session.phone_api_url;
     if (!apiUrl) { setSmsMessages([]); return; }
+    const isSmsbot = apiUrl.startsWith("smsbot://");
 
     const fetchSms = async () => {
       setSmsLoading(true);
       try {
-        const { data } = await supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
+        const invocation = isSmsbot
+          ? supabase.functions.invoke("smsbot-proxy", { body: { rentalId: apiUrl.slice("smsbot://".length) } })
+          : supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
+        const { data } = await invocation;
         if (data?.sms) {
           const cutoff = new Date(session.updated_at).getTime();
           const sorted = [...data.sms]
@@ -240,9 +273,11 @@ function IdentDetailContent({
   // Sync when session updates externally
   useEffect(() => {
     setPhoneUrl(session.phone_api_url ?? "");
+    setProvider((session.phone_api_url ?? "").startsWith("smsbot://") ? "smsbot" : "anosim");
     setTestData(session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" })));
     setEmailTanEnabled(session.email_tan_enabled ?? false);
     setEmailTans(session.email_tans ?? []);
+
   }, [session.id, session.updated_at]);
 
   const handleSave = async () => {
@@ -426,68 +461,139 @@ function IdentDetailContent({
       <div className="space-y-4">
         <Card>
           <CardContent className="pt-6 space-y-4">
-            <Label className="font-medium">Telefonnummer (Anosim)</Label>
+            <Label className="font-medium">Telefonnummer</Label>
 
-            {/* Resolved number badge */}
-            {phoneUrl && phoneDisplayMap[phoneUrl] && (
-              <Badge variant="secondary" className="gap-1.5 text-sm py-1 px-3">
-                📞 {phoneDisplayMap[phoneUrl]}
-              </Badge>
-            )}
-
-            {/* Dropdown for existing numbers */}
-            {phoneEntries.length > 0 && (
-              <Select
-                value={phoneUrl}
-                onValueChange={(val) => {
-                  setPhoneUrl(val);
-                  handleAssignPhone(val);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Nummer auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {phoneEntries.map(entry => (
-                    <SelectItem key={entry.id} value={entry.api_url}>
-                      {phoneDisplayMap[entry.api_url] || "Laden..."}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Manual link input + Zuweisen button */}
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Oder Anosim Share-Link einfügen..."
-                value={phoneUrl}
-                onChange={(e) => setPhoneUrl(e.target.value)}
-                className="text-xs flex-1"
-              />
+            {/* Provider toggle */}
+            <div className="flex gap-2">
               <Button
+                type="button"
                 size="sm"
-                onClick={() => handleAssignPhone(phoneUrl)}
-                disabled={assigningPhone || !phoneUrl.trim()}
-                className="shrink-0 gap-1.5"
+                variant={provider === "anosim" ? "default" : "outline"}
+                onClick={() => setProvider("anosim")}
               >
-                {assigningPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                Zuweisen
+                Anosim
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={provider === "smsbot" ? "default" : "outline"}
+                onClick={() => setProvider("smsbot")}
+              >
+                SMSBot
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="addToBranding"
-                checked={addToBranding}
-                onCheckedChange={(checked) => setAddToBranding(!!checked)}
-              />
-              <Label htmlFor="addToBranding" className="text-xs text-muted-foreground cursor-pointer">
-                Nummer auch zum Branding hinzufügen
-              </Label>
-            </div>
+            {/* Resolved number badge */}
+            {phoneUrl && resolveDisplayNumber(phoneUrl) && (
+              <Badge variant="secondary" className="gap-1.5 text-sm py-1 px-3">
+                <Phone className="h-3.5 w-3.5" /> {resolveDisplayNumber(phoneUrl)}
+                <span className="ml-1 text-[10px] uppercase tracking-wide opacity-70">
+                  {phoneUrl.startsWith("smsbot://") ? "smsbot" : "anosim"}
+                </span>
+              </Badge>
+            )}
+
+            {/* Searchable combobox for existing numbers */}
+            {(() => {
+              const items = provider === "smsbot"
+                ? smsbotRentals.map(r => ({
+                    identifier: `smsbot://${r.rentalId}`,
+                    number: r.number || "Unbekannt",
+                    meta: [r.country, r.service].filter(Boolean).join(" · "),
+                  }))
+                : phoneEntries.map(e => ({
+                    identifier: e.api_url,
+                    number: phoneDisplayMap[e.api_url] || "Laden...",
+                    meta: "",
+                  }));
+              const selected = items.find(i => i.identifier === phoneUrl);
+              return (
+                <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={pickerOpen}
+                      className="w-full justify-between font-normal"
+                      disabled={items.length === 0}
+                    >
+                      <span className="truncate">
+                        {items.length === 0
+                          ? (provider === "smsbot" ? "Keine SMSBot-Nummern verfügbar" : "Keine Anosim-Nummern verfügbar")
+                          : selected
+                            ? selected.number
+                            : "Nummer auswählen..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Nummer suchen..." />
+                      <CommandList>
+                        <CommandEmpty>Keine Treffer.</CommandEmpty>
+                        <CommandGroup>
+                          {items.map(item => (
+                            <CommandItem
+                              key={item.identifier}
+                              value={`${item.number} ${item.meta}`}
+                              onSelect={() => {
+                                setPickerOpen(false);
+                                setPhoneUrl(item.identifier);
+                                handleAssignPhone(item.identifier);
+                              }}
+                            >
+                              <Check className={`mr-2 h-4 w-4 ${phoneUrl === item.identifier ? "opacity-100" : "opacity-0"}`} />
+                              <div className="flex flex-col">
+                                <span>{item.number}</span>
+                                {item.meta && <span className="text-xs text-muted-foreground">{item.meta}</span>}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              );
+            })()}
+
+            {/* Manual link input – Anosim only */}
+            {provider === "anosim" && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Oder Anosim Share-Link einfügen..."
+                    value={phoneUrl.startsWith("smsbot://") ? "" : phoneUrl}
+                    onChange={(e) => setPhoneUrl(e.target.value)}
+                    className="text-xs flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => handleAssignPhone(phoneUrl)}
+                    disabled={assigningPhone || !phoneUrl.trim() || phoneUrl.startsWith("smsbot://")}
+                    className="shrink-0 gap-1.5"
+                  >
+                    {assigningPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    Zuweisen
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="addToBranding"
+                    checked={addToBranding}
+                    onCheckedChange={(checked) => setAddToBranding(!!checked)}
+                  />
+                  <Label htmlFor="addToBranding" className="text-xs text-muted-foreground cursor-pointer">
+                    Nummer auch zum Branding hinzufügen
+                  </Label>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
+
 
         <Card>
           <CardContent className="pt-6">
