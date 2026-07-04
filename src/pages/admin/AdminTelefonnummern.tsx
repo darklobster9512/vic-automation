@@ -187,10 +187,11 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigator.clipboard.writeText(entry.api_url);
-                    toast({ title: "Link kopiert", description: "API-Link wurde in die Zwischenablage kopiert." });
+                    const val = entry.provider === "smsbot" ? (entry.rental_id ?? "") : (entry.api_url ?? "");
+                    navigator.clipboard.writeText(val);
+                    toast({ title: "Kopiert", description: entry.provider === "smsbot" ? "Rental-ID wurde kopiert." : "API-Link wurde kopiert." });
                   }}
-                  title="Original-Link kopieren"
+                  title={entry.provider === "smsbot" ? "Rental-ID kopieren" : "Original-Link kopieren"}
                 >
                   <Link className="h-4 w-4 text-muted-foreground" />
                 </Button>
