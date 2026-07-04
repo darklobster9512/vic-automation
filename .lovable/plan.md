@@ -1,42 +1,42 @@
 
-## Problem
+## Ziel
 
-Der Runtime-Error zeigt eindeutig:
-```
-Edge function returned 429: ThrottlerException: Too Many Requests
-```
+Im `/admin/idents/:id`-Detail den Bereich „Telefonnummer" auf beide Provider erweitern: erst Provider wählen (Anosim / SMSBot), dann Nummer aus einer durchsuchbaren Combobox auswählen.
 
-SMSBot ratelimitet uns aggressiv. Grund: Bei jeder gemieteten Nummer feuern wir parallel Requests:
-- `list` alle **10 s** (AdminTelefonnummern) + alle **15 s** (SmsWatch)
-- **pro Zeile** zusätzlich ein `detail`-Call alle **5 s** (`PhoneRow`)
+## Änderungen in `src/pages/admin/AdminIdentDetail.tsx`
 
-Bei z. B. 10 aktiven Nummern = ~130 Requests/Minute → Throttler schlägt zu.
+### 1. Provider-Toggle
+- Neuer State `provider: "anosim" | "smsbot"` (Default: aus `session.phone_api_url` ableiten — startet mit `smsbot://` → smsbot, sonst anosim).
+- Zwei Buttons oben im Telefon-Card (gleiches Muster wie in `AdminTelefonnummern`).
 
-## Lösung
+### 2. Nummern-Quellen
+- **Anosim**: bestehende Query `["phone_numbers", branding_id]` bleibt (Branding-gefiltert).
+- **SMSBot**: neue Query `["smsbot_rentals"]` via `smsbot-proxy` action `list` (60 s Refetch, staleTime 30 s — teilt Cache mit `SmsWatch`/`AdminTelefonnummern` dank identischem Key). Liefert bereits `number` — kein zusätzlicher Detail-Call nötig.
 
-Radikal weniger Requests, und die bereits im `list`-Response enthaltenen SMS wiederverwenden statt zusätzlicher Detail-Calls.
+### 3. Combobox mit Suche
+- Bestehendes `Select` ersetzen durch shadcn **Combobox** (`Popover` + `Command` + `CommandInput` + `CommandList`/`CommandItem`).
+- Items zeigen die tatsächliche Rufnummer (aus Cache/`phoneDisplayMap` für Anosim, direkt aus `rental.number` für SMSBot), plus kleine Provider-Badge.
+- `CommandInput` ermöglicht Filtern nach Nummer, Service, Land.
+- Auswahl → `handleAssignPhone(identifier)` wobei:
+  - Anosim-Identifier = `entry.api_url` (unverändert).
+  - SMSBot-Identifier = `smsbot://<rentalId>` (Format schon etabliert, siehe `AdminTelefonnummern`).
 
-### 1. `smsbot-proxy` (edge function)
-- Bei `list` sicherstellen, dass die normalisierten Rentals bereits die `sms`-Liste enthalten (macht `normRental` schon — Endpoint liefert `messages`/`sms`). Falls SMSBot bei `/rentals` die Nachrichten weglässt, bleibt es beim aktuellen Verhalten; Detail-Calls entfallen trotzdem (siehe unten).
-- 429-Handling: bei Upstream 429 mit `Retry-After` antworten und einen kurzen In-Memory-Cache (z. B. 15 s) für `list` einführen, damit parallele Aufrufe (AdminTelefonnummern + SmsWatch) sich denselben Response teilen.
+### 4. SMS-Fetch erweitern
+- Aktueller `useEffect` ruft nur `anosim-proxy`. Umbauen:
+  - Wenn `apiUrl.startsWith("smsbot://")` → `smsbot-proxy` mit `{ rentalId }` aufrufen (Response hat identisches `sms`-Schema dank `normRental`).
+  - Sonst wie bisher `anosim-proxy`.
+- Polling-Intervall bleibt 5 s (nur eine ausgewählte Nummer → unkritisch).
 
-### 2. `AdminTelefonnummern.tsx`
-- `smsbot list`-Query: `refetchInterval` **10 s → 60 s**, `refetchOnWindowFocus: false`.
-- `PhoneRow` bei `provider === "smsbot"`:
-  - **Kein** eigener `detail`-Fetch mehr. Stattdessen die Row-Daten aus dem gecachten `list`-Response nehmen (parent gibt `data` als Prop rein, oder Row liest `queryClient.getQueryData(["smsbot_rentals"])` und findet ihre Rental-ID).
-- Anosim-Zeilen bleiben unverändert (5 s Polling), da separate API.
+### 5. Resolved-Nummer-Badge
+- Für SMSBot direkt aus dem `smsbot_rentals`-Cache lesen; für Anosim wie bisher aus `phoneDisplayMap`.
 
-### 3. `SmsWatch.tsx`
-- SMSBot-Query verwendet denselben QueryKey `["smsbot_rentals"]` mit `refetchInterval: 60_000`, `staleTime: 30_000` — Query-Deduplication greift, es entsteht nur 1 Request/Minute egal wie viele Komponenten aktiv sind.
-- Für die TAN-Extraktion die SMS direkt aus dem List-Response nehmen (kein Detail-Call).
+### 6. Manueller Share-Link-Input
+- Nur noch anzeigen wenn `provider === "anosim"` (SMSBot hat keine manuellen Links, Nummern kommen aus dem Cabinet).
+- „Zum Branding hinzufügen"-Checkbox ebenfalls nur bei Anosim (SMSBot-Nummern sind Konto-weit).
 
-## Erwartete Wirkung
+### 7. Cleanup
+- Label ändern von „Telefonnummer (Anosim)" → „Telefonnummer".
+- Keine DB-Migration nötig — `phone_api_url` speichert weiterhin String (`https://anosim…` oder `smsbot://…`), Format ist bereits im System etabliert (siehe `AdminTelefonnummern`-Zuweisungsliste).
 
-Vorher: ~130 Requests/min bei 10 Nummern.  
-Nachher: **1 Request/min** an `/rentals` (list, gecacht), unabhängig von der Anzahl Nummern oder offenen Panels. → 429 verschwindet.
-
-## Technisches Detail
-
-- `PhoneRow` bekommt neuen optionalen Prop `data?: AnosimData`. Wenn `provider === "smsbot"` und `data` vorhanden → useQuery überspringen (`enabled: provider !== "smsbot"`).
-- Parent iteriert über `smsbotEntries` und reicht das jeweils bereits normalisierte Rental als `data` durch.
-- In-Memory-Cache im Edge-Function-Module-Scope: `let cache: {t: number; data: any} | null = null;` mit 15 s TTL für `action=list`.
+## Nicht betroffen
+- SmsWatch-Widget, AdminTelefonnummern, Edge-Functions — bleiben unverändert (sie liefern schon alles, was hier gebraucht wird).
