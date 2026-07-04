@@ -31,7 +31,10 @@ interface AnosimData {
 
 interface PhoneEntry {
   id: string;
-  api_url: string;
+  api_url: string | null;
+  provider: "anosim" | "smsbot";
+  rental_id: string | null;
+  label: string | null;
   created_at: string;
 }
 
@@ -44,10 +47,18 @@ interface IdentAssignment {
 function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const identifier = entry.provider === "smsbot" ? `smsbot://${entry.rental_id}` : (entry.api_url ?? "");
 
   const { data, isLoading, isError } = useQuery<AnosimData>({
-    queryKey: ["anosim", entry.api_url],
+    queryKey: ["phone-data", entry.provider, identifier],
     queryFn: async () => {
+      if (entry.provider === "smsbot") {
+        const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
+          body: { rentalId: entry.rental_id },
+        });
+        if (error) throw error;
+        return data;
+      }
       const { data, error } = await supabase.functions.invoke("anosim-proxy", {
         body: { url: entry.api_url },
       });
@@ -58,12 +69,12 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   });
 
   const { data: assignments = [] } = useQuery<IdentAssignment[]>({
-    queryKey: ["phone_assignments", entry.api_url],
+    queryKey: ["phone_assignments", identifier],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ident_sessions")
         .select("id, employment_contracts:contract_id(first_name, last_name), orders:order_id(title)")
-        .eq("phone_api_url", entry.api_url);
+        .eq("phone_api_url", identifier);
       if (error) throw error;
       return (data as any) ?? [];
     },
