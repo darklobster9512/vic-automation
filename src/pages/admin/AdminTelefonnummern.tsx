@@ -55,6 +55,8 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
     queryKey: ["phone-data", entry.provider, identifier],
     queryFn: async () => {
       if (entry.provider === "smsbot") {
+        // SMSBot data is served from the shared list cache – no per-row detail call.
+        if (entry.data) return entry.data;
         const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
           body: { rentalId: entry.rental_id },
         });
@@ -67,8 +69,12 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000,
+    // Anosim only – SMSBot rows read from the shared list (initialData below).
+    refetchInterval: entry.provider === "smsbot" ? false : 5000,
+    initialData: entry.provider === "smsbot" ? entry.data : undefined,
+    staleTime: entry.provider === "smsbot" ? 60_000 : 0,
   });
+
 
   const { data: assignments = [] } = useQuery<IdentAssignment[]>({
     queryKey: ["phone_assignments", identifier],
