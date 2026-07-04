@@ -307,11 +307,10 @@ export default function AdminTelefonnummern() {
   const isLoading = provider === "smsbot" ? smsbotLoading : anosimLoading;
 
   const addMutation = useMutation({
-    mutationFn: async (payload: { provider: "anosim" | "smsbot"; api_url: string | null; rental_id: string | null }) => {
+    mutationFn: async (apiUrl: string) => {
       const { error } = await supabase.from("phone_numbers" as any).insert({
-        provider: payload.provider,
-        api_url: payload.api_url,
-        rental_id: payload.rental_id,
+        provider: "anosim",
+        api_url: apiUrl,
         branding_id: activeBrandingId,
       } as any);
       if (error) throw error;
@@ -319,7 +318,6 @@ export default function AdminTelefonnummern() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phone_numbers"] });
       setUrl("");
-      setRentalId("");
       toast({ title: "Hinzugefügt", description: "Telefonnummer wurde hinzugefügt." });
     },
     onError: (e: any) => toast({ title: "Fehler", description: e?.message ?? "Konnte nicht hinzugefügt werden.", variant: "destructive" }),
@@ -342,21 +340,12 @@ export default function AdminTelefonnummern() {
   };
 
   const handleAdd = () => {
-    if (provider === "anosim") {
-      if (!isValidAnosim(url)) {
-        toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
-        return;
-      }
-      const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
-      addMutation.mutate({ provider: "anosim", api_url: apiUrl, rental_id: null });
-    } else {
-      const id = rentalId.trim();
-      if (!id) {
-        toast({ title: "Rental-ID fehlt", description: "Bitte die SMSBot Rental-ID eintragen.", variant: "destructive" });
-        return;
-      }
-      addMutation.mutate({ provider: "smsbot", api_url: `smsbot://${id}`, rental_id: id });
+    if (!isValidAnosim(url)) {
+      toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
+      return;
     }
+    const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    addMutation.mutate(apiUrl);
   };
 
   return (
