@@ -423,7 +423,7 @@ export default function AdminTelefonnummern() {
                 </TableHeader>
                 <TableBody>
                   {pageEntries.map((entry) => (
-                    <PhoneRow key={entry.id} entry={entry} onDelete={(id) => deleteMutation.mutate(id)} />
+                    <PhoneRow key={entry.id} entry={entry} onDelete={(id) => deleteMutation.mutate(id)} hideDelete={provider === "smsbot"} />
                   ))}
                 </TableBody>
               </Table>
