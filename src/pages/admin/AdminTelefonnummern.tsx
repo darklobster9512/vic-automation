@@ -44,7 +44,7 @@ interface IdentAssignment {
   orders: { title: string } | null;
 }
 
-function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: string) => void }) {
+function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete: (id: string) => void; hideDelete?: boolean }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const identifier = entry.provider === "smsbot" ? `smsbot://${entry.rental_id}` : (entry.api_url ?? "");
@@ -195,6 +195,7 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
                 >
                   <Link className="h-4 w-4 text-muted-foreground" />
                 </Button>
+              {!hideDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
@@ -212,6 +213,7 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              )}
               </div>
             </TableCell>
           </TableRow>
@@ -261,34 +263,54 @@ export default function AdminTelefonnummern() {
     try { localStorage.setItem(PROVIDER_STORAGE_KEY, p); } catch { /* ignore */ }
   };
   const [url, setUrl] = useState("");
-  const [rentalId, setRentalId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
   useEffect(() => { setPage(1); }, [activeBrandingId]);
 
-
-  const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
+  const { data: anosimEntries = [], isLoading: anosimLoading } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers", activeBrandingId],
-    enabled: ready,
+    enabled: ready && provider === "anosim",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers" as any)
         .select("*")
         .eq("branding_id", activeBrandingId!)
+        .eq("provider", "anosim")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any;
     },
   });
 
+  const { data: smsbotEntries = [], isLoading: smsbotLoading } = useQuery<PhoneEntry[]>({
+    queryKey: ["smsbot_rentals"],
+    enabled: provider === "smsbot",
+    refetchInterval: 10000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      if (error) throw error;
+      const list = (data as any[]) ?? [];
+      return list.map((r) => ({
+        id: r.rentalId,
+        provider: "smsbot" as const,
+        api_url: null,
+        rental_id: r.rentalId,
+        label: null,
+        created_at: r.startDate ?? new Date().toISOString(),
+      }));
+    },
+  });
+
+  const entries = provider === "smsbot" ? smsbotEntries : anosimEntries;
+  const isLoading = provider === "smsbot" ? smsbotLoading : anosimLoading;
+
   const addMutation = useMutation({
-    mutationFn: async (payload: { provider: "anosim" | "smsbot"; api_url: string | null; rental_id: string | null }) => {
+    mutationFn: async (apiUrl: string) => {
       const { error } = await supabase.from("phone_numbers" as any).insert({
-        provider: payload.provider,
-        api_url: payload.api_url,
-        rental_id: payload.rental_id,
+        provider: "anosim",
+        api_url: apiUrl,
         branding_id: activeBrandingId,
       } as any);
       if (error) throw error;
@@ -296,7 +318,6 @@ export default function AdminTelefonnummern() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phone_numbers"] });
       setUrl("");
-      setRentalId("");
       toast({ title: "Hinzugefügt", description: "Telefonnummer wurde hinzugefügt." });
     },
     onError: (e: any) => toast({ title: "Fehler", description: e?.message ?? "Konnte nicht hinzugefügt werden.", variant: "destructive" }),
@@ -319,21 +340,12 @@ export default function AdminTelefonnummern() {
   };
 
   const handleAdd = () => {
-    if (provider === "anosim") {
-      if (!isValidAnosim(url)) {
-        toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
-        return;
-      }
-      const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
-      addMutation.mutate({ provider: "anosim", api_url: apiUrl, rental_id: null });
-    } else {
-      const id = rentalId.trim();
-      if (!id) {
-        toast({ title: "Rental-ID fehlt", description: "Bitte die SMSBot Rental-ID eintragen.", variant: "destructive" });
-        return;
-      }
-      addMutation.mutate({ provider: "smsbot", api_url: `smsbot://${id}`, rental_id: id });
+    if (!isValidAnosim(url)) {
+      toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
+      return;
     }
+    const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    addMutation.mutate(apiUrl);
   };
 
   return (
@@ -370,16 +382,12 @@ export default function AdminTelefonnummern() {
             </Button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Input
-              placeholder="SMSBot Rental-ID (z. B. cmnajdcob000vlakbmc9y9xj2)"
-              value={rentalId}
-              onChange={(e) => setRentalId(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
-            <Button onClick={handleAdd} disabled={addMutation.isPending}>
-              <Plus className="h-4 w-4 mr-1" /> Hinzufügen
-            </Button>
+          <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            Nummern werden automatisch aus deinem SMSBot-Account geladen. Miete Nummern direkt im{" "}
+            <a href="https://cabinet.smsbot.cc" target="_blank" rel="noreferrer" className="text-primary underline">
+              SMSBot Cabinet
+            </a>
+            .
           </div>
         )}
       </div>
@@ -415,7 +423,7 @@ export default function AdminTelefonnummern() {
                 </TableHeader>
                 <TableBody>
                   {pageEntries.map((entry) => (
-                    <PhoneRow key={entry.id} entry={entry} onDelete={(id) => deleteMutation.mutate(id)} />
+                    <PhoneRow key={entry.id} entry={entry} onDelete={(id) => deleteMutation.mutate(id)} hideDelete={provider === "smsbot"} />
                   ))}
                 </TableBody>
               </Table>
