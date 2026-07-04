@@ -382,16 +382,12 @@ export default function AdminTelefonnummern() {
             </Button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Input
-              placeholder="SMSBot Rental-ID (z. B. cmnajdcob000vlakbmc9y9xj2)"
-              value={rentalId}
-              onChange={(e) => setRentalId(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
-            <Button onClick={handleAdd} disabled={addMutation.isPending}>
-              <Plus className="h-4 w-4 mr-1" /> Hinzufügen
-            </Button>
+          <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            Nummern werden automatisch aus deinem SMSBot-Account geladen. Miete Nummern direkt im{" "}
+            <a href="https://cabinet.smsbot.cc" target="_blank" rel="noreferrer" className="text-primary underline">
+              SMSBot Cabinet
+            </a>
+            .
           </div>
         )}
       </div>
