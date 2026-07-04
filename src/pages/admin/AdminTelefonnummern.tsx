@@ -36,7 +36,9 @@ interface PhoneEntry {
   rental_id: string | null;
   label: string | null;
   created_at: string;
+  data?: AnosimData;
 }
+
 
 interface IdentAssignment {
   id: string;
