@@ -1,28 +1,77 @@
-## Problem
+## Ziel
 
-Janina Smith konnte einen 1. Arbeitstag am **Fr., 03.07.2026 10:00** buchen, obwohl im Zeitplan (`branding_schedule_settings`, `schedule_type='trial'`) für dieses Branding `available_days = [1,2,3,4,6]` gespeichert ist — Freitag (5) ist gesperrt.
+`/admin/telefonnummern` erweitern, damit neben **Anosim** auch Nummern von **SMSBot** (`https://cabinet.smsbot.cc/api/v1`) exakt gleich funktionieren: Nummer anzeigen, SMS pollen (5s), TAN extrahieren, in `SmsWatch` verwenden und Ident-Sessions zuordnen.
 
-Ursache: Die RPC `book_first_workday_public` schreibt den Termin **ohne serverseitige Validierung**. Nur das Frontend prüft die verfügbaren Wochentage; wird das umgangen (veraltete Query-Daten, direkter RPC-Call, nachträglich geänderte Einstellungen), landet der Termin trotzdem in der DB.
+## Änderungen
 
-## Fix
+### 1. Datenbank — `phone_numbers` erweitern
 
-**Migration:** `book_first_workday_public` (SECURITY DEFINER) um serverseitige Validierung erweitern:
+Neue Spalten (Migration):
+- `provider text NOT NULL DEFAULT 'anosim'` — Werte: `'anosim' | 'smsbot'`
+- `rental_id text NULL` — SMSBot Rental-ID (bei Anosim NULL)
+- `label text NULL` — optionaler Anzeigename
 
-1. `branding_id` des Contracts ermitteln.
-2. `branding_schedule_settings` mit `schedule_type='trial'` laden (Fallback: `available_days=[1..6]`, 08:00–18:00, 30 min).
-3. Vor dem INSERT prüfen:
-   - ISO-Wochentag von `_appointment_date` muss in `available_days` enthalten sein → sonst `RAISE EXCEPTION 'Dieser Wochentag ist nicht verfügbar'`.
-   - `_appointment_time` muss im gültigen Zeitfenster liegen (Wochenende ggf. `weekend_*_time`) → sonst Exception.
-   - `_appointment_time` darf nicht in `first_workday_blocked_slots` oder `trial_day_blocked_slots` für dieses Datum + Branding stehen → sonst Exception.
-   - Kombination `(_appointment_date, _appointment_time)` darf noch nicht als gebucht existieren (Doppelbuchung) → sonst Exception.
-4. Frontend (`ErsterArbeitstag.tsx`) fängt die neuen Exceptions in der Mutation und zeigt Toast "Dieser Termin ist nicht mehr verfügbar. Bitte wählen Sie einen anderen."
+`api_url` bleibt (bei Anosim: Share-Link → API-Link; bei SMSBot: NULL, wird intern gebaut).
 
-## Datenkorrektur
+Existierende Zeilen bekommen automatisch `provider='anosim'` — keine Datenmigration nötig.
 
-Bestehender Fehl-Termin von Janina Smith (Fr 03.07.2026 10:00) **bleibt bestehen** — keine Löschung.
+### 2. Secret
 
-## Nicht betroffen
+Neu: `SMSBOT_API_KEY` (via `add_secret`, ein globaler Account-Key — SMSBot nutzt Bearer-Token pro Account, nicht pro Nummer).
 
-- Trial- und Interview-Buchung — analoge Absicherung in Folge-Ticket möglich.
-- Admin-Erstellungen und Reschedules via Admin-Panel (nutzen diese RPC nicht).
-- Kein UI-Redesign, kein Schema-Change an Tabellen.
+### 3. Edge Function — neu: `smsbot-proxy`
+
+Analog zu `anosim-proxy`, ruft `GET https://cabinet.smsbot.cc/api/v1/rentals/:id` mit `Authorization: Bearer $SMSBOT_API_KEY` und mappt die Response ins **gleiche Format wie Anosim**, damit Frontend-Komponenten unverändert bleiben:
+
+```json
+{
+  "number": "+34689018024",
+  "country": "ES",
+  "rentalType": "single",
+  "service": "Bling",
+  "startDate": "...",
+  "endDate": "...",
+  "state": "active",       // aus SMSBot-Status abgeleitet
+  "sms": [
+    { "messageSender": "Bling", "messageDate": "...", "messageText": "..." }
+  ]
+}
+```
+
+### 4. Frontend
+
+**`AdminTelefonnummern.tsx`:**
+- Dialog "Nummer hinzufügen" mit Provider-Auswahl (Radio: Anosim / SMSBot).
+  - Anosim: bisheriges Eingabefeld (Share-Link).
+  - SMSBot: Eingabefeld **Rental-ID** (+ optional Label).
+- Insert schreibt `provider` + `rental_id` / `api_url`.
+- `PhoneRow` ruft je nach `entry.provider` `anosim-proxy` oder `smsbot-proxy` — sonst identisch (Tabelle, Badges, SMS-Liste, Kopieren, Zuordnungen bleiben gleich, da das Datenformat identisch ist).
+- Optional: kleiner Provider-Badge in der Namensspalte.
+
+**`SmsWatch.tsx`** und alle anderen Konsumenten (`ident_sessions.phone_api_url` als Kennung):
+- Die Zuordnungslogik nutzt einen stabilen Identifier. Vorschlag: Feld weiter `phone_api_url` benutzen; bei SMSBot dort `smsbot://<rental_id>` speichern. Damit müssen nachgelagerte Komponenten (SmsWatch, `ident_sessions`-Join) nicht angepasst werden — sie erhalten die Zeile aus `phone_numbers` und rufen den passenden Proxy.
+- `SmsWatch` bekommt den kleinen Umbau: statt hart `anosim-proxy` aufzurufen, wählt es per `entry.provider` den Proxy.
+
+### 5. Wie füge ich eine SMSBot-Nummer ein?
+
+Sobald ausgerollt:
+
+1. In `/admin/telefonnummern` auf **„Nummer hinzufügen"** klicken.
+2. Provider **SMSBot** wählen.
+3. **Rental-ID** eintragen (findet sich im SMSBot-Cabinet unter der gemieteten Nummer, Format wie `cmnajdcob000vlakbmc9y9xj2`).
+4. Speichern → Zeile erscheint mit Nummer, Service, Countdown, SMS-Liste — Verhalten identisch zu Anosim (Polling alle 5s, TAN-Extraktion in `SmsWatch`).
+
+Voraussetzung einmalig: `SMSBOT_API_KEY` als Supabase-Secret hinterlegt.
+
+## Technisches (Detail)
+
+- SMSBot-Status-Mapping: `active` → `active`, `expired`/`cancelled` → `ended`, sonst → `pending`.
+- SMSBot-SMS-Feldnamen (`sender`, `message`, `receivedAt`) werden 1:1 auf Anosim-Feldnamen (`messageSender`, `messageText`, `messageDate`) gemappt.
+- Rate-Limit SMSBot (300/min) reicht bei 5s-Polling und < ~10 aktiven Nummern locker.
+- Kein Webhook nötig — Polling reicht und bleibt konsistent zu Anosim.
+
+## Nicht Teil dieses Plans
+
+- Nummern-Kauf/Extend/Cancel über UI (nur Anzeigen + SMS-Empfang wie bisher bei Anosim).
+- Rückwärtige Migration bestehender Anosim-Zeilen.
+- Änderungen an Ident-Session-Flows außer dem Proxy-Switch in `SmsWatch`.
