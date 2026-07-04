@@ -295,7 +295,9 @@ export default function AdminTelefonnummern() {
   const { data: smsbotEntries = [], isLoading: smsbotLoading } = useQuery<PhoneEntry[]>({
     queryKey: ["smsbot_rentals"],
     enabled: provider === "smsbot",
-    refetchInterval: 10000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
       if (error) throw error;
@@ -307,9 +309,11 @@ export default function AdminTelefonnummern() {
         rental_id: r.rentalId,
         label: null,
         created_at: r.startDate ?? new Date().toISOString(),
+        data: r as AnosimData,
       }));
     },
   });
+
 
   const entries = provider === "smsbot" ? smsbotEntries : anosimEntries;
   const isLoading = provider === "smsbot" ? smsbotLoading : anosimLoading;
