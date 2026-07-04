@@ -205,7 +205,20 @@ function IdentDetailContent({
     },
   });
 
-  // Resolve phone numbers to display numbers
+  // Fetch SMSBot rentals (shared cache with SmsWatch/AdminTelefonnummern)
+  const { data: smsbotRentals = [] } = useQuery<Array<{ rentalId: string; number: string; service: string; country: string; state: string; sms: AnosimSms[] }>>({
+    queryKey: ["smsbot_rentals"],
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+
+  // Resolve Anosim phone numbers to display numbers
   const [phoneDisplayMap, setPhoneDisplayMap] = useState<Record<string, string>>({});
   useEffect(() => {
     phoneEntries.forEach(async (entry) => {
@@ -219,15 +232,28 @@ function IdentDetailContent({
     });
   }, [phoneEntries]);
 
-  // Fetch SMS
+  // Helper: resolve any identifier to a display number
+  const resolveDisplayNumber = (identifier: string): string | undefined => {
+    if (identifier.startsWith("smsbot://")) {
+      const rentalId = identifier.slice("smsbot://".length);
+      return smsbotRentals.find(r => r.rentalId === rentalId)?.number;
+    }
+    return phoneDisplayMap[identifier];
+  };
+
+  // Fetch SMS (works for both Anosim URLs and smsbot:// identifiers)
   useEffect(() => {
     const apiUrl = phoneUrl || session.phone_api_url;
     if (!apiUrl) { setSmsMessages([]); return; }
+    const isSmsbot = apiUrl.startsWith("smsbot://");
 
     const fetchSms = async () => {
       setSmsLoading(true);
       try {
-        const { data } = await supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
+        const invocation = isSmsbot
+          ? supabase.functions.invoke("smsbot-proxy", { body: { rentalId: apiUrl.slice("smsbot://".length) } })
+          : supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
+        const { data } = await invocation;
         if (data?.sms) {
           const cutoff = new Date(session.updated_at).getTime();
           const sorted = [...data.sms]
@@ -247,9 +273,11 @@ function IdentDetailContent({
   // Sync when session updates externally
   useEffect(() => {
     setPhoneUrl(session.phone_api_url ?? "");
+    setProvider((session.phone_api_url ?? "").startsWith("smsbot://") ? "smsbot" : "anosim");
     setTestData(session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" })));
     setEmailTanEnabled(session.email_tan_enabled ?? false);
     setEmailTans(session.email_tans ?? []);
+
   }, [session.id, session.updated_at]);
 
   const handleSave = async () => {
