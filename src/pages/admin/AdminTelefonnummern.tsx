@@ -44,7 +44,7 @@ interface IdentAssignment {
   orders: { title: string } | null;
 }
 
-function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: string) => void }) {
+function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete: (id: string) => void; hideDelete?: boolean }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const identifier = entry.provider === "smsbot" ? `smsbot://${entry.rental_id}` : (entry.api_url ?? "");
