@@ -1336,25 +1336,34 @@ export type Database = {
       }
       phone_numbers: {
         Row: {
-          api_url: string
+          api_url: string | null
           branding_id: string | null
           created_at: string
           created_by: string | null
           id: string
+          label: string | null
+          provider: string
+          rental_id: string | null
         }
         Insert: {
-          api_url: string
+          api_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          label?: string | null
+          provider?: string
+          rental_id?: string | null
         }
         Update: {
-          api_url?: string
+          api_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          label?: string | null
+          provider?: string
+          rental_id?: string | null
         }
         Relationships: [
           {
