@@ -23,7 +23,24 @@ interface AnosimData {
 
 interface PhoneEntry {
   id: string;
-  api_url: string;
+  api_url: string | null;
+  provider: "anosim" | "smsbot";
+  rental_id: string | null;
+}
+
+async function fetchPhoneData(entry: PhoneEntry): Promise<AnosimData> {
+  if (entry.provider === "smsbot") {
+    const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
+      body: { rentalId: entry.rental_id },
+    });
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.functions.invoke("anosim-proxy", {
+    body: { url: entry.api_url },
+  });
+  if (error) throw error;
+  return data;
 }
 
 interface SmsWatchProps {
