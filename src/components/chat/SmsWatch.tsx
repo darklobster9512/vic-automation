@@ -70,17 +70,36 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: entries = [] } = useQuery<PhoneEntry[]>({
+  const { data: anosimEntries = [] } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers")
         .select("id, api_url, provider, rental_id")
+        .eq("provider", "anosim")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as unknown as PhoneEntry[];
     },
   });
+
+  const { data: smsbotEntries = [] } = useQuery<PhoneEntry[]>({
+    queryKey: ["smsbot_rentals"],
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      if (error) throw error;
+      const list = (data as any[]) ?? [];
+      return list.map((r) => ({
+        id: `smsbot-${r.rentalId}`,
+        api_url: null,
+        provider: "smsbot" as const,
+        rental_id: r.rentalId as string,
+      }));
+    },
+  });
+
+  const entries = [...anosimEntries, ...smsbotEntries];
 
   const { data: anosimData, isLoading } = useQuery<AnosimData>({
     queryKey: ["sms-watch", selectedEntry?.id],
