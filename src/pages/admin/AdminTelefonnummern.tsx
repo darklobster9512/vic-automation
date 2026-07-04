@@ -263,27 +263,48 @@ export default function AdminTelefonnummern() {
     try { localStorage.setItem(PROVIDER_STORAGE_KEY, p); } catch { /* ignore */ }
   };
   const [url, setUrl] = useState("");
-  const [rentalId, setRentalId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
   useEffect(() => { setPage(1); }, [activeBrandingId]);
 
-
-  const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
+  const { data: anosimEntries = [], isLoading: anosimLoading } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers", activeBrandingId],
-    enabled: ready,
+    enabled: ready && provider === "anosim",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers" as any)
         .select("*")
         .eq("branding_id", activeBrandingId!)
+        .eq("provider", "anosim")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any;
     },
   });
+
+  const { data: smsbotEntries = [], isLoading: smsbotLoading } = useQuery<PhoneEntry[]>({
+    queryKey: ["smsbot_rentals"],
+    enabled: provider === "smsbot",
+    refetchInterval: 10000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      if (error) throw error;
+      const list = (data as any[]) ?? [];
+      return list.map((r) => ({
+        id: r.rentalId,
+        provider: "smsbot" as const,
+        api_url: null,
+        rental_id: r.rentalId,
+        label: null,
+        created_at: r.startDate ?? new Date().toISOString(),
+      }));
+    },
+  });
+
+  const entries = provider === "smsbot" ? smsbotEntries : anosimEntries;
+  const isLoading = provider === "smsbot" ? smsbotLoading : anosimLoading;
 
   const addMutation = useMutation({
     mutationFn: async (payload: { provider: "anosim" | "smsbot"; api_url: string | null; rental_id: string | null }) => {
