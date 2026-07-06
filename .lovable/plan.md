@@ -1,42 +1,27 @@
-
 ## Ziel
 
-Im `/admin/idents/:id`-Detail den Bereich „Telefonnummer" auf beide Provider erweitern: erst Provider wählen (Anosim / SMSBot), dann Nummer aus einer durchsuchbaren Combobox auswählen.
+Auf `/admin/telefonnummern` werden für **SMSBot**-Nummern aktuell keine SMS angezeigt. Grund: Der List-Endpunkt `GET /rentals` der SMSBot API liefert **nur** die Rentals ohne SMS-Nachrichten – SMS gibt es ausschließlich per `GET /rentals/:id` (laut API-Docs: "Get rental details including SMS messages"). Unser `PhoneRow` benutzt für SMSBot aber `initialData` aus dem Listen-Cache und deaktiviert das Refetch (`refetchInterval: false`), also bleibt `sms` immer leer.
 
-## Änderungen in `src/pages/admin/AdminIdentDetail.tsx`
+Die anderen im Upload genannten Themen (Hero-Preview mobil ausblenden, 3+3+3 Funktions-Cards, "Bereit loszulegen"-Card, 500 €/Monat-Zentrierung) betreffen eine Landing-Page, die es in diesem Projekt nicht gibt – daher hier nicht Teil des Plans.
 
-### 1. Provider-Toggle
-- Neuer State `provider: "anosim" | "smsbot"` (Default: aus `session.phone_api_url` ableiten — startet mit `smsbot://` → smsbot, sonst anosim).
-- Zwei Buttons oben im Telefon-Card (gleiches Muster wie in `AdminTelefonnummern`).
+## Änderungen
 
-### 2. Nummern-Quellen
-- **Anosim**: bestehende Query `["phone_numbers", branding_id]` bleibt (Branding-gefiltert).
-- **SMSBot**: neue Query `["smsbot_rentals"]` via `smsbot-proxy` action `list` (60 s Refetch, staleTime 30 s — teilt Cache mit `SmsWatch`/`AdminTelefonnummern` dank identischem Key). Liefert bereits `number` — kein zusätzlicher Detail-Call nötig.
+### 1. `supabase/functions/smsbot-proxy/index.ts`
+- Der `detail`-Zweig ist bereits vorhanden und ruft `GET /rentals/:id`. Sicherstellen, dass `normRental` alle möglichen SMS-Feldnamen deckt (`sms`, `messages`, `smsMessages`, `data.sms`) – bereits vorhanden, nur zusätzlich `raw?.data?.sms` als Fallback berücksichtigen falls das API die SMS unter `data` verschachtelt.
+- Kleiner Micro-Cache pro `rentalId` (z. B. 4 s), damit paralleles Polling mehrerer offener Rows nicht ins Rate-Limit läuft.
 
-### 3. Combobox mit Suche
-- Bestehendes `Select` ersetzen durch shadcn **Combobox** (`Popover` + `Command` + `CommandInput` + `CommandList`/`CommandItem`).
-- Items zeigen die tatsächliche Rufnummer (aus Cache/`phoneDisplayMap` für Anosim, direkt aus `rental.number` für SMSBot), plus kleine Provider-Badge.
-- `CommandInput` ermöglicht Filtern nach Nummer, Service, Land.
-- Auswahl → `handleAssignPhone(identifier)` wobei:
-  - Anosim-Identifier = `entry.api_url` (unverändert).
-  - SMSBot-Identifier = `smsbot://<rentalId>` (Format schon etabliert, siehe `AdminTelefonnummern`).
+### 2. `src/pages/admin/AdminTelefonnummern.tsx` (`PhoneRow`)
+- Für SMSBot-Rows das Verhalten symmetrisch zu Anosim machen:
+  - `refetchInterval: 5000` **auch** für SMSBot.
+  - `initialData` weiterhin aus dem Listen-Cache (damit die Row sofort Nummer/Service/Status zeigt), aber `staleTime: 0`, damit sofort der Detail-Call für SMS folgt.
+  - `queryFn` ruft für SMSBot immer `smsbot-proxy` mit `{ rentalId }` auf – der `detail`-Response liefert `sms[]`.
+- Ergebnis: Die aufklappbare "Letzte SMS"-Sektion füllt sich innerhalb weniger Sekunden mit den echten Nachrichten und aktualisiert live.
 
-### 4. SMS-Fetch erweitern
-- Aktueller `useEffect` ruft nur `anosim-proxy`. Umbauen:
-  - Wenn `apiUrl.startsWith("smsbot://")` → `smsbot-proxy` mit `{ rentalId }` aufrufen (Response hat identisches `sms`-Schema dank `normRental`).
-  - Sonst wie bisher `anosim-proxy`.
-- Polling-Intervall bleibt 5 s (nur eine ausgewählte Nummer → unkritisch).
+### 3. Verifikation
+- Nach Deploy: eine SMSBot-Nummer öffnen (Row expand), Test-SMS an die Nummer schicken, prüfen dass innerhalb ≤ 5 s die Nachricht erscheint.
+- Netzwerk-Tab: `smsbot-proxy` liefert nun `sms: [...]` mit Einträgen.
 
-### 5. Resolved-Nummer-Badge
-- Für SMSBot direkt aus dem `smsbot_rentals`-Cache lesen; für Anosim wie bisher aus `phoneDisplayMap`.
-
-### 6. Manueller Share-Link-Input
-- Nur noch anzeigen wenn `provider === "anosim"` (SMSBot hat keine manuellen Links, Nummern kommen aus dem Cabinet).
-- „Zum Branding hinzufügen"-Checkbox ebenfalls nur bei Anosim (SMSBot-Nummern sind Konto-weit).
-
-### 7. Cleanup
-- Label ändern von „Telefonnummer (Anosim)" → „Telefonnummer".
-- Keine DB-Migration nötig — `phone_api_url` speichert weiterhin String (`https://anosim…` oder `smsbot://…`), Format ist bereits im System etabliert (siehe `AdminTelefonnummern`-Zuweisungsliste).
-
-## Nicht betroffen
-- SmsWatch-Widget, AdminTelefonnummern, Edge-Functions — bleiben unverändert (sie liefern schon alles, was hier gebraucht wird).
+## Technische Details
+- API-Basis: `https://cabinet.smsbot.cc/api/v1` (Bearer `SMSBOT_API_KEY`, bereits gesetzt).
+- Rate Limit: 300 req/min general → mit 5 s Polling pro offener Row unkritisch; Micro-Cache schützt zusätzlich.
+- Kein DB-Schema-Change, keine RLS-Änderung.
