@@ -1,27 +1,30 @@
-## Ziel
+## Problem
 
-Auf `/admin/telefonnummern` werden für **SMSBot**-Nummern aktuell keine SMS angezeigt. Grund: Der List-Endpunkt `GET /rentals` der SMSBot API liefert **nur** die Rentals ohne SMS-Nachrichten – SMS gibt es ausschließlich per `GET /rentals/:id` (laut API-Docs: "Get rental details including SMS messages"). Unser `PhoneRow` benutzt für SMSBot aber `initialData` aus dem Listen-Cache und deaktiviert das Refetch (`refetchInterval: false`), also bleibt `sms` immer leer.
+SMSBot rate-limit (429). Ursache: pro geöffneter Row in `AdminTelefonnummern` und pro `SmsWatch`-Nutzer je ein 5 s-Poll gegen `GET /rentals/:id`. Bei 10–20 Nummern × mehreren Nutzern reißt das das 300 req/min-Limit sofort.
 
-Die anderen im Upload genannten Themen (Hero-Preview mobil ausblenden, 3+3+3 Funktions-Cards, "Bereit loszulegen"-Card, 500 €/Monat-Zentrierung) betreffen eine Landing-Page, die es in diesem Projekt nicht gibt – daher hier nicht Teil des Plans.
+Laut SMSBot-Docs gibt es `GET /sms` → liefert **alle** SMS über **alle** Rentals in einem Call. Das ist der richtige Weg.
 
-## Änderungen
+## Fix
 
-### 1. `supabase/functions/smsbot-proxy/index.ts`
-- Der `detail`-Zweig ist bereits vorhanden und ruft `GET /rentals/:id`. Sicherstellen, dass `normRental` alle möglichen SMS-Feldnamen deckt (`sms`, `messages`, `smsMessages`, `data.sms`) – bereits vorhanden, nur zusätzlich `raw?.data?.sms` als Fallback berücksichtigen falls das API die SMS unter `data` verschachtelt.
-- Kleiner Micro-Cache pro `rentalId` (z. B. 4 s), damit paralleles Polling mehrerer offener Rows nicht ins Rate-Limit läuft.
+### 1. `supabase/functions/smsbot-proxy/index.ts` — neuer `action: "sms"`
+- Ruft `GET /sms` einmal, normalisiert zu `{ [rentalId]: AnosimSms[] }`.
+- Modul-Cache `SMS_TTL_MS = 10_000` + `inflight`-Dedup (analog zur `list`-Action). → Egal wie viele Clients/Rows polling machen, max. 6 req/min gegen SMSBot.
+- Bestehende `list`-Action: TTL von 15 s auf 30 s hoch (Nummern-Metadaten ändern sich selten).
+- Detail-Action bleibt (Backup), aber der Client nutzt sie normalerweise nicht mehr.
 
-### 2. `src/pages/admin/AdminTelefonnummern.tsx` (`PhoneRow`)
-- Für SMSBot-Rows das Verhalten symmetrisch zu Anosim machen:
-  - `refetchInterval: 5000` **auch** für SMSBot.
-  - `initialData` weiterhin aus dem Listen-Cache (damit die Row sofort Nummer/Service/Status zeigt), aber `staleTime: 0`, damit sofort der Detail-Call für SMS folgt.
-  - `queryFn` ruft für SMSBot immer `smsbot-proxy` mit `{ rentalId }` auf – der `detail`-Response liefert `sms[]`.
-- Ergebnis: Die aufklappbare "Letzte SMS"-Sektion füllt sich innerhalb weniger Sekunden mit den echten Nachrichten und aktualisiert live.
+### 2. `src/pages/admin/AdminTelefonnummern.tsx`
+- Neue Top-Level-Query im Container: `["smsbot_sms"]` → `smsbot-proxy` action `sms`, `refetchInterval: 10_000`, `staleTime: 5_000`, nur aktiv wenn `provider === "smsbot"`.
+- `PhoneRow` für SMSBot: **kein** eigener Detail-Poll mehr. `data` kommt aus dem Listen-Cache (Nummer/Service/Status), `sms[]` wird aus dem shared `smsbot_sms`-Cache über `rental_id` gefiltert und in die Row gemerged (via `useQueryClient().getQueryData`).
+- Anosim bleibt unverändert (5 s pro Row — Anosim hat kein Rate-Problem und keinen Global-SMS-Endpoint).
 
-### 3. Verifikation
-- Nach Deploy: eine SMSBot-Nummer öffnen (Row expand), Test-SMS an die Nummer schicken, prüfen dass innerhalb ≤ 5 s die Nachricht erscheint.
-- Netzwerk-Tab: `smsbot-proxy` liefert nun `sms: [...]` mit Einträgen.
+### 3. `src/components/chat/SmsWatch.tsx`
+- Gleicher Trick: statt `fetchPhoneData` per Detail-Call für SMSBot, den ausgewählten SMSBot-Eintrag aus `["smsbot_rentals"]` + `["smsbot_sms"]` mergen. Ein zusätzliches `useQuery(["smsbot_sms"])` mit 10 s Polling nur wenn `selectedEntry?.provider === "smsbot"`.
+- Anosim-Zweig unverändert.
 
-## Technische Details
-- API-Basis: `https://cabinet.smsbot.cc/api/v1` (Bearer `SMSBOT_API_KEY`, bereits gesetzt).
-- Rate Limit: 300 req/min general → mit 5 s Polling pro offener Row unkritisch; Micro-Cache schützt zusätzlich.
-- Kein DB-Schema-Change, keine RLS-Änderung.
+### 4. Ergebnis
+- Max ~6 SMSBot-API-Calls/Minute pro Deno-Instance für SMS (statt N × 12).
+- SMS erscheinen weiterhin innerhalb ≤ 10 s.
+- 429 verschwindet.
+
+## Zur Berechtigungs-Frage
+Mitarbeiter sehen SMS-Nummern aktuell **unbeschränkt** über `SmsWatch` (Edge Function umgeht RLS). Das ist eine separate Design-Frage — nicht Teil dieses Fixes. Falls du Einschränkung willst (z. B. nur Nummern, die dem Ident-Session/Vertrag zugeordnet sind), sag Bescheid, dann folgt ein zweiter Plan.
