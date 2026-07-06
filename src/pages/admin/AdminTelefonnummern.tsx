@@ -51,28 +51,41 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
   const { toast } = useToast();
   const identifier = entry.provider === "smsbot" ? `smsbot://${entry.rental_id}` : (entry.api_url ?? "");
 
-  const { data, isLoading, isError } = useQuery<AnosimData>({
+  // Shared global SMS cache for SMSBot – one poll per browser regardless of row count.
+  const { data: smsByRental } = useQuery<Record<string, AnosimSms[]>>({
+    queryKey: ["smsbot_sms"],
+    enabled: entry.provider === "smsbot",
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: false,
+    staleTime: 5_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "sms" } });
+      if (error) throw error;
+      return (data as Record<string, AnosimSms[]>) ?? {};
+    },
+  });
+
+  const { data: rawData, isLoading, isError } = useQuery<AnosimData>({
     queryKey: ["phone-data", entry.provider, identifier],
     queryFn: async () => {
-      if (entry.provider === "smsbot") {
-        // SMSBot list endpoint does NOT include SMS messages – always fetch detail.
-        const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
-          body: { rentalId: entry.rental_id },
-        });
-        if (error) throw error;
-        return data;
-      }
       const { data, error } = await supabase.functions.invoke("anosim-proxy", {
         body: { url: entry.api_url },
       });
       if (error) throw error;
       return data;
     },
-    // Poll every 5 s for both providers so incoming SMS appear live.
-    refetchInterval: 5000,
+    enabled: entry.provider === "anosim",
+    refetchInterval: entry.provider === "anosim" ? 5000 : false,
     initialData: entry.provider === "smsbot" ? entry.data : undefined,
-    staleTime: 0,
+    staleTime: entry.provider === "smsbot" ? 60_000 : 0,
   });
+
+  // Merge live SMS from the global cache into SMSBot rows.
+  const data = entry.provider === "smsbot" && rawData
+    ? { ...rawData, sms: smsByRental?.[entry.rental_id ?? ""] ?? rawData.sms ?? [] }
+    : rawData;
+
+
 
 
   const { data: assignments = [] } = useQuery<IdentAssignment[]>({

@@ -29,21 +29,14 @@ interface PhoneEntry {
   data?: AnosimData;
 }
 
-async function fetchPhoneData(entry: PhoneEntry): Promise<AnosimData> {
-  if (entry.provider === "smsbot") {
-    if (entry.data) return entry.data;
-    const { data, error } = await supabase.functions.invoke("smsbot-proxy", {
-      body: { rentalId: entry.rental_id },
-    });
-    if (error) throw error;
-    return data;
-  }
+async function fetchAnosim(entry: PhoneEntry): Promise<AnosimData> {
   const { data, error } = await supabase.functions.invoke("anosim-proxy", {
     body: { url: entry.api_url },
   });
   if (error) throw error;
   return data;
 }
+
 
 
 interface SmsWatchProps {
@@ -115,14 +108,33 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 
   const { data: anosimData, isLoading } = useQuery<AnosimData>({
     queryKey: ["sms-watch", resolvedSelected?.id],
-    queryFn: () => fetchPhoneData(resolvedSelected!),
+    queryFn: () => fetchAnosim(resolvedSelected!),
     enabled: !!resolvedSelected && resolvedSelected.provider === "anosim",
     refetchInterval: 5000,
     initialData: resolvedSelected?.provider === "smsbot" ? resolvedSelected.data : undefined,
   });
 
-  // For smsbot, keep the displayed data in sync with the polled list.
-  const displayData = resolvedSelected?.provider === "smsbot" ? resolvedSelected.data : anosimData;
+  // Shared global SMS cache – one poll per browser for all SMSBot rentals.
+  const { data: smsByRental } = useQuery<Record<string, AnosimSms[]>>({
+    queryKey: ["smsbot_sms"],
+    enabled: resolvedSelected?.provider === "smsbot",
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: false,
+    staleTime: 5_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "sms" } });
+      if (error) throw error;
+      return (data as Record<string, AnosimSms[]>) ?? {};
+    },
+  });
+
+  // For smsbot, merge fresh SMS from global cache into the list-cached rental.
+  const displayData = resolvedSelected?.provider === "smsbot"
+    ? resolvedSelected.data
+      ? { ...resolvedSelected.data, sms: smsByRental?.[resolvedSelected.rental_id ?? ""] ?? resolvedSelected.data.sms ?? [] }
+      : undefined
+    : anosimData;
+
 
 
   const addMutation = useMutation({
@@ -299,9 +311,9 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: PhoneEntry) => void }) {
   const { data, isLoading } = useQuery<AnosimData>({
     queryKey: ["phone-data", entry.provider, entry.provider === "smsbot" ? entry.rental_id : entry.api_url],
-    queryFn: () => fetchPhoneData(entry),
+    queryFn: () => fetchAnosim(entry),
     // SMSBot data already lives in the shared list – skip the extra call.
-    enabled: entry.provider === "anosim" || !entry.data,
+    enabled: entry.provider === "anosim",
     initialData: entry.data,
     staleTime: entry.provider === "smsbot" ? 60_000 : 0,
   });
@@ -321,4 +333,5 @@ function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: Pho
     </button>
   );
 }
+
 

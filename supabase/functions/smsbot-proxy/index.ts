@@ -5,12 +5,15 @@ const corsHeaders = {
 };
 
 const BASE = "https://cabinet.smsbot.cc/api/v1";
-const LIST_TTL_MS = 15_000;
-const DETAIL_TTL_MS = 4_000;
+const LIST_TTL_MS = 30_000;
+const DETAIL_TTL_MS = 8_000;
+const SMS_TTL_MS = 10_000;
 let listCache: { t: number; data: unknown } | null = null;
 let inflight: Promise<Response> | null = null;
 const detailCache = new Map<string, { t: number; data: unknown }>();
 const detailInflight = new Map<string, Promise<unknown>>();
+let smsCache: { t: number; data: unknown } | null = null;
+let smsInflight: Promise<unknown> | null = null;
 
 function mapState(raw: string | undefined | null): string {
   const s = (raw ?? "").toLowerCase();
@@ -114,6 +117,55 @@ Deno.serve(async (req) => {
         inflight = null;
       }
     }
+
+    if (action === "sms") {
+      // Global SMS endpoint – returns all SMS across all rentals in a single call.
+      // Aggressively cached + deduped so N clients polling produce at most
+      // (60 / SMS_TTL_MS) requests per minute against SMSBot.
+      const now = Date.now();
+      if (smsCache && now - smsCache.t < SMS_TTL_MS) {
+        return new Response(JSON.stringify(smsCache.data), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
+        });
+      }
+      if (!smsInflight) {
+        smsInflight = (async () => {
+          const res = await fetch(`${BASE}/sms`, { headers });
+          const text = await res.text();
+          let raw: any;
+          try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
+          if (!res.ok) {
+            const err: any = { __error: true, status: res.status, retryAfter: res.headers.get("retry-after"), body: { error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status } };
+            return err;
+          }
+          const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.sms ?? raw?.items ?? []);
+          const byRental: Record<string, ReturnType<typeof normSms>[]> = {};
+          for (const m of (Array.isArray(arr) ? arr : [])) {
+            const rid = m?.rentalId ?? m?.rental_id ?? m?.rental?.id ?? "";
+            if (!rid) continue;
+            (byRental[rid] ??= []).push(normSms(m));
+          }
+          smsCache = { t: Date.now(), data: byRental };
+          return byRental;
+        })();
+      }
+      try {
+        const result: any = await smsInflight;
+        if (result?.__error) {
+          const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+          if (result.retryAfter) respHeaders["Retry-After"] = result.retryAfter;
+          return new Response(JSON.stringify(result.body), { status: result.status, headers: respHeaders });
+        }
+        return new Response(JSON.stringify(result), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
+        });
+      } finally {
+        smsInflight = null;
+      }
+    }
+
+
 
     // detail
     const rentalId = body?.rentalId;
