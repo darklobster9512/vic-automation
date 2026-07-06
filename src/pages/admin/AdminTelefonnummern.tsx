@@ -72,17 +72,6 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
     refetchInterval: 5000,
     initialData: entry.provider === "smsbot" ? entry.data : undefined,
     staleTime: 0,
-      }
-      const { data, error } = await supabase.functions.invoke("anosim-proxy", {
-        body: { url: entry.api_url },
-      });
-      if (error) throw error;
-      return data;
-    },
-    // Anosim only – SMSBot rows read from the shared list (initialData below).
-    refetchInterval: entry.provider === "smsbot" ? false : 5000,
-    initialData: entry.provider === "smsbot" ? entry.data : undefined,
-    staleTime: entry.provider === "smsbot" ? 60_000 : 0,
   });
 
 
