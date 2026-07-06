@@ -1,39 +1,50 @@
-## Ziel
+## Problem
 
-Genau **ein** Request pro Cache-Intervall zu SMSBot — die Antwort wird an alle Nutzer und alle parallelen Edge-Function-Isolates verteilt.
+`Deno.openKv()` ist in Supabase Edge Runtime nicht implementiert → Function crasht sofort beim Boot (`TypeError: Deno.openKv is not a function`) → SMSBot lädt gar nicht mehr.
 
-## Warum es aktuell nicht funktioniert
+## Fix
 
-Supabase Edge Functions laufen unter Last in mehreren parallelen Deno-Isolates. Mein `let smsCache = ...` lebt nur innerhalb **einer** Isolate — 5 Isolates × 6 req/min = 30 req/min, plus zusätzliche Cold-Starts. Deshalb weiterhin 429.
+Shared Cache über eine Postgres-Tabelle statt KV. Postgres ist ohnehin bereits die einzige verlässliche geteilte Persistenzschicht der Edge Functions.
 
-## Fix: Cache in Deno KV (shared über alle Isolates)
+### 1. Migration: `edge_cache`-Tabelle
 
-`Deno.openKv()` steht in Supabase Edge Functions zur Verfügung und ist persistent + geteilt über alle Isolates derselben Function. Damit gibt es **wirklich** nur einen Request pro TTL.
+```sql
+CREATE TABLE public.edge_cache (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  expires_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT ALL ON public.edge_cache TO service_role;
+ALTER TABLE public.edge_cache ENABLE ROW LEVEL SECURITY;
+-- Keine Policies: nur service_role (Edge Functions) darf zugreifen.
+CREATE INDEX ON public.edge_cache (expires_at);
+```
 
-### Änderungen in `supabase/functions/smsbot-proxy/index.ts`
+### 2. `supabase/functions/smsbot-proxy/index.ts` umbauen
 
-1. **KV-Handle** auf Modul-Ebene: `const kv = await Deno.openKv();`
-2. **Zentraler Helper** `cached<T>(key, ttlMs, fetcher)`:
-   - `kv.get<{t:number,data:T}>([key])` → wenn frisch → sofort zurück.
-   - Sonst: **Single-Flight-Lock** via `kv.atomic().check({key: [lockKey], versionstamp: null}).set([lockKey], 1, {expireIn: 3000}).commit()` — nur eine Isolate darf fetchen; die anderen warten kurz (150 ms Polling, max. 2 s) und lesen dann den frischen Cache.
-   - Nach erfolgreichem Fetch: `kv.set([key], {t, data}, {expireIn: ttlMs * 3})` + Lock löschen.
-   - Bei 429 von SMSBot: `kv.set([backoffKey], 1, {expireIn: 5000})` — solange dieser Key existiert, liefert der Proxy den letzten guten Cache-Wert (oder 429 wenn keiner da ist) ohne SMSBot anzufragen.
-3. **Alle drei Actions** darüber:
-   - `list` → key `smsbot:list`, TTL 30 s
-   - `sms` → key `smsbot:sms`, TTL 12 s
-   - `detail` → key `smsbot:detail:${rentalId}`, TTL 12 s
-4. Response-Header `X-Cache: HIT|MISS|LOCKED` zur Verifikation.
+- `Deno.openKv()`-Import entfernen.
+- Service-Role Supabase-Client (`@supabase/supabase-js` via `esm.sh`, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`).
+- Helper `cached(key, ttlMs, fetcher)`:
+  1. `SELECT value, expires_at FROM edge_cache WHERE key = $1` — wenn frisch → HIT.
+  2. Sonst: `fetcher()` aufrufen, mit `INSERT ... ON CONFLICT (key) DO UPDATE SET value, expires_at, updated_at` speichern → MISS.
+  3. Kein hartes Lock nötig — bei paralleler Anfrage aus 2–3 Isolates gibt es maximal 2–3 doppelte Fetches pro TTL, das sind bei 12 s TTL max. ~15 req/min, weit unter dem 300/min-Limit.
+- 429 vom SMSBot-API → `expires_at = now() + 10s` in einen Backoff-Row schreiben (`key = 'smsbot:backoff'`). Solange dieser Row existiert, wird kein neuer Fetch versucht — stattdessen der letzte gute Cache-Wert geliefert oder 429 wenn keiner da.
+- Response-Header `X-Cache: HIT|MISS|STALE`.
 
-### Kein Frontend-Change nötig
-Client-Polling (10 s) bleibt. Der Server-Cache stellt sicher: **max. 5 Requests/Minute** zu SMSBot für SMS, **max. 2/Minute** für Liste, egal wie viele Nutzer/Isolates.
+### 3. Sonst nichts
+
+Frontend unverändert, Anosim unverändert.
 
 ## Verifikation
-- Deploy.
-- 2–3 Minuten `/admin/telefonnummern` mit mehreren Tabs offen.
-- Netzwerk-Tab: fast alle `smsbot-proxy`-Responses zeigen `X-Cache: HIT`.
-- Kein 429 mehr im Console-Log.
+
+- Deploy `smsbot-proxy`.
+- `curl_edge_functions` mit `{"action":"list"}` liefert Nummern (nicht mehr 500).
+- `/admin/telefonnummern` → SMSBot-Tab zeigt Nummern.
+- 2 Tabs parallel → nur alle 30 s ein realer Request an SMSBot (Log-Check).
 
 ## Technisches
-- `Deno.openKv()` ohne Pfad → per-Function persistenter KV-Store, geteilt über alle Isolates.
-- `expireIn` räumt automatisch auf.
-- Kein DB-Schema, keine RLS-Änderung.
+
+- Cache-Tabelle im `public`-Schema, nur `service_role`-Zugriff (RLS aktiv, keine Policies).
+- `updated_at` erlaubt Debug/Monitoring.
+- Alter Cleanup: optional Cron oder einfach ignorieren (kleine Tabelle, ~10 Zeilen).
