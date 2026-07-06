@@ -311,9 +311,9 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: PhoneEntry) => void }) {
   const { data, isLoading } = useQuery<AnosimData>({
     queryKey: ["phone-data", entry.provider, entry.provider === "smsbot" ? entry.rental_id : entry.api_url],
-    queryFn: () => fetchPhoneData(entry),
+    queryFn: () => fetchAnosim(entry),
     // SMSBot data already lives in the shared list – skip the extra call.
-    enabled: entry.provider === "anosim" || !entry.data,
+    enabled: entry.provider === "anosim",
     initialData: entry.data,
     staleTime: entry.provider === "smsbot" ? 60_000 : 0,
   });
@@ -333,4 +333,5 @@ function PhoneOption({ entry, onSelect }: { entry: PhoneEntry; onSelect: (e: Pho
     </button>
   );
 }
+
 
