@@ -6,8 +6,11 @@ const corsHeaders = {
 
 const BASE = "https://cabinet.smsbot.cc/api/v1";
 const LIST_TTL_MS = 15_000;
+const DETAIL_TTL_MS = 4_000;
 let listCache: { t: number; data: unknown } | null = null;
 let inflight: Promise<Response> | null = null;
+const detailCache = new Map<string, { t: number; data: unknown }>();
+const detailInflight = new Map<string, Promise<unknown>>();
 
 function mapState(raw: string | undefined | null): string {
   const s = (raw ?? "").toLowerCase();
@@ -25,7 +28,7 @@ function normSms(m: any) {
 }
 
 function normRental(r: any) {
-  const smsArr = r?.sms ?? r?.messages ?? r?.smsMessages ?? [];
+  const smsArr = r?.sms ?? r?.messages ?? r?.smsMessages ?? r?.data?.sms ?? r?.data?.messages ?? [];
   const service = Array.isArray(r?.services) && r.services.length > 0
     ? r.services.map((s: any) => s?.name ?? s?.service ?? s).join(", ")
     : (r?.service?.name ?? r?.service ?? r?.detectedService ?? "—");
@@ -119,22 +122,49 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const res = await fetch(`${BASE}/rentals/${encodeURIComponent(rentalId)}`, { headers });
-    const text = await res.text();
-    let raw: any;
-    try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
-    if (!res.ok) {
-      const retryAfter = res.headers.get("retry-after");
-      const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
-      if (retryAfter) respHeaders["Retry-After"] = retryAfter;
-      return new Response(JSON.stringify({ error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status }), {
-        status: res.status, headers: respHeaders,
+
+    const nowD = Date.now();
+    const cached = detailCache.get(rentalId);
+    if (cached && nowD - cached.t < DETAIL_TTL_MS) {
+      return new Response(JSON.stringify(cached.data), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
       });
     }
-    const r = raw?.data ?? raw?.rental ?? raw;
-    return new Response(JSON.stringify(normRental(r)), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+
+    let pending = detailInflight.get(rentalId);
+    if (!pending) {
+      pending = (async () => {
+        const res = await fetch(`${BASE}/rentals/${encodeURIComponent(rentalId)}`, { headers });
+        const text = await res.text();
+        let raw: any;
+        try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
+        if (!res.ok) {
+          const retryAfter = res.headers.get("retry-after");
+          const err: any = { __error: true, status: res.status, retryAfter, body: { error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status } };
+          return err;
+        }
+        const r = raw?.data ?? raw?.rental ?? raw;
+        const normalized = normRental(r);
+        detailCache.set(rentalId, { t: Date.now(), data: normalized });
+        return normalized;
+      })();
+      detailInflight.set(rentalId, pending);
+    }
+
+    try {
+      const result: any = await pending;
+      if (result?.__error) {
+        const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+        if (result.retryAfter) respHeaders["Retry-After"] = result.retryAfter;
+        return new Response(JSON.stringify(result.body), { status: result.status, headers: respHeaders });
+      }
+      return new Response(JSON.stringify(result), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
+      });
+    } finally {
+      detailInflight.delete(rentalId);
+    }
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
