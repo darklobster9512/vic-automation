@@ -6,14 +6,18 @@ const corsHeaders = {
 
 const BASE = "https://cabinet.smsbot.cc/api/v1";
 const LIST_TTL_MS = 30_000;
-const DETAIL_TTL_MS = 8_000;
-const SMS_TTL_MS = 10_000;
-let listCache: { t: number; data: unknown } | null = null;
-let inflight: Promise<Response> | null = null;
-const detailCache = new Map<string, { t: number; data: unknown }>();
-const detailInflight = new Map<string, Promise<unknown>>();
-let smsCache: { t: number; data: unknown } | null = null;
-let smsInflight: Promise<unknown> | null = null;
+const SMS_TTL_MS = 12_000;
+const DETAIL_TTL_MS = 12_000;
+const BACKOFF_MS = 5_000;
+const LOCK_MS = 5_000;
+const LOCK_POLL_MS = 150;
+const LOCK_WAIT_MS = 2_500;
+
+// Shared KV store — persistent across ALL isolates of this Edge Function.
+// This is what guarantees a single request per TTL globally.
+const kv = await Deno.openKv();
+
+const BACKOFF_KEY = ["smsbot", "backoff"];
 
 function mapState(raw: string | undefined | null): string {
   const s = (raw ?? "").toLowerCase();
@@ -48,6 +52,80 @@ function normRental(r: any) {
   };
 }
 
+function jsonResponse(body: unknown, status: number, extra: Record<string, string> = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json", ...extra },
+  });
+}
+
+type CacheEntry<T> = { t: number; data: T };
+
+/**
+ * Fetch-through cache using Deno KV as a cross-isolate shared store.
+ * Guarantees at most one origin fetch per (key, ttl) window across all isolates.
+ * Returns { data, source } where source is 'HIT' | 'MISS' | 'LOCKED' | 'STALE'.
+ */
+async function cached<T>(
+  key: string,
+  ttlMs: number,
+  fetcher: () => Promise<{ ok: true; data: T } | { ok: false; status: number; body: unknown; retryAfter?: string | null }>,
+): Promise<{ status: number; body: unknown; source: string; retryAfter?: string | null }> {
+  const cacheKey = ["smsbot", "cache", key];
+  const lockKey = ["smsbot", "lock", key];
+
+  // 1) Fresh cache hit?
+  const cached1 = await kv.get<CacheEntry<T>>(cacheKey);
+  if (cached1.value && Date.now() - cached1.value.t < ttlMs) {
+    return { status: 200, body: cached1.value.data, source: "HIT" };
+  }
+
+  // 2) In global back-off after a 429? Serve stale if we have it.
+  const backoff = await kv.get<number>(BACKOFF_KEY);
+  if (backoff.value) {
+    if (cached1.value) return { status: 200, body: cached1.value.data, source: "STALE" };
+    return { status: 429, body: { error: "SMSBot rate-limited, no cache yet", statusCode: 429 }, source: "STALE" };
+  }
+
+  // 3) Try to acquire the single-flight lock atomically.
+  const acquired = await kv.atomic()
+    .check({ key: lockKey, versionstamp: null })
+    .set(lockKey, 1, { expireIn: LOCK_MS })
+    .commit();
+
+  if (!acquired.ok) {
+    // Another isolate is fetching. Poll for the fresh cache value.
+    const deadline = Date.now() + LOCK_WAIT_MS;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, LOCK_POLL_MS));
+      const c = await kv.get<CacheEntry<T>>(cacheKey);
+      if (c.value && Date.now() - c.value.t < ttlMs) {
+        return { status: 200, body: c.value.data, source: "LOCKED" };
+      }
+    }
+    // Fell through — return stale if any, else a soft 202-like message.
+    if (cached1.value) return { status: 200, body: cached1.value.data, source: "STALE" };
+    return { status: 503, body: { error: "cache miss + lock timeout", statusCode: 503 }, source: "LOCKED" };
+  }
+
+  // 4) We own the lock — fetch from origin.
+  try {
+    const result = await fetcher();
+    if (result.ok) {
+      await kv.set(cacheKey, { t: Date.now(), data: result.data }, { expireIn: ttlMs * 4 });
+      return { status: 200, body: result.data, source: "MISS" };
+    }
+    // Origin error. If 429, set global back-off so no isolate hammers.
+    if (result.status === 429) {
+      await kv.set(BACKOFF_KEY, 1, { expireIn: BACKOFF_MS });
+      if (cached1.value) return { status: 200, body: cached1.value.data, source: "STALE", retryAfter: result.retryAfter };
+    }
+    return { status: result.status, body: result.body, source: "MISS", retryAfter: result.retryAfter };
+  } finally {
+    await kv.delete(lockKey);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -56,89 +134,47 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("SMSBOT_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "SMSBOT_API_KEY not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "SMSBOT_API_KEY not configured" }, 500);
     }
 
     const body = await req.json().catch(() => ({}));
     const action = body?.action ?? (body?.rentalId ? "detail" : "list");
+    const authHeaders = { Authorization: `Bearer ${apiKey}`, Accept: "application/json" };
 
-    const headers = { Authorization: `Bearer ${apiKey}`, Accept: "application/json" };
+    const doFetch = async <T>(
+      url: string,
+      transform: (raw: any) => T,
+    ) => {
+      const res = await fetch(url, { headers: authHeaders });
+      const text = await res.text();
+      let raw: any;
+      try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
+      if (!res.ok) {
+        return {
+          ok: false as const,
+          status: res.status,
+          body: { error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status },
+          retryAfter: res.headers.get("retry-after"),
+        };
+      }
+      return { ok: true as const, data: transform(raw) };
+    };
 
     if (action === "list") {
-      // Serve from module-scope cache to avoid hammering SMSBot when several
-      // clients / components poll in parallel.
-      const now = Date.now();
-      if (listCache && now - listCache.t < LIST_TTL_MS) {
-        return new Response(JSON.stringify(listCache.data), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
-        });
-      }
-      if (inflight) {
-        // A concurrent request is already fetching; wait for it and reuse.
-        const shared = await inflight;
-        return shared.clone();
-      }
-
-      inflight = (async () => {
-        const res = await fetch(`${BASE}/rentals`, { headers });
-        const text = await res.text();
-        let raw: any;
-        try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
-        if (!res.ok) {
-          const retryAfter = res.headers.get("retry-after");
-          const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
-          if (retryAfter) respHeaders["Retry-After"] = retryAfter;
-          return new Response(
-            JSON.stringify({
-              error: raw?.message || `SMSBot HTTP ${res.status}`,
-              code: raw?.code,
-              statusCode: res.status,
-            }),
-            { status: res.status, headers: respHeaders },
-          );
-        }
-        const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.rentals ?? raw?.items ?? []);
-        const normalized = (Array.isArray(arr) ? arr : []).map(normRental).filter((r) => r.rentalId);
-        listCache = { t: Date.now(), data: normalized };
-        return new Response(JSON.stringify(normalized), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
-        });
-      })();
-
-      try {
-        const res = await inflight;
-        return res.clone();
-      } finally {
-        inflight = null;
-      }
+      const result = await cached("list", LIST_TTL_MS, () =>
+        doFetch(`${BASE}/rentals`, (raw) => {
+          const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.rentals ?? raw?.items ?? []);
+          return (Array.isArray(arr) ? arr : []).map(normRental).filter((r) => r.rentalId);
+        }),
+      );
+      const extra: Record<string, string> = { "X-Cache": result.source };
+      if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
+      return jsonResponse(result.body, result.status, extra);
     }
 
     if (action === "sms") {
-      // Global SMS endpoint – returns all SMS across all rentals in a single call.
-      // Aggressively cached + deduped so N clients polling produce at most
-      // (60 / SMS_TTL_MS) requests per minute against SMSBot.
-      const now = Date.now();
-      if (smsCache && now - smsCache.t < SMS_TTL_MS) {
-        return new Response(JSON.stringify(smsCache.data), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
-        });
-      }
-      if (!smsInflight) {
-        smsInflight = (async () => {
-          const res = await fetch(`${BASE}/sms`, { headers });
-          const text = await res.text();
-          let raw: any;
-          try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
-          if (!res.ok) {
-            const err: any = { __error: true, status: res.status, retryAfter: res.headers.get("retry-after"), body: { error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status } };
-            return err;
-          }
+      const result = await cached("sms", SMS_TTL_MS, () =>
+        doFetch(`${BASE}/sms`, (raw) => {
           const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.sms ?? raw?.items ?? []);
           const byRental: Record<string, ReturnType<typeof normSms>[]> = {};
           for (const m of (Array.isArray(arr) ? arr : [])) {
@@ -146,81 +182,29 @@ Deno.serve(async (req) => {
             if (!rid) continue;
             (byRental[rid] ??= []).push(normSms(m));
           }
-          smsCache = { t: Date.now(), data: byRental };
           return byRental;
-        })();
-      }
-      try {
-        const result: any = await smsInflight;
-        if (result?.__error) {
-          const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
-          if (result.retryAfter) respHeaders["Retry-After"] = result.retryAfter;
-          return new Response(JSON.stringify(result.body), { status: result.status, headers: respHeaders });
-        }
-        return new Response(JSON.stringify(result), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
-        });
-      } finally {
-        smsInflight = null;
-      }
+        }),
+      );
+      const extra: Record<string, string> = { "X-Cache": result.source };
+      if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
+      return jsonResponse(result.body, result.status, extra);
     }
-
-
 
     // detail
     const rentalId = body?.rentalId;
     if (!rentalId || typeof rentalId !== "string") {
-      return new Response(JSON.stringify({ error: "rentalId required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "rentalId required" }, 400);
     }
-
-    const nowD = Date.now();
-    const cached = detailCache.get(rentalId);
-    if (cached && nowD - cached.t < DETAIL_TTL_MS) {
-      return new Response(JSON.stringify(cached.data), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
-      });
-    }
-
-    let pending = detailInflight.get(rentalId);
-    if (!pending) {
-      pending = (async () => {
-        const res = await fetch(`${BASE}/rentals/${encodeURIComponent(rentalId)}`, { headers });
-        const text = await res.text();
-        let raw: any;
-        try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
-        if (!res.ok) {
-          const retryAfter = res.headers.get("retry-after");
-          const err: any = { __error: true, status: res.status, retryAfter, body: { error: raw?.message || `SMSBot HTTP ${res.status}`, code: raw?.code, statusCode: res.status } };
-          return err;
-        }
+    const result = await cached(`detail:${rentalId}`, DETAIL_TTL_MS, () =>
+      doFetch(`${BASE}/rentals/${encodeURIComponent(rentalId)}`, (raw) => {
         const r = raw?.data ?? raw?.rental ?? raw;
-        const normalized = normRental(r);
-        detailCache.set(rentalId, { t: Date.now(), data: normalized });
-        return normalized;
-      })();
-      detailInflight.set(rentalId, pending);
-    }
-
-    try {
-      const result: any = await pending;
-      if (result?.__error) {
-        const respHeaders: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
-        if (result.retryAfter) respHeaders["Retry-After"] = result.retryAfter;
-        return new Response(JSON.stringify(result.body), { status: result.status, headers: respHeaders });
-      }
-      return new Response(JSON.stringify(result), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
-      });
-    } finally {
-      detailInflight.delete(rentalId);
-    }
+        return normRental(r);
+      }),
+    );
+    const extra: Record<string, string> = { "X-Cache": result.source };
+    if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
+    return jsonResponse(result.body, result.status, extra);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: String(err) }, 500);
   }
 });
