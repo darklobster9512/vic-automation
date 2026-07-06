@@ -503,6 +503,27 @@ export type Database = {
           },
         ]
       }
+      edge_cache: {
+        Row: {
+          expires_at: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          expires_at: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          expires_at?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           branding_id: string | null

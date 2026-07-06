@@ -1,3 +1,5 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -8,16 +10,15 @@ const BASE = "https://cabinet.smsbot.cc/api/v1";
 const LIST_TTL_MS = 30_000;
 const SMS_TTL_MS = 12_000;
 const DETAIL_TTL_MS = 12_000;
-const BACKOFF_MS = 5_000;
-const LOCK_MS = 5_000;
-const LOCK_POLL_MS = 150;
-const LOCK_WAIT_MS = 2_500;
+const BACKOFF_MS = 10_000;
 
-// Shared KV store — persistent across ALL isolates of this Edge Function.
-// This is what guarantees a single request per TTL globally.
-const kv = await Deno.openKv();
+const BACKOFF_KEY = "smsbot:backoff";
 
-const BACKOFF_KEY = ["smsbot", "backoff"];
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false } },
+);
 
 function mapState(raw: string | undefined | null): string {
   const s = (raw ?? "").toLowerCase();
@@ -59,71 +60,59 @@ function jsonResponse(body: unknown, status: number, extra: Record<string, strin
   });
 }
 
-type CacheEntry<T> = { t: number; data: T };
+async function cacheGet(key: string): Promise<{ value: any; expired: boolean } | null> {
+  const { data, error } = await supabase
+    .from("edge_cache")
+    .select("value, expires_at")
+    .eq("key", key)
+    .maybeSingle();
+  if (error || !data) return null;
+  const expired = new Date(data.expires_at).getTime() < Date.now();
+  return { value: data.value, expired };
+}
+
+async function cacheSet(key: string, value: unknown, ttlMs: number) {
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  await supabase
+    .from("edge_cache")
+    .upsert({ key, value: value as any, expires_at: expiresAt, updated_at: new Date().toISOString() });
+}
 
 /**
- * Fetch-through cache using Deno KV as a cross-isolate shared store.
- * Guarantees at most one origin fetch per (key, ttl) window across all isolates.
- * Returns { data, source } where source is 'HIT' | 'MISS' | 'LOCKED' | 'STALE'.
+ * Fetch-through cache using Postgres as shared cross-isolate store.
+ * Returns { status, body, source: 'HIT'|'MISS'|'STALE' }.
  */
 async function cached<T>(
   key: string,
   ttlMs: number,
   fetcher: () => Promise<{ ok: true; data: T } | { ok: false; status: number; body: unknown; retryAfter?: string | null }>,
 ): Promise<{ status: number; body: unknown; source: string; retryAfter?: string | null }> {
-  const cacheKey = ["smsbot", "cache", key];
-  const lockKey = ["smsbot", "lock", key];
+  const cacheKey = `smsbot:${key}`;
 
   // 1) Fresh cache hit?
-  const cached1 = await kv.get<CacheEntry<T>>(cacheKey);
-  if (cached1.value && Date.now() - cached1.value.t < ttlMs) {
-    return { status: 200, body: cached1.value.data, source: "HIT" };
+  const cached1 = await cacheGet(cacheKey);
+  if (cached1 && !cached1.expired) {
+    return { status: 200, body: cached1.value, source: "HIT" };
   }
 
-  // 2) In global back-off after a 429? Serve stale if we have it.
-  const backoff = await kv.get<number>(BACKOFF_KEY);
-  if (backoff.value) {
-    if (cached1.value) return { status: 200, body: cached1.value.data, source: "STALE" };
+  // 2) Global back-off after 429?
+  const backoff = await cacheGet(BACKOFF_KEY);
+  if (backoff && !backoff.expired) {
+    if (cached1) return { status: 200, body: cached1.value, source: "STALE" };
     return { status: 429, body: { error: "SMSBot rate-limited, no cache yet", statusCode: 429 }, source: "STALE" };
   }
 
-  // 3) Try to acquire the single-flight lock atomically.
-  const acquired = await kv.atomic()
-    .check({ key: lockKey, versionstamp: null })
-    .set(lockKey, 1, { expireIn: LOCK_MS })
-    .commit();
-
-  if (!acquired.ok) {
-    // Another isolate is fetching. Poll for the fresh cache value.
-    const deadline = Date.now() + LOCK_WAIT_MS;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, LOCK_POLL_MS));
-      const c = await kv.get<CacheEntry<T>>(cacheKey);
-      if (c.value && Date.now() - c.value.t < ttlMs) {
-        return { status: 200, body: c.value.data, source: "LOCKED" };
-      }
-    }
-    // Fell through — return stale if any, else a soft 202-like message.
-    if (cached1.value) return { status: 200, body: cached1.value.data, source: "STALE" };
-    return { status: 503, body: { error: "cache miss + lock timeout", statusCode: 503 }, source: "LOCKED" };
+  // 3) Fetch from origin.
+  const result = await fetcher();
+  if (result.ok) {
+    await cacheSet(cacheKey, result.data, ttlMs);
+    return { status: 200, body: result.data, source: "MISS" };
   }
-
-  // 4) We own the lock — fetch from origin.
-  try {
-    const result = await fetcher();
-    if (result.ok) {
-      await kv.set(cacheKey, { t: Date.now(), data: result.data }, { expireIn: ttlMs * 4 });
-      return { status: 200, body: result.data, source: "MISS" };
-    }
-    // Origin error. If 429, set global back-off so no isolate hammers.
-    if (result.status === 429) {
-      await kv.set(BACKOFF_KEY, 1, { expireIn: BACKOFF_MS });
-      if (cached1.value) return { status: 200, body: cached1.value.data, source: "STALE", retryAfter: result.retryAfter };
-    }
-    return { status: result.status, body: result.body, source: "MISS", retryAfter: result.retryAfter };
-  } finally {
-    await kv.delete(lockKey);
+  if (result.status === 429) {
+    await cacheSet(BACKOFF_KEY, { at: Date.now() }, BACKOFF_MS);
+    if (cached1) return { status: 200, body: cached1.value, source: "STALE", retryAfter: result.retryAfter };
   }
+  return { status: result.status, body: result.body, source: "MISS", retryAfter: result.retryAfter };
 }
 
 Deno.serve(async (req) => {
