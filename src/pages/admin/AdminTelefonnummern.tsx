@@ -65,7 +65,7 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
     },
   });
 
-  const { data, isLoading, isError } = useQuery<AnosimData>({
+  const { data: rawData, isLoading, isError } = useQuery<AnosimData>({
     queryKey: ["phone-data", entry.provider, identifier],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("anosim-proxy", {
@@ -81,9 +81,10 @@ function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete
   });
 
   // Merge live SMS from the global cache into SMSBot rows.
-  const mergedData = entry.provider === "smsbot" && data
-    ? { ...data, sms: smsByRental?.[entry.rental_id ?? ""] ?? data.sms ?? [] }
-    : data;
+  const data = entry.provider === "smsbot" && rawData
+    ? { ...rawData, sms: smsByRental?.[entry.rental_id ?? ""] ?? rawData.sms ?? [] }
+    : rawData;
+
 
 
 
