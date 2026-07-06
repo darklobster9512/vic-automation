@@ -28,10 +28,12 @@ function mapState(raw: string | undefined | null): string {
 }
 
 function normSms(m: any) {
+  const svc = typeof m?.service === "object" ? (m.service?.name ?? null) : (m?.service ?? null);
   return {
-    messageSender: m.sender ?? m.detectedService ?? m.from ?? "Unknown",
-    messageDate: m.receivedAt ?? m.createdAt ?? m.date ?? new Date().toISOString(),
-    messageText: m.message ?? m.text ?? m.body ?? "",
+    messageSender:
+      m?.sender ?? m?.detectedService ?? svc ?? m?.from ?? m?.originator ?? "Unknown",
+    messageDate: m?.receivedAt ?? m?.createdAt ?? m?.date ?? new Date().toISOString(),
+    messageText: m?.message ?? m?.text ?? m?.body ?? "",
   };
 }
 
