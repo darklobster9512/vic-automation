@@ -28,7 +28,7 @@ function normSms(m: any) {
 }
 
 function normRental(r: any) {
-  const smsArr = r?.sms ?? r?.messages ?? r?.smsMessages ?? [];
+  const smsArr = r?.sms ?? r?.messages ?? r?.smsMessages ?? r?.data?.sms ?? r?.data?.messages ?? [];
   const service = Array.isArray(r?.services) && r.services.length > 0
     ? r.services.map((s: any) => s?.name ?? s?.service ?? s).join(", ")
     : (r?.service?.name ?? r?.service ?? r?.detectedService ?? "—");
