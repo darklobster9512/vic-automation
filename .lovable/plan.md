@@ -1,30 +1,39 @@
-## Problem
+## Ziel
 
-SMSBot rate-limit (429). Ursache: pro geöffneter Row in `AdminTelefonnummern` und pro `SmsWatch`-Nutzer je ein 5 s-Poll gegen `GET /rentals/:id`. Bei 10–20 Nummern × mehreren Nutzern reißt das das 300 req/min-Limit sofort.
+Genau **ein** Request pro Cache-Intervall zu SMSBot — die Antwort wird an alle Nutzer und alle parallelen Edge-Function-Isolates verteilt.
 
-Laut SMSBot-Docs gibt es `GET /sms` → liefert **alle** SMS über **alle** Rentals in einem Call. Das ist der richtige Weg.
+## Warum es aktuell nicht funktioniert
 
-## Fix
+Supabase Edge Functions laufen unter Last in mehreren parallelen Deno-Isolates. Mein `let smsCache = ...` lebt nur innerhalb **einer** Isolate — 5 Isolates × 6 req/min = 30 req/min, plus zusätzliche Cold-Starts. Deshalb weiterhin 429.
 
-### 1. `supabase/functions/smsbot-proxy/index.ts` — neuer `action: "sms"`
-- Ruft `GET /sms` einmal, normalisiert zu `{ [rentalId]: AnosimSms[] }`.
-- Modul-Cache `SMS_TTL_MS = 10_000` + `inflight`-Dedup (analog zur `list`-Action). → Egal wie viele Clients/Rows polling machen, max. 6 req/min gegen SMSBot.
-- Bestehende `list`-Action: TTL von 15 s auf 30 s hoch (Nummern-Metadaten ändern sich selten).
-- Detail-Action bleibt (Backup), aber der Client nutzt sie normalerweise nicht mehr.
+## Fix: Cache in Deno KV (shared über alle Isolates)
 
-### 2. `src/pages/admin/AdminTelefonnummern.tsx`
-- Neue Top-Level-Query im Container: `["smsbot_sms"]` → `smsbot-proxy` action `sms`, `refetchInterval: 10_000`, `staleTime: 5_000`, nur aktiv wenn `provider === "smsbot"`.
-- `PhoneRow` für SMSBot: **kein** eigener Detail-Poll mehr. `data` kommt aus dem Listen-Cache (Nummer/Service/Status), `sms[]` wird aus dem shared `smsbot_sms`-Cache über `rental_id` gefiltert und in die Row gemerged (via `useQueryClient().getQueryData`).
-- Anosim bleibt unverändert (5 s pro Row — Anosim hat kein Rate-Problem und keinen Global-SMS-Endpoint).
+`Deno.openKv()` steht in Supabase Edge Functions zur Verfügung und ist persistent + geteilt über alle Isolates derselben Function. Damit gibt es **wirklich** nur einen Request pro TTL.
 
-### 3. `src/components/chat/SmsWatch.tsx`
-- Gleicher Trick: statt `fetchPhoneData` per Detail-Call für SMSBot, den ausgewählten SMSBot-Eintrag aus `["smsbot_rentals"]` + `["smsbot_sms"]` mergen. Ein zusätzliches `useQuery(["smsbot_sms"])` mit 10 s Polling nur wenn `selectedEntry?.provider === "smsbot"`.
-- Anosim-Zweig unverändert.
+### Änderungen in `supabase/functions/smsbot-proxy/index.ts`
 
-### 4. Ergebnis
-- Max ~6 SMSBot-API-Calls/Minute pro Deno-Instance für SMS (statt N × 12).
-- SMS erscheinen weiterhin innerhalb ≤ 10 s.
-- 429 verschwindet.
+1. **KV-Handle** auf Modul-Ebene: `const kv = await Deno.openKv();`
+2. **Zentraler Helper** `cached<T>(key, ttlMs, fetcher)`:
+   - `kv.get<{t:number,data:T}>([key])` → wenn frisch → sofort zurück.
+   - Sonst: **Single-Flight-Lock** via `kv.atomic().check({key: [lockKey], versionstamp: null}).set([lockKey], 1, {expireIn: 3000}).commit()` — nur eine Isolate darf fetchen; die anderen warten kurz (150 ms Polling, max. 2 s) und lesen dann den frischen Cache.
+   - Nach erfolgreichem Fetch: `kv.set([key], {t, data}, {expireIn: ttlMs * 3})` + Lock löschen.
+   - Bei 429 von SMSBot: `kv.set([backoffKey], 1, {expireIn: 5000})` — solange dieser Key existiert, liefert der Proxy den letzten guten Cache-Wert (oder 429 wenn keiner da ist) ohne SMSBot anzufragen.
+3. **Alle drei Actions** darüber:
+   - `list` → key `smsbot:list`, TTL 30 s
+   - `sms` → key `smsbot:sms`, TTL 12 s
+   - `detail` → key `smsbot:detail:${rentalId}`, TTL 12 s
+4. Response-Header `X-Cache: HIT|MISS|LOCKED` zur Verifikation.
 
-## Zur Berechtigungs-Frage
-Mitarbeiter sehen SMS-Nummern aktuell **unbeschränkt** über `SmsWatch` (Edge Function umgeht RLS). Das ist eine separate Design-Frage — nicht Teil dieses Fixes. Falls du Einschränkung willst (z. B. nur Nummern, die dem Ident-Session/Vertrag zugeordnet sind), sag Bescheid, dann folgt ein zweiter Plan.
+### Kein Frontend-Change nötig
+Client-Polling (10 s) bleibt. Der Server-Cache stellt sicher: **max. 5 Requests/Minute** zu SMSBot für SMS, **max. 2/Minute** für Liste, egal wie viele Nutzer/Isolates.
+
+## Verifikation
+- Deploy.
+- 2–3 Minuten `/admin/telefonnummern` mit mehreren Tabs offen.
+- Netzwerk-Tab: fast alle `smsbot-proxy`-Responses zeigen `X-Cache: HIT`.
+- Kein 429 mehr im Console-Log.
+
+## Technisches
+- `Deno.openKv()` ohne Pfad → per-Function persistenter KV-Store, geteilt über alle Isolates.
+- `expireIn` räumt automatisch auf.
+- Kein DB-Schema, keine RLS-Änderung.
