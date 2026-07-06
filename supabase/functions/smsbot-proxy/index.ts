@@ -28,10 +28,12 @@ function mapState(raw: string | undefined | null): string {
 }
 
 function normSms(m: any) {
+  const svc = typeof m?.service === "object" ? (m.service?.name ?? null) : (m?.service ?? null);
   return {
-    messageSender: m.sender ?? m.detectedService ?? m.from ?? "Unknown",
-    messageDate: m.receivedAt ?? m.createdAt ?? m.date ?? new Date().toISOString(),
-    messageText: m.message ?? m.text ?? m.body ?? "",
+    messageSender:
+      m?.sender ?? m?.detectedService ?? svc ?? m?.from ?? m?.originator ?? "Unknown",
+    messageDate: m?.receivedAt ?? m?.createdAt ?? m?.date ?? new Date().toISOString(),
+    messageText: m?.message ?? m?.text ?? m?.body ?? "",
   };
 }
 
@@ -136,9 +138,6 @@ Deno.serve(async (req) => {
     ) => {
       const res = await fetch(url, { headers: authHeaders });
       const text = await res.text();
-      if (url.endsWith("/sms")) {
-        console.log("SMSBOT /sms RAW:", text.slice(0, 4000));
-      }
       let raw: any;
       try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
       if (!res.ok) {
