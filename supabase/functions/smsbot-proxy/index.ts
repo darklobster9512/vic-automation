@@ -136,6 +136,9 @@ Deno.serve(async (req) => {
     ) => {
       const res = await fetch(url, { headers: authHeaders });
       const text = await res.text();
+      if (url.endsWith("/sms")) {
+        console.log("SMSBOT /sms RAW:", text.slice(0, 4000));
+      }
       let raw: any;
       try { raw = JSON.parse(text); } catch { raw = { raw: text }; }
       if (!res.ok) {
