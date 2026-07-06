@@ -5,12 +5,15 @@ const corsHeaders = {
 };
 
 const BASE = "https://cabinet.smsbot.cc/api/v1";
-const LIST_TTL_MS = 15_000;
-const DETAIL_TTL_MS = 4_000;
+const LIST_TTL_MS = 30_000;
+const DETAIL_TTL_MS = 8_000;
+const SMS_TTL_MS = 10_000;
 let listCache: { t: number; data: unknown } | null = null;
 let inflight: Promise<Response> | null = null;
 const detailCache = new Map<string, { t: number; data: unknown }>();
 const detailInflight = new Map<string, Promise<unknown>>();
+let smsCache: { t: number; data: unknown } | null = null;
+let smsInflight: Promise<unknown> | null = null;
 
 function mapState(raw: string | undefined | null): string {
   const s = (raw ?? "").toLowerCase();
