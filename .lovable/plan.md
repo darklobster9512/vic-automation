@@ -1,30 +1,26 @@
-## Vorgehen
+## Änderungen in `src/components/admin/AssignmentDialog.tsx`
 
-Doku (https://smsbot.cc/en/api-docs) dokumentiert nur den **Webhook-Payload** (`sender`, `detectedService`, `message`, `receivedAt`, …). Der List-Endpoint `GET /sms` ist nicht mit Beispiel-Response gezeigt. Wir probieren `sender`/`detectedService` bereits — trotzdem "Unknown". Deshalb einmal loggen und mappen.
+### 1. "Alle auswählen"-Button je Tab
+Über jeder Liste (Offen / Zugewiesen / Testaufträge) einen kleinen Button hinzufügen:
+- Wählt alle aktuell im Tab sichtbaren (nach Suche gefilterten) Mitarbeiter aus.
+- Falls bereits alle ausgewählt sind, wird der Button zu "Alle abwählen" und entfernt die Auswahl der sichtbaren Einträge.
+- Wirkt nur auf den aktiven Tab, überschreibt keine anderen Tabs.
 
-## Schritte
+### 2. Neuer Tab "Testaufträge"
+Zusätzlich zu "Offen" und "Zugewiesen" ein dritter Tab (nur bei `mode="order"`):
+- Zeigt alle Mitarbeiter, die genau **2 zugewiesene Aufträge** haben (`assignmentCounts[id] === 2`).
+- Ausgeschlossen: bereits diesem Auftrag zugewiesene (die bleiben im "Zugewiesen"-Tab).
+- Diese Mitarbeiter werden aus dem "Offen"-Tab entfernt (Filter: `assignmentCounts[id] !== 2`).
+- Tab-Header zeigt Anzahl: `Testaufträge (X)`.
 
-### 1. Temporäres Roh-Logging in `supabase/functions/smsbot-proxy/index.ts`
+### Logik zur Filterung
 
-Im `doFetch` einen einmaligen Log für `/sms`:
-
-```ts
-if (url.endsWith("/sms")) {
-  console.log("SMSBOT /sms RAW:", text.slice(0, 4000));
-}
+```text
+openItems      = filteredItems.filter(i => !existingIds.has(i.id) && (counts[i.id] ?? 0) !== 2)
+testItems      = filteredItems.filter(i => !existingIds.has(i.id) && (counts[i.id] ?? 0) === 2)
+assignedItems  = filteredItems.filter(i =>  existingIds.has(i.id))
 ```
 
-### 2. Deploy + Cache leeren + Call auslösen
+Damit sind Testauftrags-Mitarbeiter klar getrennt und werden nicht im Offen-Tab doppelt angezeigt.
 
-- `smsbot-proxy` redeployen
-- `DELETE FROM edge_cache WHERE key = 'smsbot:sms'`
-- `curl_edge_functions {"action":"sms"}`
-- `edge_function_logs smsbot-proxy` lesen → tatsächliche Feldnamen
-
-### 3. `normSms` auf die realen Feldnamen anpassen
-
-Erwartete Kandidaten laut Doku: `sender`, `detectedService`, `extractedCode`, `message`, `receivedAt`. Falls die List-Route stattdessen `sms.sender` oder verschachteltes `service.name` liefert, entsprechend.
-
-### 4. Log wieder entfernen, redeploy
-
-Frontend unverändert.
+Keine weiteren Änderungen an anderen Dateien nötig — `assignmentCounts` wird bereits im Dialog geladen.
