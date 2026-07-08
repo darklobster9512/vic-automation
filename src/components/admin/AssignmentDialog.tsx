@@ -337,11 +337,10 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 return (
                   <div className="mt-2">
                     {list.length > 0 && (
-                      <div className="flex justify-end mb-2">
-                        <Button variant="outline" size="sm" onClick={toggleAll}>
-                          {allSelected ? "Alle abwählen" : "Alle auswählen"} ({list.length})
-                        </Button>
-                      </div>
+                      <label className="flex items-center gap-2 px-1 py-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none">
+                        <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                        <span>Alle auswählen ({list.length})</span>
+                      </label>
                     )}
                     <div className="rounded-lg border">
                       <ScrollArea className={list.length > 5 ? "h-[340px]" : ""}>
@@ -371,20 +370,21 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 <Tabs defaultValue="open" className="mt-2">
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="open">Offen ({openItems.length})</TabsTrigger>
-                    <TabsTrigger value="test">Testaufträge ({testItems.length})</TabsTrigger>
                     <TabsTrigger value="assigned">Zugewiesen ({assignedItems.length})</TabsTrigger>
+                    <TabsTrigger value="test">Testaufträge ({testItems.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="open" className="mt-0">
                     {renderList(openItems, search ? `Keine Ergebnisse für „${search}"` : "Alle Mitarbeiter bereits zugewiesen")}
                   </TabsContent>
-                  <TabsContent value="test" className="mt-0">
-                    {renderList(testItems, search ? `Keine Ergebnisse für „${search}"` : "Keine Mitarbeiter mit genau 2 Aufträgen")}
-                  </TabsContent>
                   <TabsContent value="assigned" className="mt-0">
                     {renderList(assignedItems, search ? `Keine Ergebnisse für „${search}"` : "Noch keine Zuweisungen für diesen Auftrag")}
                   </TabsContent>
+                  <TabsContent value="test" className="mt-0">
+                    {renderList(testItems, search ? `Keine Ergebnisse für „${search}"` : "Keine Mitarbeiter mit genau 2 Aufträgen")}
+                  </TabsContent>
                 </Tabs>
               );
+
 
             })()}
           </>
