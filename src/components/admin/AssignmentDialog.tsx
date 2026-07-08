@@ -320,41 +320,72 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 );
               };
 
-              const renderList = (list: typeof filteredItems, emptyMsg: string) => (
-                <div className="rounded-lg border mt-2">
-                  <ScrollArea className={list.length > 5 ? "h-[340px]" : ""}>
-                    <div className="space-y-2 p-2">
-                      {list.length === 0 ? (
-                        <div className="py-6 text-center text-sm text-muted-foreground">{emptyMsg}</div>
-                      ) : (
-                        list.map(renderRow)
-                      )}
+              const renderList = (list: typeof filteredItems, emptyMsg: string) => {
+                const visibleIds = list.map((i) => i.id);
+                const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+                const toggleAll = () => {
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (allSelected) {
+                      visibleIds.forEach((id) => next.delete(id));
+                    } else {
+                      visibleIds.forEach((id) => next.add(id));
+                    }
+                    return next;
+                  });
+                };
+                return (
+                  <div className="mt-2">
+                    {list.length > 0 && (
+                      <div className="flex justify-end mb-2">
+                        <Button variant="outline" size="sm" onClick={toggleAll}>
+                          {allSelected ? "Alle abwählen" : "Alle auswählen"} ({list.length})
+                        </Button>
+                      </div>
+                    )}
+                    <div className="rounded-lg border">
+                      <ScrollArea className={list.length > 5 ? "h-[340px]" : ""}>
+                        <div className="space-y-2 p-2">
+                          {list.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">{emptyMsg}</div>
+                          ) : (
+                            list.map(renderRow)
+                          )}
+                        </div>
+                      </ScrollArea>
                     </div>
-                  </ScrollArea>
-                </div>
-              );
+                  </div>
+                );
+              };
 
               if (mode !== "order") {
                 return renderList(filteredItems, search ? `Keine Ergebnisse für „${search}"` : "Keine Einträge");
               }
 
-              const openItems = filteredItems.filter((i) => !existingIds.has(i.id));
+              const counts = assignmentCounts ?? {};
+              const openItems = filteredItems.filter((i) => !existingIds.has(i.id) && (counts[i.id] ?? 0) !== 2);
+              const testItems = filteredItems.filter((i) => !existingIds.has(i.id) && (counts[i.id] ?? 0) === 2);
               const assignedItems = filteredItems.filter((i) => existingIds.has(i.id));
 
               return (
                 <Tabs defaultValue="open" className="mt-2">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="open">Offen ({openItems.length})</TabsTrigger>
+                    <TabsTrigger value="test">Testaufträge ({testItems.length})</TabsTrigger>
                     <TabsTrigger value="assigned">Zugewiesen ({assignedItems.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="open" className="mt-0">
                     {renderList(openItems, search ? `Keine Ergebnisse für „${search}"` : "Alle Mitarbeiter bereits zugewiesen")}
+                  </TabsContent>
+                  <TabsContent value="test" className="mt-0">
+                    {renderList(testItems, search ? `Keine Ergebnisse für „${search}"` : "Keine Mitarbeiter mit genau 2 Aufträgen")}
                   </TabsContent>
                   <TabsContent value="assigned" className="mt-0">
                     {renderList(assignedItems, search ? `Keine Ergebnisse für „${search}"` : "Noch keine Zuweisungen für diesen Auftrag")}
                   </TabsContent>
                 </Tabs>
               );
+
             })()}
           </>
         )}
