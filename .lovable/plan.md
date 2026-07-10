@@ -1,20 +1,21 @@
-## Ursache
+## 1. Suchleiste in `/admin/auftraege`
 
-In `src/pages/mitarbeiter/AuftragDetails.tsx` (SMS-Fetch für Ident-Session) wird **immer** die Edge Function `anosim-proxy` mit `body: { url: phone_api_url }` aufgerufen — egal welcher Provider hinterlegt ist. Wenn der Admin eine SMSBot-Nummer zugewiesen hat, ist `phone_api_url = "smsbot://<rentalId>"`. `anosim-proxy` kennt dieses Schema nicht → liefert weder `sms` noch `number`, deshalb bleibt die SMS-Liste im Mitarbeiter-Panel leer.
+In `src/pages/admin/AdminAuftraege.tsx` ein `Input` mit Search-Icon oberhalb der Karten-Liste einfügen (unter dem Header). Client-seitiges Filtern der `orders`-Liste (case-insensitive) über `title`, `description` und `order_type`/`typeLabel`. Kein Query-Change, nur ein zusätzlicher `useState<string>` + `.filter()` vor dem `.map()`.
 
-Im Admin (`AdminIdentDetail.tsx`) wird korrekt anhand `startsWith("smsbot://")` zwischen `smsbot-proxy` und `anosim-proxy` unterschieden — deshalb funktioniert es dort.
+## 2. Zusatz-Buttons „Alle auswählen mit …h" im Zuweisungs-Popup (nur Tab „Offen")
 
-## Fix
+In `src/components/admin/AssignmentDialog.tsx`:
 
-In `src/pages/mitarbeiter/AuftragDetails.tsx` beide betroffenen Effects (SMS-Fetch + Nummern-Auflösung) so anpassen, dass sie dieselbe Provider-Erkennung wie im Admin nutzen:
+- `renderList` bekommt einen optionalen Parameter `showHourFilters?: boolean`.
+- Nur der Aufruf für den Tab „Offen" setzt `showHourFilters={true}`.
+- Wenn aktiv, wird neben der bestehenden „Alle auswählen"-Checkbox eine kleine Button-Reihe gerendert:
+  - `Alle mit ≥10h` — wählt alle sichtbaren Items aus, deren aus `templateTitle` per Regex `/(\d+)\s*Stunden/i` geparste Stundenzahl `>= 10` ist.
+  - `Alle mit ≥20h` — analog `>= 20`.
+- Klick setzt zusätzlich zur bestehenden Auswahl (union), analog zur bisherigen Toggle-Logik. Items ohne parsbare Stundenzahl werden ignoriert.
+- Styling: `Button variant="outline" size="sm"` in einer Flex-Row rechts neben dem „Alle auswählen"-Label.
 
-- Wenn `phone_api_url.startsWith("smsbot://")` → `smsbot-proxy` aufrufen mit `body: { rentalId: phone_api_url.slice("smsbot://".length) }` und die Antwort (`sms`, `number`) analog verwenden.
-- Sonst weiter `anosim-proxy` mit `{ url }`.
+## Technisch
 
-Kein weiterer Umbau nötig (kein neuer State, kein UI-Change). Countdown-Logik bleibt identisch.
-
-## Nicht enthalten
-
-- Keine Änderung an `anosim-proxy` / `smsbot-proxy` selbst.
-- Keine Änderung an Admin-Seiten oder `SmsWatch`.
-- Keine RLS-/Berechtigungsänderung.
+- Stundenparser identisch zur bestehenden Anzeige (Zeile 304): `item.templateTitle.match(/(\d+)\s*Stunden/i)`.
+- Keine Änderungen an DB, RLS, Datenmodell oder anderen Tabs.
+- Keine Änderung am „Testaufträge"- oder „Zugewiesen"-Tab.
