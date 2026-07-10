@@ -7,7 +7,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip, Copy } from "lucide-react";
+import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip, Copy, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useState } from "react";
