@@ -229,12 +229,19 @@ const AuftragDetails = () => {
       return;
     }
 
+    const apiUrl = identSession.phone_api_url;
+    const isSmsbot = apiUrl.startsWith("smsbot://");
+
     const fetchSms = async () => {
       setSmsLoading(true);
       try {
-        const { data } = await supabase.functions.invoke("anosim-proxy", {
-          body: { url: identSession.phone_api_url },
-        });
+        const { data } = isSmsbot
+          ? await supabase.functions.invoke("smsbot-proxy", {
+              body: { rentalId: apiUrl.slice("smsbot://".length) },
+            })
+          : await supabase.functions.invoke("anosim-proxy", {
+              body: { url: apiUrl },
+            });
         if (data?.sms) {
           const cutoff = new Date(identSession.updated_at).getTime();
           const sorted = [...data.sms]
@@ -262,16 +269,23 @@ const AuftragDetails = () => {
       setResolvedPhoneNumber(null);
       return;
     }
+    const apiUrl = identSession.phone_api_url;
+    const isSmsbot = apiUrl.startsWith("smsbot://");
     const resolve = async () => {
       try {
-        const { data } = await supabase.functions.invoke("anosim-proxy", {
-          body: { url: identSession.phone_api_url },
-        });
+        const { data } = isSmsbot
+          ? await supabase.functions.invoke("smsbot-proxy", {
+              body: { rentalId: apiUrl.slice("smsbot://".length) },
+            })
+          : await supabase.functions.invoke("anosim-proxy", {
+              body: { url: apiUrl },
+            });
         if (data?.number) setResolvedPhoneNumber(data.number);
       } catch {}
     };
     resolve();
   }, [identSession?.phone_api_url]);
+
 
 
   // 1-second countdown timer for SMS refresh
