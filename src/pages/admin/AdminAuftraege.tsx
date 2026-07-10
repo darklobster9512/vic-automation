@@ -7,7 +7,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip, Copy } from "lucide-react";
+import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip, Copy, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -27,6 +29,8 @@ export default function AdminAuftraege() {
   const navigate = useNavigate();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [assignOrder, setAssignOrder] = useState<any>(null);
+  const [search, setSearch] = useState("");
+
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders", activeBrandingId],
@@ -90,7 +94,27 @@ export default function AdminAuftraege() {
         </Button>
       </div>
 
-      {isLoading ? (
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Aufträge suchen..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {(() => {
+        const q = search.trim().toLowerCase();
+        const filteredOrders = !q ? (orders ?? []) : (orders ?? []).filter((o: any) => {
+          const typeStr = (typeLabel[o.order_type] || o.order_type || "").toLowerCase();
+          return (
+            (o.title || "").toLowerCase().includes(q) ||
+            (o.description || "").toLowerCase().includes(q) ||
+            typeStr.includes(q)
+          );
+        });
+        return isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Laden...</div>
       ) : !orders?.length ? (
         <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl text-muted-foreground gap-3">
@@ -100,10 +124,16 @@ export default function AdminAuftraege() {
             <Plus className="h-4 w-4 mr-1" /> Ersten Auftrag erstellen
           </Button>
         </div>
+      ) : !filteredOrders.length ? (
+        <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl text-muted-foreground gap-3">
+          <Search className="h-10 w-10" />
+          <p className="text-sm">Keine Aufträge für „{search}" gefunden</p>
+        </div>
       ) : (
         <div className="grid gap-4">
-          {orders.map((o: any, i: number) => {
+          {filteredOrders.map((o: any, i: number) => {
             const count = assignmentCounts?.[o.id] || 0;
+
             return (
               <motion.div
                 key={o.id}
@@ -204,7 +234,9 @@ export default function AdminAuftraege() {
             );
           })}
         </div>
-      )}
+      );
+      })()}
+
 
       {assignOrder && (
         <AssignmentDialog
