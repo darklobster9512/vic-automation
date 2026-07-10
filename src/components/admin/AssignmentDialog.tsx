@@ -320,7 +320,13 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 );
               };
 
-              const renderList = (list: typeof filteredItems, emptyMsg: string) => {
+              const parseHours = (item: typeof filteredItems[number]): number | null => {
+                if (!item.templateTitle) return null;
+                const m = item.templateTitle.match(/(\d+)\s*Stunden/i);
+                return m ? parseInt(m[1], 10) : null;
+              };
+
+              const renderList = (list: typeof filteredItems, emptyMsg: string, showHourFilters = false) => {
                 const visibleIds = list.map((i) => i.id);
                 const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
                 const toggleAll = () => {
@@ -334,13 +340,35 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                     return next;
                   });
                 };
+                const selectByMinHours = (min: number) => {
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    list.forEach((it) => {
+                      const h = parseHours(it);
+                      if (h !== null && h >= min) next.add(it.id);
+                    });
+                    return next;
+                  });
+                };
                 return (
                   <div className="mt-2">
                     {list.length > 0 && (
-                      <label className="flex items-center gap-2 px-1 py-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none">
-                        <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-                        <span>Alle auswählen ({list.length})</span>
-                      </label>
+                      <div className="flex flex-wrap items-center gap-3 px-1 py-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none">
+                          <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                          <span>Alle auswählen ({list.length})</span>
+                        </label>
+                        {showHourFilters && (
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => selectByMinHours(10)}>
+                              Alle mit ≥10h
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => selectByMinHours(20)}>
+                              Alle mit ≥20h
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     )}
                     <div className="rounded-lg border">
                       <ScrollArea className={list.length > 5 ? "h-[340px]" : ""}>
@@ -356,6 +384,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                   </div>
                 );
               };
+
 
               if (mode !== "order") {
                 return renderList(filteredItems, search ? `Keine Ergebnisse für „${search}"` : "Keine Einträge");
