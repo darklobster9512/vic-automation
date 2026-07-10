@@ -234,7 +234,9 @@ export default function AdminAuftraege() {
             );
           })}
         </div>
-      )}
+      );
+      })()}
+
 
       {assignOrder && (
         <AssignmentDialog
