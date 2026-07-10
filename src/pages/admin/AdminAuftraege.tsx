@@ -29,6 +29,8 @@ export default function AdminAuftraege() {
   const navigate = useNavigate();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [assignOrder, setAssignOrder] = useState<any>(null);
+  const [search, setSearch] = useState("");
+
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders", activeBrandingId],
