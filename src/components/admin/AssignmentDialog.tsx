@@ -403,8 +403,9 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                     <TabsTrigger value="test">Testaufträge ({testItems.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="open" className="mt-0">
-                    {renderList(openItems, search ? `Keine Ergebnisse für „${search}"` : "Alle Mitarbeiter bereits zugewiesen")}
+                    {renderList(openItems, search ? `Keine Ergebnisse für „${search}"` : "Alle Mitarbeiter bereits zugewiesen", true)}
                   </TabsContent>
+
                   <TabsContent value="assigned" className="mt-0">
                     {renderList(assignedItems, search ? `Keine Ergebnisse für „${search}"` : "Noch keine Zuweisungen für diesen Auftrag")}
                   </TabsContent>
