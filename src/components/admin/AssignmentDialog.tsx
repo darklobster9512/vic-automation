@@ -216,6 +216,50 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           }
         }
       }
+
+      // Contract mode: multiple orders assigned to ONE employee → 1 Sammel-SMS (or 1 einzel SMS)
+      if (mode === "contract" && newlyAdded.length > 0) {
+        const { data: contract } = await supabase
+          .from("employment_contracts")
+          .select("id, email, first_name, last_name, phone, user_id, branding_id")
+          .eq("id", sourceId)
+          .single();
+
+        if (contract?.phone) {
+          const brandingMap = await resolveContractBrandingBatch([contract]);
+          const effectiveBrandingId = brandingMap[contract.id] ?? null;
+          const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
+
+          let smsText: string;
+          let eventType: string;
+
+          if (newlyAdded.length === 1) {
+            const { data: order } = await supabase
+              .from("orders")
+              .select("title")
+              .eq("id", newlyAdded[0])
+              .single();
+            const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftrag_zugewiesen").single();
+            eventType = "auftrag_zugewiesen";
+            smsText = (tpl as any)?.message
+              ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
+              : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
+          } else {
+            const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftraege_zugewiesen_sammel").single();
+            eventType = "auftraege_zugewiesen_sammel";
+            smsText = (tpl as any)?.message
+              ? (tpl as any).message.replace("{name}", name).replace("{anzahl}", String(newlyAdded.length))
+              : `Hallo ${name}, es sind ${newlyAdded.length} neue Auftraege fuer Sie verfuegbar. Jetzt im Mitarbeiterportal ansehen.`;
+          }
+
+          let smsSender: string | undefined;
+          if (effectiveBrandingId) {
+            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", effectiveBrandingId).single();
+            smsSender = (branding as any)?.sms_sender_name || undefined;
+          }
+          await sendSms({ to: contract.phone, text: smsText, event_type: eventType, recipient_name: name, from: smsSender, branding_id: effectiveBrandingId });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
