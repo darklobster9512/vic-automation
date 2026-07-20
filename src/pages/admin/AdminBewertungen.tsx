@@ -597,19 +597,23 @@ const AdminBewertungen = () => {
           <TabsTrigger value="rejected">Abgelehnt ({rejectedReviews.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="in-review">
-          {pendingReviews.length > 0 && (
-            <div className="flex justify-end mb-3">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={processing === "__bulk__"}
-                onClick={() => handleApproveAllSilent(pendingReviews)}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {processing === "__bulk__" ? "Genehmige..." : `Alle genehmigen (ohne SMS) · ${pendingReviews.length}`}
-              </Button>
-            </div>
-          )}
+          {(() => {
+            const placeholderReviews = pendingReviews.filter((r) => r.order_type === "platzhalter");
+            return placeholderReviews.length > 0 ? (
+              <div className="flex justify-end mb-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={processing === "__bulk__"}
+                  onClick={() => handleApproveAllSilent(placeholderReviews)}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {processing === "__bulk__" ? "Genehmige..." : `Alle Platzhalter genehmigen (ohne SMS) · ${placeholderReviews.length}`}
+                </Button>
+              </div>
+            ) : null;
+          })()}
+
           {renderTable(pendingReviews, true)}
         </TabsContent>
         <TabsContent value="approved">

@@ -1,7 +1,10 @@
 ## Ziel
-SMS „Bewertung genehmigt" komplett deaktivieren — soll nicht mehr versendet werden.
+Der Button „Alle genehmigen (ohne SMS)" im Tab „In Überprüfung" soll ausschließlich Bewertungen von **Platzhalter-Aufträgen** (`order_type === "platzhalter"`) genehmigen.
 
-## Umsetzung
-In `src/pages/admin/AdminBewertungen.tsx` im Einzel-`handleApprove` den `sendSms`-Aufruf mit `event_type: "bewertung_genehmigt"` entfernen (bzw. auskommentieren). Der Bulk-Approve-Pfad sendet ohnehin bereits keine SMS.
+## Umsetzung in `src/pages/admin/AdminBewertungen.tsx`
 
-Keine DB-Änderung, keine Template-Löschung — Vorlage bleibt bestehen, wird nur nicht mehr getriggert.
+1. Aufruf ändern: `handleApproveAllSilent(pendingReviews.filter(r => r.order_type === "platzhalter"))`.
+2. Button-Label + Count auf gefilterte Liste umstellen: `Alle Platzhalter genehmigen (ohne SMS) · {count}`.
+3. Button ausblenden/disablen, wenn keine Platzhalter-Reviews offen sind.
+
+Keine Änderung an der Genehmigungslogik selbst.
