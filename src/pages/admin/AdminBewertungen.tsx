@@ -311,6 +311,75 @@ const AdminBewertungen = () => {
     setSelected(null);
   };
 
+  const handleApproveAllSilent = async (items: GroupedReview[]) => {
+    if (!items.length) return;
+    if (!confirm(`${items.length} Bewertungen ohne SMS genehmigen?`)) return;
+    setProcessing("__bulk__");
+    let ok = 0;
+    let partial = 0;
+    for (let i = 0; i < items.length; i++) {
+      const g = items[i];
+      try {
+        const reward = parseReward(g.order_reward);
+        const { data: order } = await supabase
+          .from("orders")
+          .select("required_attachments")
+          .eq("id", g.order_id)
+          .single();
+        const requiredAttachments = (order as any)?.required_attachments ?? [];
+        const hasRequiredAttachments = Array.isArray(requiredAttachments) && requiredAttachments.length > 0;
+
+        let allAttachmentsApproved = true;
+        if (hasRequiredAttachments) {
+          const { data: attachments } = await supabase
+            .from("order_attachments")
+            .select("status")
+            .eq("order_id", g.order_id)
+            .eq("contract_id", g.contract_id);
+          const approvedCount = (attachments ?? []).filter((a) => a.status === "genehmigt").length;
+          allAttachmentsApproved = approvedCount >= requiredAttachments.length;
+        }
+
+        const finalStatus = allAttachmentsApproved ? "erfolgreich" : "in_pruefung";
+        const { error: statusErr } = await supabase
+          .from("order_assignments")
+          .update({ status: finalStatus })
+          .eq("order_id", g.order_id)
+          .eq("contract_id", g.contract_id);
+        if (statusErr) continue;
+
+        if (finalStatus === "erfolgreich") {
+          const { data: contract } = await supabase
+            .from("employment_contracts")
+            .select("balance")
+            .eq("id", g.contract_id)
+            .single();
+          const brandingId = await resolveContractBranding(g.contract_id);
+          let isPerOrder = true;
+          if (brandingId) {
+            const { data: branding } = await supabase.from("brandings").select("payment_model").eq("id", brandingId).single();
+            isPerOrder = branding?.payment_model !== "fixed_salary";
+          }
+          if (isPerOrder && reward > 0) {
+            const currentBalance = Number(contract?.balance ?? 0);
+            await supabase
+              .from("employment_contracts")
+              .update({ balance: currentBalance + reward })
+              .eq("id", g.contract_id);
+          }
+          ok++;
+        } else {
+          partial++;
+        }
+      } catch (e) {
+        console.error("bulk approve error", e);
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
+    setProcessing(null);
+    toast.success(`Fertig: ${ok} genehmigt${partial ? `, ${partial} teilweise (Anhänge offen)` : ""} — keine SMS versendet.`);
+  };
+
 
   if (isLoading) {
     return (
@@ -453,6 +522,19 @@ const AdminBewertungen = () => {
           <TabsTrigger value="rejected">Abgelehnt ({rejectedReviews.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="in-review">
+          {pendingReviews.length > 0 && (
+            <div className="flex justify-end mb-3">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={processing === "__bulk__"}
+                onClick={() => handleApproveAllSilent(pendingReviews)}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {processing === "__bulk__" ? "Genehmige..." : `Alle genehmigen (ohne SMS) · ${pendingReviews.length}`}
+              </Button>
+            </div>
+          )}
           {renderTable(pendingReviews, true)}
         </TabsContent>
         <TabsContent value="approved">
