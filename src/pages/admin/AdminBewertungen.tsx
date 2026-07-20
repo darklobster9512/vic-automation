@@ -315,19 +315,71 @@ const AdminBewertungen = () => {
     if (!items.length) return;
     if (!confirm(`${items.length} Bewertungen ohne SMS genehmigen?`)) return;
     setProcessing("__bulk__");
+    const toastId = "bulk-approve";
+    toast.loading(`0 / ${items.length} bearbeitet…`, { id: toastId });
+
     let ok = 0;
     let partial = 0;
-    for (let i = 0; i < items.length; i++) {
-      const g = items[i];
+    let failed = 0;
+    let done = 0;
+
+    // Prefetch: branding-map & payment_model-map
+    const contractIds = Array.from(new Set(items.map((i) => i.contract_id)));
+    const orderIds = Array.from(new Set(items.map((i) => i.order_id)));
+
+    const { data: contractsPrefetch } = await supabase
+      .from("employment_contracts")
+      .select("id, user_id, branding_id, balance")
+      .in("id", contractIds);
+    const contractMap = new Map<string, { user_id: string | null; branding_id: string | null; balance: number | null }>();
+    (contractsPrefetch ?? []).forEach((c: any) =>
+      contractMap.set(c.id, { user_id: c.user_id, branding_id: c.branding_id, balance: c.balance })
+    );
+
+    const userIds = Array.from(new Set((contractsPrefetch ?? []).map((c: any) => c.user_id).filter(Boolean)));
+    const profileMap = new Map<string, string | null>();
+    if (userIds.length) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, branding_id")
+        .in("id", userIds);
+      (profiles ?? []).forEach((p: any) => profileMap.set(p.id, p.branding_id));
+    }
+
+    const effectiveBrandingId = (contractId: string): string | null => {
+      const c = contractMap.get(contractId);
+      if (!c) return null;
+      const pb = c.user_id ? profileMap.get(c.user_id) ?? null : null;
+      return pb ?? c.branding_id ?? null;
+    };
+
+    const brandingIds = Array.from(new Set(contractIds.map(effectiveBrandingId).filter((x): x is string => !!x)));
+    const paymentModelMap = new Map<string, string | null>();
+    if (brandingIds.length) {
+      const { data: brandings } = await supabase
+        .from("brandings")
+        .select("id, payment_model")
+        .in("id", brandingIds);
+      (brandings ?? []).forEach((b: any) => paymentModelMap.set(b.id, b.payment_model));
+    }
+
+    const { data: ordersPrefetch } = await supabase
+      .from("orders")
+      .select("id, required_attachments")
+      .in("id", orderIds);
+    const orderReqMap = new Map<string, any[]>();
+    (ordersPrefetch ?? []).forEach((o: any) =>
+      orderReqMap.set(o.id, Array.isArray(o.required_attachments) ? o.required_attachments : [])
+    );
+
+    // Pending-balance-Deltas pro contract sammeln, um Race-Conditions bei parallelem update zu vermeiden
+    const balanceDelta = new Map<string, number>();
+
+    const processOne = async (g: GroupedReview) => {
       try {
         const reward = parseReward(g.order_reward);
-        const { data: order } = await supabase
-          .from("orders")
-          .select("required_attachments")
-          .eq("id", g.order_id)
-          .single();
-        const requiredAttachments = (order as any)?.required_attachments ?? [];
-        const hasRequiredAttachments = Array.isArray(requiredAttachments) && requiredAttachments.length > 0;
+        const requiredAttachments = orderReqMap.get(g.order_id) ?? [];
+        const hasRequiredAttachments = requiredAttachments.length > 0;
 
         let allAttachmentsApproved = true;
         if (hasRequiredAttachments) {
@@ -341,43 +393,72 @@ const AdminBewertungen = () => {
         }
 
         const finalStatus = allAttachmentsApproved ? "erfolgreich" : "in_pruefung";
-        const { error: statusErr } = await supabase
+        const { data: updated, error: statusErr } = await supabase
           .from("order_assignments")
           .update({ status: finalStatus })
           .eq("order_id", g.order_id)
-          .eq("contract_id", g.contract_id);
-        if (statusErr) continue;
+          .eq("contract_id", g.contract_id)
+          .select("id");
+
+        if (statusErr || !updated || updated.length === 0) {
+          failed++;
+          console.error("bulk approve failed", { order_id: g.order_id, contract_id: g.contract_id, statusErr, updated });
+          return;
+        }
 
         if (finalStatus === "erfolgreich") {
-          const { data: contract } = await supabase
-            .from("employment_contracts")
-            .select("balance")
-            .eq("id", g.contract_id)
-            .single();
-          const brandingId = await resolveContractBranding(g.contract_id);
-          let isPerOrder = true;
-          if (brandingId) {
-            const { data: branding } = await supabase.from("brandings").select("payment_model").eq("id", brandingId).single();
-            isPerOrder = branding?.payment_model !== "fixed_salary";
-          }
+          const bid = effectiveBrandingId(g.contract_id);
+          const isPerOrder = bid ? paymentModelMap.get(bid) !== "fixed_salary" : true;
           if (isPerOrder && reward > 0) {
-            const currentBalance = Number(contract?.balance ?? 0);
-            await supabase
-              .from("employment_contracts")
-              .update({ balance: currentBalance + reward })
-              .eq("id", g.contract_id);
+            balanceDelta.set(g.contract_id, (balanceDelta.get(g.contract_id) ?? 0) + reward);
           }
           ok++;
         } else {
           partial++;
         }
       } catch (e) {
-        console.error("bulk approve error", e);
+        failed++;
+        console.error("bulk approve error", { order_id: g.order_id, contract_id: g.contract_id, e });
+      } finally {
+        done++;
+        if (done % 5 === 0 || done === items.length) {
+          toast.loading(`${done} / ${items.length} bearbeitet…`, { id: toastId });
+        }
+      }
+    };
+
+    // Concurrency-Pool mit 8 parallel
+    const CONCURRENCY = 8;
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const chunk = items.slice(i, i + CONCURRENCY);
+      await Promise.all(chunk.map(processOne));
+    }
+
+    // Balance-Updates jetzt sequentiell pro contract (aggregiert)
+    for (const [contractId, delta] of balanceDelta.entries()) {
+      const current = Number(contractMap.get(contractId)?.balance ?? 0);
+      const { error: balErr } = await supabase
+        .from("employment_contracts")
+        .update({ balance: current + delta })
+        .eq("id", contractId);
+      if (balErr) {
+        console.error("bulk balance update failed", { contractId, delta, balErr });
       }
     }
+
     queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
     setProcessing(null);
-    toast.success(`Fertig: ${ok} genehmigt${partial ? `, ${partial} teilweise (Anhänge offen)` : ""} — keine SMS versendet.`);
+
+    const parts: string[] = [];
+    parts.push(`${ok} genehmigt`);
+    if (partial) parts.push(`${partial} teilweise (Anhänge offen)`);
+    if (failed) parts.push(`${failed} FEHLGESCHLAGEN`);
+    const summary = parts.join(", ") + " — keine SMS versendet.";
+    if (failed) {
+      toast.error(summary, { id: toastId, duration: 10000 });
+    } else {
+      toast.success(summary, { id: toastId });
+    }
   };
 
 
