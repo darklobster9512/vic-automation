@@ -239,14 +239,8 @@ const AdminBewertungen = () => {
 
       // E-Mail-Versand für "auftrag_erfolgreich" deaktiviert — nur SMS
 
-      if (contract?.phone) {
-        const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
-        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
-        const smsText = (tpl as any)?.message
-          ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title).replace("{praemie}", g.order_reward)
-          : `Hallo ${name}, Ihr Auftrag "${g.order_title}" wurde erfolgreich abgeschlossen.`;
-        await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name, from: smsSender, branding_id: brandingId || null });
-      }
+      // SMS "bewertung_genehmigt" deaktiviert — kein Versand mehr
+
     }
 
     if (finalStatus === "erfolgreich") {
