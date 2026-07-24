@@ -1,27 +1,11 @@
-## Problem
+## Änderung
 
-Melanie Wolf-Busch hat 244 Chat-Nachrichten. Beim Öffnen des Chats werden aber nur die **ältesten 200** angezeigt – ihre neuen Nachrichten fehlen komplett.
+In `src/components/chat/useChatRealtime.ts`:
+- `.limit(500)` komplett entfernen
+- Query wieder auf `ascending: true` stellen (natürliche chronologische Reihenfolge, kein `.reverse()` mehr nötig)
 
-## Ursache
+Damit lädt sowohl Admin-Livechat als auch Mitarbeiter-Widget **alle** Nachrichten der Conversation, ohne Limit.
 
-In `src/components/chat/useChatRealtime.ts` lädt der Initial-Load:
+## Hinweis
 
-```ts
-.order("created_at", { ascending: true })
-.limit(200);
-```
-
-Aufsteigend sortiert + Limit 200 = die **ersten** 200 Nachrichten (älteste). Alles ab Nachricht 201 (inkl. der neuesten) wird nie geladen. Neue Realtime-INSERTs kommen zwar rein, aber bereits gespeicherte Nachrichten oberhalb des Limits werden nie sichtbar.
-
-Betrifft sowohl das Admin-Panel (`AdminLivechat`) als auch das Mitarbeiter-`ChatWidget`, da beide denselben Hook nutzen.
-
-## Fix
-
-In `src/components/chat/useChatRealtime.ts`, `load()`-Funktion:
-
-1. Sortierung auf `ascending: false` umstellen und Limit auf **500** anheben, damit auch längere Konversationen komplett geladen werden.
-2. Das Ergebnis clientseitig via `.reverse()` wieder in chronologische Reihenfolge bringen, bevor es in `setMessages` gesetzt wird.
-
-So werden immer die 500 **neuesten** Nachrichten geladen und in gewohnter Reihenfolge (alt → neu, mit Auto-Scroll ans Ende) angezeigt.
-
-Keine weiteren Änderungen nötig – Realtime-Subscription, Read-Marker und `sendMessage` bleiben identisch.
+Beide Oberflächen nutzen denselben Hook – ein Change reicht für beide Seiten.
