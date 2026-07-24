@@ -1,20 +1,27 @@
-## Ziel
+## Problem
 
-Alle eindeutigen Telefonnummern der Mitarbeiter im Branding **for.tel Solutions** mit Vertragsstatus **genehmigt** (AV angenommen) als `+49...`-Liste in eine Textdatei exportieren.
+Melanie Wolf-Busch hat 244 Chat-Nachrichten. Beim Öffnen des Chats werden aber nur die **ältesten 200** angezeigt – ihre neuen Nachrichten fehlen komplett.
 
-## Vorgehen
+## Ursache
 
-1. Query bereits ausgeführt: 96 Roh-Nummern aus `profiles.phone` via Join `employment_contracts` (`branding_id = for.tel`, `status = 'genehmigt'`).
-2. Normalisierung in Python:
-   - Alle Nicht-Ziffern entfernen
-   - `00` → `+`
-   - Führende `49` → `+49`
-   - Führende `0` → `+49`
-   - Rest → `+49` vorne anfügen
-   - Ungültige Längen (<11 oder >16) und Nicht-Nummern (z. B. die eine E-Mail-Adresse im `phone`-Feld) verwerfen
-   - Deduplizieren, sortieren
-3. Ausgabe nach `/mnt/documents/fortel_av_angenommen_phones.txt` und Anzeige der Liste im Chat.
+In `src/components/chat/useChatRealtime.ts` lädt der Initial-Load:
 
-## Hinweis
+```ts
+.order("created_at", { ascending: true })
+.limit(200);
+```
 
-„AV angenommen" wird als `employment_contracts.status = 'genehmigt'` interpretiert (mögliche Werte im Branding: `offen`, `eingereicht`, `genehmigt`). Falls du stattdessen nur `eingereicht` oder eine andere Definition meinst, sag Bescheid – sonst wechsle in den Build-Mode, damit ich die Datei schreiben kann.
+Aufsteigend sortiert + Limit 200 = die **ersten** 200 Nachrichten (älteste). Alles ab Nachricht 201 (inkl. der neuesten) wird nie geladen. Neue Realtime-INSERTs kommen zwar rein, aber bereits gespeicherte Nachrichten oberhalb des Limits werden nie sichtbar.
+
+Betrifft sowohl das Admin-Panel (`AdminLivechat`) als auch das Mitarbeiter-`ChatWidget`, da beide denselben Hook nutzen.
+
+## Fix
+
+In `src/components/chat/useChatRealtime.ts`, `load()`-Funktion:
+
+1. Sortierung auf `ascending: false` umstellen und Limit auf **500** anheben, damit auch längere Konversationen komplett geladen werden.
+2. Das Ergebnis clientseitig via `.reverse()` wieder in chronologische Reihenfolge bringen, bevor es in `setMessages` gesetzt wird.
+
+So werden immer die 500 **neuesten** Nachrichten geladen und in gewohnter Reihenfolge (alt → neu, mit Auto-Scroll ans Ende) angezeigt.
+
+Keine weiteren Änderungen nötig – Realtime-Subscription, Read-Marker und `sendMessage` bleiben identisch.
