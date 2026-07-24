@@ -33,9 +33,10 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
         .from("chat_messages")
         .select("*")
         .eq("contract_id", contractId)
-        .order("created_at", { ascending: true })
-        .limit(200);
-      setMessages((data as ChatMessage[]) ?? []);
+        .order("created_at", { ascending: false })
+        .limit(500);
+      const rows = ((data as ChatMessage[]) ?? []).slice().reverse();
+      setMessages(rows);
       setLoading(false);
     };
     load();
