@@ -1,10 +1,16 @@
-In `src/pages/admin/AdminAnhaengeDetail.tsx` auf jeder Anhang-Card ein kleines Fullscreen-Icon (Lucide `Maximize2`) oben rechts über dem Bild einblenden. Klick öffnet einen Dialog mit dem Bild in Vollansicht (Sheet/Dialog, max-w screen, dunkler Hintergrund, Bild `object-contain`).
+In `src/pages/admin/AdminAuftraege.tsx` oberhalb der Liste (unter der Suchleiste) eine Tab-Leiste einfügen zum Filtern nach `order_type`.
+
+Tabs (shadcn `Tabs`):
+- Alle
+- Bankdrop
+- Exchanger
+- Platzhalter
+- Andere
 
 Umsetzung:
-- Neuer lokaler State `fullscreenUrl: string | null`.
-- Auf jeder Card (nur wenn `isImage(a.file_url)`) ein Button-Overlay mit `Maximize2`-Icon, absolut positioniert (top-2 right-2), halbtransparenter Hintergrund, `hover:bg-black/70`.
-- Klick setzt `fullscreenUrl = a.file_url`.
-- Neuer `<Dialog>` außerhalb der Grid-Map mit großem `DialogContent` (`max-w-[95vw] max-h-[95vh] p-0 bg-black/95`), zeigt `<img class="w-full h-full object-contain">`.
-- Bestehendes Layout und Approve/Reject-Logik bleibt unverändert.
+- Neuer State `typeFilter: "alle" | "bankdrop" | "exchanger" | "platzhalter" | "andere"` (default `"alle"`).
+- Zusätzlich zum bestehenden Such-Filter wird `filteredOrders` nach `typeFilter` gefiltert (`o.order_type === typeFilter` außer bei `"alle"`).
+- Jeder Tab-Trigger zeigt einen kleinen Count-Badge mit der Anzahl der Aufträge in diesem Typ.
+- Leerer Zustand bleibt erhalten (bei 0 gefilterten: „Keine Aufträge in dieser Kategorie").
 
-Betrifft nur diese eine Datei, rein UI.
+Rein UI/Filter-Änderung, keine Datenlogik-Änderung.
