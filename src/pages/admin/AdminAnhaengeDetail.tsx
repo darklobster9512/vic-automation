@@ -83,6 +83,7 @@ export default function AdminAnhaengeDetail() {
   const { contractId, orderId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [fullscreenUrl, setFullscreenUrl] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-attachment-detail", contractId, orderId],
