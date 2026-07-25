@@ -107,8 +107,40 @@ export default function AdminAuftraege() {
       </div>
 
       {(() => {
+        const typeCounts: Record<string, number> = { alle: (orders ?? []).length };
+        (orders ?? []).forEach((o: any) => {
+          const t = o.order_type || "andere";
+          typeCounts[t] = (typeCounts[t] || 0) + 1;
+        });
+        const tabs: { value: string; label: string }[] = [
+          { value: "alle", label: "Alle" },
+          { value: "bankdrop", label: "Bankdrop" },
+          { value: "exchanger", label: "Exchanger" },
+          { value: "platzhalter", label: "Platzhalter" },
+          { value: "andere", label: "Andere" },
+        ];
+        return (
+          <Tabs value={typeFilter} onValueChange={setTypeFilter}>
+            <TabsList className="flex flex-wrap h-auto">
+              {tabs.map((t) => (
+                <TabsTrigger key={t.value} value={t.value} className="gap-2">
+                  {t.label}
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
+                    {typeCounts[t.value] || 0}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        );
+      })()}
+
+      {(() => {
         const q = search.trim().toLowerCase();
-        const filteredOrders = !q ? (orders ?? []) : (orders ?? []).filter((o: any) => {
+        const byType = typeFilter === "alle"
+          ? (orders ?? [])
+          : (orders ?? []).filter((o: any) => (o.order_type || "andere") === typeFilter);
+        const filteredOrders = !q ? byType : byType.filter((o: any) => {
           const typeStr = (typeLabel[o.order_type] || o.order_type || "").toLowerCase();
           return (
             (o.title || "").toLowerCase().includes(q) ||
@@ -129,7 +161,9 @@ export default function AdminAuftraege() {
       ) : !filteredOrders.length ? (
         <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl text-muted-foreground gap-3">
           <Search className="h-10 w-10" />
-          <p className="text-sm">Keine Aufträge für „{search}" gefunden</p>
+          <p className="text-sm">
+            {q ? `Keine Aufträge für „${search}" gefunden` : "Keine Aufträge in dieser Kategorie"}
+          </p>
         </div>
       ) : (
         <div className="grid gap-4">
