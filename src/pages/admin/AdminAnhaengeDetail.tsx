@@ -262,6 +262,14 @@ export default function AdminAnhaengeDetail() {
         </div>
         </>
       )}
+
+      <Dialog open={!!fullscreenUrl} onOpenChange={(open) => !open && setFullscreenUrl(null)}>
+        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0 flex items-center justify-center">
+          {fullscreenUrl && (
+            <img src={fullscreenUrl} alt="Vollbild" className="max-w-full max-h-[95vh] object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
