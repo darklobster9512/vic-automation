@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ArrowLeft, CheckCircle, XCircle, ExternalLink, Maximize2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -81,6 +83,7 @@ export default function AdminAnhaengeDetail() {
   const { contractId, orderId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [fullscreenUrl, setFullscreenUrl] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-attachment-detail", contractId, orderId],
@@ -224,9 +227,19 @@ export default function AdminAnhaengeDetail() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.attachments.map((a: any) => (
             <Card key={a.id} className="overflow-hidden">
-              <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+              <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                 {isImage(a.file_url) ? (
-                  <img src={a.file_url} alt={a.file_name} className="w-full h-full object-cover" />
+                  <>
+                    <img src={a.file_url} alt={a.file_name} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setFullscreenUrl(a.file_url)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/50 hover:bg-black/75 text-white transition-colors"
+                      aria-label="Vollbild anzeigen"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                  </>
                 ) : (
                   <a href={a.file_url} target="_blank" rel="noopener noreferrer"
                     className="text-primary hover:underline flex flex-col items-center gap-2 p-4 text-center">
@@ -249,6 +262,14 @@ export default function AdminAnhaengeDetail() {
         </div>
         </>
       )}
+
+      <Dialog open={!!fullscreenUrl} onOpenChange={(open) => !open && setFullscreenUrl(null)}>
+        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0 flex items-center justify-center">
+          {fullscreenUrl && (
+            <img src={fullscreenUrl} alt="Vollbild" className="max-w-full max-h-[95vh] object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
