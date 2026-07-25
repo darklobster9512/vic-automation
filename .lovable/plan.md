@@ -1,16 +1,38 @@
-In `src/pages/admin/AdminAuftraege.tsx` oberhalb der Liste (unter der Suchleiste) eine Tab-Leiste einfügen zum Filtern nach `order_type`.
+## Test Edge Function für Octoparse AI
 
-Tabs (shadcn `Tabs`):
-- Alle
-- Bankdrop
-- Exchanger
-- Platzhalter
-- Andere
+Neue Edge Function `test-data` erstellen, die auf GET-Requests mit hartkodierten JSON-Daten antwortet.
 
-Umsetzung:
-- Neuer State `typeFilter: "alle" | "bankdrop" | "exchanger" | "platzhalter" | "andere"` (default `"alle"`).
-- Zusätzlich zum bestehenden Such-Filter wird `filteredOrders` nach `typeFilter` gefiltert (`o.order_type === typeFilter` außer bei `"alle"`).
-- Jeder Tab-Trigger zeigt einen kleinen Count-Badge mit der Anzahl der Aufträge in diesem Typ.
-- Leerer Zustand bleibt erhalten (bei 0 gefilterten: „Keine Aufträge in dieser Kategorie").
+### Details
 
-Rein UI/Filter-Änderung, keine Datenlogik-Änderung.
+**Datei:** `supabase/functions/test-data/index.ts`
+
+**Verhalten:**
+- Akzeptiert GET-Requests (und OPTIONS für CORS)
+- Antwortet mit `application/json` und den hartkodierten Testdaten
+- Öffentlich zugänglich (`verify_jwt = false` in `supabase/config.toml`)
+- CORS offen für alle Origins, damit Octoparse AI ohne Auth zugreifen kann
+
+**Response-Body:**
+```json
+{
+  "anrede": "Herr",
+  "vorname": "Fabian",
+  "nachname": "Schmidt",
+  "geburtsdatum": "15.10.1991",
+  "geburtsort": "Berlin",
+  "familienstand": "ledig",
+  "staatsangehoerigkeit": "Deutschland",
+  "strasse": "Quellenstr. 42",
+  "plz": "59556",
+  "stadt": "Lippstadt",
+  "mobilnummer": "+4917637235412",
+  "email": "susannemueller@web.de"
+}
+```
+
+**Aufruf-URL (nach Deployment):**
+```
+https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/test-data
+```
+
+Nach dem Deploy testest du sie einfach im Browser oder in Octoparse per GET.

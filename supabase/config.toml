@@ -2,3 +2,6 @@ project_id = "laozvnaupdecerpvwzmh"
 
 [functions.restore-database]
 verify_jwt = false
+
+[functions.test-data]
+verify_jwt = false
