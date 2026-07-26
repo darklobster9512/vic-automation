@@ -17,7 +17,7 @@ Deno.serve((req) => {
     hausnummer: '42',
     plz: '59556',
     stadt: 'Lippstadt',
-    mobilnummer: '+4917637235412',
+    mobilnummer: '017637235412',
     email: 'susannemueller@web.de',
   };
 
