@@ -1,13 +1,15 @@
 ## Ziel
-Feld `anrede` in der Edge Function `test-data` zu `geschlecht` umbenennen.
+Feldnamen in der Edge Function `test-data` anpassen.
 
 ## Änderung
-Datei: `supabase/functions/test-data/index.ts`
+In `supabase/functions/test-data/index.ts`:
+- `strasse: 'Quellenstr.'` → `adresse: 'Quellenstr.'`
+- Danach Function neu deployen und per GET-Test verifizieren.
 
-- `anrede: 'Herr',` → `geschlecht: 'Herr',`
-- Position im JSON bleibt gleich (erstes Feld).
+## Offen: "ort → stadt"
+Ein Feld `ort` existiert nicht. Vorhanden sind `geburtsort` und bereits `stadt`. Falls `geburtsort` → `geburtsstadt` gemeint ist, sag kurz Bescheid – dann nehme ich das mit rein.
 
-Danach Redeploy, sodass `https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/test-data` direkt `geschlecht` liefert.
-
-## Offene Kleinigkeit
-Der Wert bleibt `Herr` (groß). Falls du `herr` klein brauchst, sag kurz Bescheid.
+## Ergebnis (JSON)
+```json
+{ "geschlecht": "Herr", "vorname": "Fabian", "nachname": "Schmidt", "geburtsdatum": "15.10.1991", "geburtsort": "Berlin", "familienstand": "ledig", "staatsangehoerigkeit": "Deutschland", "adresse": "Quellenstr.", "hausnummer": "42", "plz": "59556", "stadt": "Lippstadt", "telefonnummer": "017637235412", "email": "susannemueller@web.de", "geburtsland": "Deutschland", "passwort": "BBva551xx" }
+```
