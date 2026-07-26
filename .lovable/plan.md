@@ -1,5 +1,10 @@
 ## Änderung
 
-In `supabase/functions/test-data/index.ts` das Feld `mobilnummer` von `'+4917637235412'` auf `'017637235412'` ändern, danach die Function `test-data` neu deployen.
+In `supabase/functions/test-data/index.ts` zwei neue Felder zum JSON-Objekt hinzufügen:
 
-Alle anderen Felder bleiben unverändert.
+- `geburtsland: 'Deutschland'`
+- `passwort: 'BBva551xx'`
+
+Danach die Function `test-data` neu deployen.
+
+Alle bestehenden Felder bleiben unverändert.
