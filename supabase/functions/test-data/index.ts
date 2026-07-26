@@ -13,7 +13,7 @@ Deno.serve((req) => {
     geburtsort: 'Berlin',
     familienstand: 'ledig',
     staatsangehoerigkeit: 'Deutschland',
-    strasse: 'Quellenstr.',
+    adresse: 'Quellenstr.',
     hausnummer: '42',
     plz: '59556',
     stadt: 'Lippstadt',
