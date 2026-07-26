@@ -1,10 +1,13 @@
+## Ziel
+Im JSON-Response der Edge Function `test-data` soll der Feldname `mobilnummer` zu `telefonnummer` umbenannt werden.
+
 ## Änderung
+Datei: `supabase/functions/test-data/index.ts`
 
-In `supabase/functions/test-data/index.ts` zwei neue Felder zum JSON-Objekt hinzufügen:
+- Zeile mit `mobilnummer: '017637235412',` → `telefonnummer: '017637235412',`
+- Wert bleibt unverändert (`017637235412`), Position im Objekt bleibt gleich.
 
-- `geburtsland: 'Deutschland'`
-- `passwort: 'BBva551xx'`
+Danach wird die Function neu deployed, sodass `https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/test-data` direkt das neue Feld liefert.
 
-Danach die Function `test-data` neu deployen.
-
-Alle bestehenden Felder bleiben unverändert.
+## Hinweis
+Deine Octoparse-Automation muss das Feld dann als `telefonnummer` statt `mobilnummer` mappen.
