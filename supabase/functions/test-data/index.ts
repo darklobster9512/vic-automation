@@ -19,6 +19,8 @@ Deno.serve((req) => {
     stadt: 'Lippstadt',
     mobilnummer: '017637235412',
     email: 'susannemueller@web.de',
+    geburtsland: 'Deutschland',
+    passwort: 'BBva551xx',
   };
 
   return new Response(JSON.stringify(data), {
