@@ -6,7 +6,7 @@ Deno.serve((req) => {
   }
 
   const data = {
-    anrede: 'Herr',
+    geschlecht: 'Herr',
     vorname: 'Fabian',
     nachname: 'Schmidt',
     geburtsdatum: '15.10.1991',
