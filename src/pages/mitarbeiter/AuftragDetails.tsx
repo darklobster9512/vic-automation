@@ -240,7 +240,7 @@ const AuftragDetails = () => {
       try {
         const { data } = isSmsbot
           ? await supabase.functions.invoke("smsbot-proxy", {
-              body: { rentalId: apiUrl.slice("smsbot://".length) },
+              body: { rentalId: apiUrl.slice("smsbot://".length), brandingId: identSession.branding_id },
             })
           : await supabase.functions.invoke("anosim-proxy", {
               body: { url: apiUrl },
@@ -278,7 +278,7 @@ const AuftragDetails = () => {
       try {
         const { data } = isSmsbot
           ? await supabase.functions.invoke("smsbot-proxy", {
-              body: { rentalId: apiUrl.slice("smsbot://".length) },
+              body: { rentalId: apiUrl.slice("smsbot://".length), brandingId: identSession.branding_id },
             })
           : await supabase.functions.invoke("anosim-proxy", {
               body: { url: apiUrl },
