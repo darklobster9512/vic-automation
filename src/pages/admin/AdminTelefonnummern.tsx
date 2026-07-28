@@ -46,20 +46,20 @@ interface IdentAssignment {
   orders: { title: string } | null;
 }
 
-function PhoneRow({ entry, onDelete, hideDelete }: { entry: PhoneEntry; onDelete: (id: string) => void; hideDelete?: boolean }) {
+function PhoneRow({ entry, onDelete, hideDelete, brandingId }: { entry: PhoneEntry; onDelete: (id: string) => void; hideDelete?: boolean; brandingId?: string | null }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const identifier = entry.provider === "smsbot" ? `smsbot://${entry.rental_id}` : (entry.api_url ?? "");
 
   // Shared global SMS cache for SMSBot – one poll per browser regardless of row count.
   const { data: smsByRental } = useQuery<Record<string, AnosimSms[]>>({
-    queryKey: ["smsbot_sms"],
-    enabled: entry.provider === "smsbot",
+    queryKey: ["smsbot_sms", brandingId],
+    enabled: entry.provider === "smsbot" && !!brandingId,
     refetchInterval: 10_000,
     refetchOnWindowFocus: false,
     staleTime: 5_000,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "sms" } });
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "sms", brandingId } });
       if (error) throw error;
       return (data as Record<string, AnosimSms[]>) ?? {};
     },
@@ -305,13 +305,13 @@ export default function AdminTelefonnummern() {
   });
 
   const { data: smsbotEntries = [], isLoading: smsbotLoading } = useQuery<PhoneEntry[]>({
-    queryKey: ["smsbot_rentals"],
-    enabled: provider === "smsbot",
+    queryKey: ["smsbot_rentals", activeBrandingId],
+    enabled: ready && provider === "smsbot" && !!activeBrandingId,
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list", brandingId: activeBrandingId } });
       if (error) throw error;
       const list = (data as any[]) ?? [];
       return list.map((r) => ({
