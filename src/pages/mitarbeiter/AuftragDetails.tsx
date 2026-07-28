@@ -346,6 +346,7 @@ const AuftragDetails = () => {
       email_tan_enabled: s.email_tan_enabled ?? false,
       email_tans: Array.isArray(s.email_tans) ? s.email_tans : [],
       info_notes: s.info_notes ?? null,
+      branding_id: s.branding_id ?? (order as any)?.branding_id ?? null,
     });
     setFlowStep("videident");
 
