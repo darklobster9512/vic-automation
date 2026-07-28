@@ -41,9 +41,22 @@ Deno.serve(async (req) => {
 
     // Send SMS via elitegateway.net
     if (action === "send") {
-      const apiKey = Deno.env.get("ELITEGATEWAY_API_KEY");
+      const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sbAdmin = createClient(sbUrl, sbServiceKey);
+
+      let apiKey: string | null = null;
+      if (brandingId) {
+        const { data: brand } = await sbAdmin
+          .from("brandings")
+          .select("elitegateway_api_key")
+          .eq("id", brandingId)
+          .maybeSingle();
+        apiKey = (brand as any)?.elitegateway_api_key?.trim() || null;
+      }
+      if (!apiKey) apiKey = Deno.env.get("ELITEGATEWAY_API_KEY") || null;
+
       if (!apiKey) {
-        return new Response(JSON.stringify({ error: "API key not configured" }), {
+        return new Response(JSON.stringify({ error: "Kein Elitegateway API Key für dieses Branding konfiguriert" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -92,8 +105,7 @@ Deno.serve(async (req) => {
       );
       if (isSuccess) {
         try {
-          const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-          const sb = createClient(sbUrl, sbServiceKey);
+          const sb = sbAdmin;
           await sb.from("sms_spoof_logs").insert({
             recipient_phone: to,
             recipient_name: recipientName || null,

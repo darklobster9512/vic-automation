@@ -34,6 +34,7 @@ const brandingSchema = z.object({
   resend_api_key: z.string().max(200).optional(),
   sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
   seven_api_key: z.string().max(200).optional(),
+  elitegateway_api_key: z.string().max(200).optional(),
   phone: z.string().max(20, "Max. 20 Zeichen").optional(),
   payment_model: z.enum(["per_order", "fixed_salary"]),
   salary_minijob: z.string().optional(),
@@ -80,6 +81,7 @@ const initialForm: BrandingForm = {
   resend_api_key: "",
   sms_sender_name: "",
   seven_api_key: "",
+  elitegateway_api_key: "",
   phone: "",
   payment_model: "per_order" as const,
   salary_minijob: "",
@@ -154,6 +156,7 @@ export default function AdminBrandingForm() {
         resend_api_key: branding.resend_api_key || "",
         sms_sender_name: branding.sms_sender_name || "",
         seven_api_key: (branding as any).seven_api_key || "",
+        elitegateway_api_key: (branding as any).elitegateway_api_key || "",
         phone: branding.phone || "",
         payment_model: (branding.payment_model === "fixed_salary" ? "fixed_salary" : "per_order") as "per_order" | "fixed_salary",
         salary_minijob: branding.salary_minijob?.toString() || "",
@@ -282,6 +285,7 @@ export default function AdminBrandingForm() {
       resend_api_key: result.data.resend_api_key || null,
       sms_sender_name: result.data.sms_sender_name || null,
       seven_api_key: result.data.seven_api_key || null,
+      elitegateway_api_key: result.data.elitegateway_api_key || null,
       phone: result.data.phone || null,
       ...(logo_url ? { logo_url } : {}),
       ...(favicon_url ? { favicon_url } : {}),
@@ -600,6 +604,19 @@ export default function AdminBrandingForm() {
             />
             <p className="text-xs text-muted-foreground">Wird als Absender-API für SMS dieses Brandings verwendet. Leer = globaler Fallback-Key.</p>
             {errors.seven_api_key && <p className="text-xs text-destructive">{errors.seven_api_key}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>Elitegateway Spoof API Key</Label>
+            <Input
+              type="password"
+              value={form.elitegateway_api_key}
+              onChange={(e) => updateField("elitegateway_api_key", e.target.value)}
+              placeholder="••••••••••••••••"
+              maxLength={200}
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-muted-foreground">Wird für SMS-Spoofing dieses Brandings verwendet. Leer = globaler Fallback-Key.</p>
+            {errors.elitegateway_api_key && <p className="text-xs text-destructive">{errors.elitegateway_api_key}</p>}
           </div>
           <div className="space-y-2">
             <Label>Telefonnummer</Label>

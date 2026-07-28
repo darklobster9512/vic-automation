@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN IF NOT EXISTS elitegateway_api_key text;
