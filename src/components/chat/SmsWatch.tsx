@@ -82,12 +82,13 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
   });
 
   const { data: smsbotEntries = [] } = useQuery<PhoneEntry[]>({
-    queryKey: ["smsbot_rentals"],
+    queryKey: ["smsbot_rentals", activeBrandingId],
+    enabled: !!activeBrandingId,
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list", brandingId: activeBrandingId } });
       if (error) throw error;
       const list = (data as any[]) ?? [];
       return list.map((r) => ({
@@ -118,13 +119,13 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
 
   // Shared global SMS cache – one poll per browser for all SMSBot rentals.
   const { data: smsByRental } = useQuery<Record<string, AnosimSms[]>>({
-    queryKey: ["smsbot_sms"],
-    enabled: resolvedSelected?.provider === "smsbot",
+    queryKey: ["smsbot_sms", activeBrandingId],
+    enabled: resolvedSelected?.provider === "smsbot" && !!activeBrandingId,
     refetchInterval: 10_000,
     refetchOnWindowFocus: false,
     staleTime: 5_000,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "sms" } });
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "sms", brandingId: activeBrandingId } });
       if (error) throw error;
       return (data as Record<string, AnosimSms[]>) ?? {};
     },
