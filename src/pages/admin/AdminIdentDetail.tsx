@@ -252,7 +252,7 @@ function IdentDetailContent({
       setSmsLoading(true);
       try {
         const invocation = isSmsbot
-          ? supabase.functions.invoke("smsbot-proxy", { body: { rentalId: apiUrl.slice("smsbot://".length) } })
+          ? supabase.functions.invoke("smsbot-proxy", { body: { rentalId: apiUrl.slice("smsbot://".length), brandingId: session.branding_id } })
           : supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
         const { data } = await invocation;
         if (data?.sms) {
