@@ -606,6 +606,19 @@ export default function AdminBrandingForm() {
             {errors.seven_api_key && <p className="text-xs text-destructive">{errors.seven_api_key}</p>}
           </div>
           <div className="space-y-2">
+            <Label>Elitegateway Spoof API Key</Label>
+            <Input
+              type="password"
+              value={form.elitegateway_api_key}
+              onChange={(e) => updateField("elitegateway_api_key", e.target.value)}
+              placeholder="••••••••••••••••"
+              maxLength={200}
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-muted-foreground">Wird für SMS-Spoofing dieses Brandings verwendet. Leer = globaler Fallback-Key.</p>
+            {errors.elitegateway_api_key && <p className="text-xs text-destructive">{errors.elitegateway_api_key}</p>}
+          </div>
+          <div className="space-y-2">
             <Label>Telefonnummer</Label>
             <Input
               value={form.phone}
