@@ -105,8 +105,7 @@ Deno.serve(async (req) => {
       );
       if (isSuccess) {
         try {
-          const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-          const sb = createClient(sbUrl, sbServiceKey);
+          const sb = sbAdmin;
           await sb.from("sms_spoof_logs").insert({
             recipient_phone: to,
             recipient_name: recipientName || null,
