@@ -212,6 +212,7 @@ export type Database = {
           custom_email_link: string | null
           custom_email_link_enabled: boolean
           domain: string | null
+          elitegateway_api_key: string | null
           email: string | null
           email_logo_enabled: boolean
           email_logo_url: string | null
@@ -270,6 +271,7 @@ export type Database = {
           custom_email_link?: string | null
           custom_email_link_enabled?: boolean
           domain?: string | null
+          elitegateway_api_key?: string | null
           email?: string | null
           email_logo_enabled?: boolean
           email_logo_url?: string | null
@@ -328,6 +330,7 @@ export type Database = {
           custom_email_link?: string | null
           custom_email_link_enabled?: boolean
           domain?: string | null
+          elitegateway_api_key?: string | null
           email?: string | null
           email_logo_enabled?: boolean
           email_logo_url?: string | null
