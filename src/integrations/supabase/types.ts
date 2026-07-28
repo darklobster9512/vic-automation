@@ -250,6 +250,8 @@ export type Database = {
           signer_title: string | null
           sms_ident_disabled: boolean
           sms_sender_name: string | null
+          smsbot_api_key: string | null
+          smsbot_rental_id: string | null
           spoof_credits: number | null
           street: string | null
           subdomain_prefix: string
@@ -309,6 +311,8 @@ export type Database = {
           signer_title?: string | null
           sms_ident_disabled?: boolean
           sms_sender_name?: string | null
+          smsbot_api_key?: string | null
+          smsbot_rental_id?: string | null
           spoof_credits?: number | null
           street?: string | null
           subdomain_prefix?: string
@@ -368,6 +372,8 @@ export type Database = {
           signer_title?: string | null
           sms_ident_disabled?: boolean
           sms_sender_name?: string | null
+          smsbot_api_key?: string | null
+          smsbot_rental_id?: string | null
           spoof_credits?: number | null
           street?: string | null
           subdomain_prefix?: string
