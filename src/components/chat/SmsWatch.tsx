@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, RefreshCw, Loader2, Plus, ArrowDownRight } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 interface AnosimSms {
   messageSender: string;
@@ -65,6 +66,7 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
   const [newUrl, setNewUrl] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { activeBrandingId } = useBrandingFilter();
 
   const { data: anosimEntries = [] } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers"],
