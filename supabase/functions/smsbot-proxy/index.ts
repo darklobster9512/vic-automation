@@ -88,6 +88,7 @@ async function cached<T>(
   key: string,
   ttlMs: number,
   fetcher: () => Promise<{ ok: true; data: T } | { ok: false; status: number; body: unknown; retryAfter?: string | null }>,
+  backoffKey: string,
 ): Promise<{ status: number; body: unknown; source: string; retryAfter?: string | null }> {
   const cacheKey = `smsbot:${key}`;
 
@@ -98,7 +99,7 @@ async function cached<T>(
   }
 
   // 2) Global back-off after 429?
-  const backoff = await cacheGet(BACKOFF_KEY);
+  const backoff = await cacheGet(backoffKey);
   if (backoff && !backoff.expired) {
     if (cached1) return { status: 200, body: cached1.value, source: "STALE" };
     return { status: 429, body: { error: "SMSBot rate-limited, no cache yet", statusCode: 429 }, source: "STALE" };
@@ -111,10 +112,48 @@ async function cached<T>(
     return { status: 200, body: result.data, source: "MISS" };
   }
   if (result.status === 429) {
-    await cacheSet(BACKOFF_KEY, { at: Date.now() }, BACKOFF_MS);
+    await cacheSet(backoffKey, { at: Date.now() }, BACKOFF_MS);
     if (cached1) return { status: 200, body: cached1.value, source: "STALE", retryAfter: result.retryAfter };
   }
   return { status: result.status, body: result.body, source: "MISS", retryAfter: result.retryAfter };
+}
+
+/** Resolve the branding for a request: explicit id, or derived from the rental id. */
+async function resolveBrandingId(explicit: string | null, rentalId: string | null): Promise<string | null> {
+  if (explicit) return explicit;
+  if (!rentalId) return null;
+
+  // a) A branding that has this rental id configured as its default.
+  const { data: byDefault } = await supabase
+    .from("brandings")
+    .select("id")
+    .eq("smsbot_rental_id", rentalId)
+    .limit(1)
+    .maybeSingle();
+  if (byDefault?.id) return byDefault.id as string;
+
+  // b) A phone number entry pointing at this rental.
+  const { data: byPhone } = await supabase
+    .from("phone_numbers")
+    .select("branding_id")
+    .eq("rental_id", rentalId)
+    .not("branding_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+  if (byPhone?.branding_id) return byPhone.branding_id as string;
+
+  // c) An ident session using this rental (employee ident flow).
+  const { data: bySession } = await supabase
+    .from("ident_sessions")
+    .select("branding_id")
+    .eq("phone_api_url", `smsbot://${rentalId}`)
+    .not("branding_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (bySession?.branding_id) return bySession.branding_id as string;
+
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -123,13 +162,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get("SMSBOT_API_KEY");
-    if (!apiKey) {
-      return jsonResponse({ error: "SMSBOT_API_KEY not configured" }, 500);
-    }
-
     const body = await req.json().catch(() => ({}));
     const action = body?.action ?? (body?.rentalId ? "detail" : "list");
+    const requestedRentalId = typeof body?.rentalId === "string" && body.rentalId ? body.rentalId : null;
+
+    const brandingId = await resolveBrandingId(
+      typeof body?.brandingId === "string" && body.brandingId ? body.brandingId : null,
+      requestedRentalId,
+    );
+
+    if (!brandingId) {
+      return jsonResponse({ error: "Kein Branding für diese SMSBot-Anfrage ermittelbar" }, 400);
+    }
+
+    const { data: branding } = await supabase
+      .from("brandings")
+      .select("smsbot_api_key, smsbot_rental_id")
+      .eq("id", brandingId)
+      .maybeSingle();
+
+    const apiKey = branding?.smsbot_api_key as string | null | undefined;
+    if (!apiKey) {
+      return jsonResponse({ error: "Für dieses Branding ist kein SMSBot API Key hinterlegt" }, 400);
+    }
+
+    const backoffKey = `${BACKOFF_KEY}:${brandingId}`;
     const authHeaders = { Authorization: `Bearer ${apiKey}`, Accept: "application/json" };
 
     const doFetch = async <T>(
@@ -152,11 +209,12 @@ Deno.serve(async (req) => {
     };
 
     if (action === "list") {
-      const result = await cached("list", LIST_TTL_MS, () =>
+      const result = await cached(`${brandingId}:list`, LIST_TTL_MS, () =>
         doFetch(`${BASE}/rentals`, (raw) => {
           const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.rentals ?? raw?.items ?? []);
           return (Array.isArray(arr) ? arr : []).map(normRental).filter((r) => r.rentalId);
         }),
+        backoffKey,
       );
       const extra: Record<string, string> = { "X-Cache": result.source };
       if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
@@ -164,7 +222,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "sms") {
-      const result = await cached("sms", SMS_TTL_MS, () =>
+      const result = await cached(`${brandingId}:sms`, SMS_TTL_MS, () =>
         doFetch(`${BASE}/sms`, (raw) => {
           const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.sms ?? raw?.items ?? []);
           const byRental: Record<string, ReturnType<typeof normSms>[]> = {};
@@ -175,6 +233,7 @@ Deno.serve(async (req) => {
           }
           return byRental;
         }),
+        backoffKey,
       );
       const extra: Record<string, string> = { "X-Cache": result.source };
       if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
@@ -182,15 +241,16 @@ Deno.serve(async (req) => {
     }
 
     // detail
-    const rentalId = body?.rentalId;
-    if (!rentalId || typeof rentalId !== "string") {
+    const rentalId = requestedRentalId ?? (branding?.smsbot_rental_id as string | null) ?? null;
+    if (!rentalId) {
       return jsonResponse({ error: "rentalId required" }, 400);
     }
-    const result = await cached(`detail:${rentalId}`, DETAIL_TTL_MS, () =>
+    const result = await cached(`${brandingId}:detail:${rentalId}`, DETAIL_TTL_MS, () =>
       doFetch(`${BASE}/rentals/${encodeURIComponent(rentalId)}`, (raw) => {
         const r = raw?.data ?? raw?.rental ?? raw;
         return normRental(r);
       }),
+      backoffKey,
     );
     const extra: Record<string, string> = { "X-Cache": result.source };
     if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
