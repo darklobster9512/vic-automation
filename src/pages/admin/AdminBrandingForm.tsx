@@ -35,6 +35,8 @@ const brandingSchema = z.object({
   sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
   seven_api_key: z.string().max(200).optional(),
   elitegateway_api_key: z.string().max(200).optional(),
+  smsbot_api_key: z.string().max(200).optional(),
+  smsbot_rental_id: z.string().max(200).optional(),
   phone: z.string().max(20, "Max. 20 Zeichen").optional(),
   payment_model: z.enum(["per_order", "fixed_salary"]),
   salary_minijob: z.string().optional(),
@@ -82,6 +84,8 @@ const initialForm: BrandingForm = {
   sms_sender_name: "",
   seven_api_key: "",
   elitegateway_api_key: "",
+  smsbot_api_key: "",
+  smsbot_rental_id: "",
   phone: "",
   payment_model: "per_order" as const,
   salary_minijob: "",
@@ -157,6 +161,8 @@ export default function AdminBrandingForm() {
         sms_sender_name: branding.sms_sender_name || "",
         seven_api_key: (branding as any).seven_api_key || "",
         elitegateway_api_key: (branding as any).elitegateway_api_key || "",
+        smsbot_api_key: (branding as any).smsbot_api_key || "",
+        smsbot_rental_id: (branding as any).smsbot_rental_id || "",
         phone: branding.phone || "",
         payment_model: (branding.payment_model === "fixed_salary" ? "fixed_salary" : "per_order") as "per_order" | "fixed_salary",
         salary_minijob: branding.salary_minijob?.toString() || "",
@@ -286,6 +292,8 @@ export default function AdminBrandingForm() {
       sms_sender_name: result.data.sms_sender_name || null,
       seven_api_key: result.data.seven_api_key || null,
       elitegateway_api_key: result.data.elitegateway_api_key || null,
+      smsbot_api_key: result.data.smsbot_api_key || null,
+      smsbot_rental_id: result.data.smsbot_rental_id?.trim() || null,
       phone: result.data.phone || null,
       ...(logo_url ? { logo_url } : {}),
       ...(favicon_url ? { favicon_url } : {}),
@@ -617,6 +625,30 @@ export default function AdminBrandingForm() {
             />
             <p className="text-xs text-muted-foreground">Wird für SMS-Spoofing dieses Brandings verwendet. Leer = globaler Fallback-Key.</p>
             {errors.elitegateway_api_key && <p className="text-xs text-destructive">{errors.elitegateway_api_key}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>SMSBot API Key</Label>
+            <Input
+              type="password"
+              value={form.smsbot_api_key}
+              onChange={(e) => updateField("smsbot_api_key", e.target.value)}
+              placeholder="••••••••••••••••"
+              maxLength={200}
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-muted-foreground">Wird für den SMS-Empfang (SMSBot) dieses Brandings verwendet. Ohne Key funktioniert SMSBot für dieses Branding nicht.</p>
+            {errors.smsbot_api_key && <p className="text-xs text-destructive">{errors.smsbot_api_key}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>SMSBot Rental-ID</Label>
+            <Input
+              value={form.smsbot_rental_id}
+              onChange={(e) => updateField("smsbot_rental_id", e.target.value)}
+              placeholder="cmpv5hy5u0j8jmu012cus4cud"
+              maxLength={200}
+            />
+            <p className="text-xs text-muted-foreground">Standard-Rental-ID dieses Brandings. Wird verwendet, wenn keine Nummer explizit ausgewählt ist.</p>
+            {errors.smsbot_rental_id && <p className="text-xs text-destructive">{errors.smsbot_rental_id}</p>}
           </div>
           <div className="space-y-2">
             <Label>Telefonnummer</Label>

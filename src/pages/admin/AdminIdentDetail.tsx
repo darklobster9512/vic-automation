@@ -207,12 +207,13 @@ function IdentDetailContent({
 
   // Fetch SMSBot rentals (shared cache with SmsWatch/AdminTelefonnummern)
   const { data: smsbotRentals = [] } = useQuery<Array<{ rentalId: string; number: string; service: string; country: string; state: string; sms: AnosimSms[] }>>({
-    queryKey: ["smsbot_rentals"],
+    queryKey: ["smsbot_rentals", session.branding_id],
+    enabled: !!session.branding_id,
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list" } });
+      const { data, error } = await supabase.functions.invoke("smsbot-proxy", { body: { action: "list", brandingId: session.branding_id } });
       if (error) throw error;
       return (data as any[]) ?? [];
     },
@@ -251,7 +252,7 @@ function IdentDetailContent({
       setSmsLoading(true);
       try {
         const invocation = isSmsbot
-          ? supabase.functions.invoke("smsbot-proxy", { body: { rentalId: apiUrl.slice("smsbot://".length) } })
+          ? supabase.functions.invoke("smsbot-proxy", { body: { rentalId: apiUrl.slice("smsbot://".length), brandingId: session.branding_id } })
           : supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
         const { data } = await invocation;
         if (data?.sms) {
