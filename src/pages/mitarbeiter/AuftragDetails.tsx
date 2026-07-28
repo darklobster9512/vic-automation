@@ -66,6 +66,7 @@ interface IdentSession {
   email_tan_enabled: boolean;
   email_tans: Array<{ code: string; created_at: string }>;
   info_notes: string | null;
+  branding_id: string | null;
 }
 
 interface AnosimSms {
@@ -165,6 +166,7 @@ const AuftragDetails = () => {
           email_tan_enabled: session.email_tan_enabled ?? false,
           email_tans: Array.isArray(session.email_tans) ? session.email_tans : [],
           info_notes: session.info_notes ?? null,
+          branding_id: session.branding_id ?? (data as any)?.branding_id ?? (contract as any)?.branding_id ?? null,
         });
         if (session.status === "waiting" || session.status === "data_sent") {
           setFlowStep("videident");
@@ -214,6 +216,7 @@ const AuftragDetails = () => {
             email_tan_enabled: updated.email_tan_enabled ?? false,
             email_tans: Array.isArray(updated.email_tans) ? updated.email_tans : [],
             info_notes: updated.info_notes ?? null,
+            branding_id: updated.branding_id ?? identSession.branding_id ?? null,
           });
         }
       )
