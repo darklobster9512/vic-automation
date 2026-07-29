@@ -8,6 +8,8 @@ import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import EmptyState from "@/components/admin/dashboard/EmptyState";
+import DashboardRow from "@/components/admin/dashboard/DashboardRow";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   offen: { label: "Offen", className: "text-muted-foreground border-border" },
