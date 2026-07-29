@@ -14,7 +14,8 @@ import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/
 import { toast } from "sonner";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
+  contract: { id: string; first_name: string | null; last_name?: string | null; phone?: string | null; branding_id?: string | null; application_id: string } | null;
+  branding?: { company_name?: string | null } | null;
   loading: boolean;
 }
 
