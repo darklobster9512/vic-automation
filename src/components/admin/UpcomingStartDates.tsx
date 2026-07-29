@@ -8,8 +8,6 @@ import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
-import EmptyState from "@/components/admin/dashboard/EmptyState";
-import DashboardRow from "@/components/admin/dashboard/DashboardRow";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   offen: { label: "Offen", className: "text-muted-foreground border-border" },
@@ -18,7 +16,7 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   unterzeichnet: { label: "Unterzeichnet", className: "text-green-600 border-green-300 bg-green-50" },
 };
 
-export default function UpcomingStartDates({ embedded = false }: { embedded?: boolean }) {
+export default function UpcomingStartDates() {
   const today = new Date().toISOString().split("T")[0];
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -36,32 +34,6 @@ export default function UpcomingStartDates({ embedded = false }: { embedded?: bo
       return data ?? [];
     },
   });
-
-  if (embedded) {
-    if (!upcoming?.length) {
-      return <EmptyState icon={CalendarClock} text="Keine anstehenden Startdaten." />;
-    }
-    return (
-      <ScrollArea className="h-[260px]">
-        {upcoming.map((item: any) => {
-          const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.offen;
-          return (
-            <DashboardRow
-              key={item.id}
-              lead={format(parseISO(item.desired_start_date), "dd.MM.", { locale: de })}
-              title={`${item.first_name ?? ""} ${item.last_name ?? ""}`.trim() || "–"}
-              subtitle={format(parseISO(item.desired_start_date), "EEEE, dd. MMMM yyyy", { locale: de })}
-              trailing={
-                <Badge variant="outline" className={`text-[10px] font-semibold ${style.className}`}>
-                  {style.label}
-                </Badge>
-              }
-            />
-          );
-        })}
-      </ScrollArea>
-    );
-  }
 
   return (
     <motion.div

@@ -9,15 +9,13 @@ import { de } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { useNavigate } from "react-router-dom";
-import EmptyState from "@/components/admin/dashboard/EmptyState";
-import DashboardRow from "@/components/admin/dashboard/DashboardRow";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   waiting: { label: "Wartet", className: "text-amber-600 border-amber-300 bg-amber-50" },
   data_sent: { label: "Daten gesendet", className: "text-blue-600 border-blue-300 bg-blue-50" },
 };
 
-export default function WaitingIdents({ embedded = false }: { embedded?: boolean }) {
+export default function WaitingIdents() {
   const { activeBrandingId, ready } = useBrandingFilter();
   const navigate = useNavigate();
 
@@ -36,33 +34,6 @@ export default function WaitingIdents({ embedded = false }: { embedded?: boolean
       return data ?? [];
     },
   });
-
-  if (embedded) {
-    if (!sessions?.length) {
-      return <EmptyState icon={Video} text="Keine wartenden Ident-Sessions." />;
-    }
-    return (
-      <ScrollArea className="h-[260px]">
-        {sessions.map((item: any) => {
-          const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.waiting;
-          return (
-            <DashboardRow
-              key={item.id}
-              lead={format(new Date(item.created_at), "dd.MM.", { locale: de })}
-              title={`${item.employment_contracts?.first_name ?? ""} ${item.employment_contracts?.last_name ?? ""}`.trim() || "–"}
-              subtitle={format(new Date(item.created_at), "HH:mm", { locale: de }) + " Uhr gestartet"}
-              trailing={
-                <Badge variant="outline" className={`text-[10px] font-semibold ${style.className}`}>
-                  {style.label}
-                </Badge>
-              }
-              onClick={() => navigate(`/admin/idents/${item.id}`)}
-            />
-          );
-        })}
-      </ScrollArea>
-    );
-  }
 
   return (
     <motion.div
