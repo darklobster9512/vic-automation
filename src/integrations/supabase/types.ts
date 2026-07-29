@@ -2001,6 +2001,10 @@ export type Database = {
           appointment_time: string
         }[]
       }
+      unassign_order: {
+        Args: { _contract_id: string; _order_id: string }
+        Returns: undefined
+      }
       update_application_phone: {
         Args: { _application_id: string; _phone: string }
         Returns: undefined
