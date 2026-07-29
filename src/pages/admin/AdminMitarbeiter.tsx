@@ -42,6 +42,11 @@ export default function AdminMitarbeiter() {
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSuspendTarget, setBulkSuspendTarget] = useState<boolean | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { activeBrandingId, ready, brandings } = useBrandingFilter();
@@ -55,6 +60,10 @@ export default function AdminMitarbeiter() {
   useEffect(() => {
     setPage(0);
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, debouncedSearch, activeBrandingId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
