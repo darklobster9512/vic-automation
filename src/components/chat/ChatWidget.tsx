@@ -82,6 +82,10 @@ export function ChatWidget({ contractId, brandColor, senderName, senderPhone, br
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
+    senderName,
+    senderPhone,
+    brandingId,
+    brandingName,
     onNewMessage: (msg: ChatMessage) => {
       if (msg.sender_role !== "user") {
         if (!openRef.current || document.hidden) {
