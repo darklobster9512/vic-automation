@@ -13,12 +13,19 @@ Deno.serve(async (req) => {
 
   try {
     const { event_type, message, branding_id } = await req.json();
+    // TEMP DEBUG (v2): zeigt exakt, welcher Text ankommt und ob er aus dem neuen Builder stammt
+    const isNewFormat = typeof message === "string" && message.includes("━━━━━━━━━━━━━━━━━");
+    console.log(
+      `[send-telegram v2] event_type=${event_type} branding_id=${branding_id ?? "none"} newFormat=${isNewFormat}\n--- MESSAGE START ---\n${message}\n--- MESSAGE END ---`
+    );
     if (!event_type || !message) {
       return new Response(JSON.stringify({ error: "event_type and message required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+
 
     const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
     if (!botToken) {
