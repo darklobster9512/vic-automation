@@ -65,7 +65,7 @@ export default function UpcomingTrialDays({ embedded = false }: { embedded?: boo
     );
   }
 
-
+  return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
