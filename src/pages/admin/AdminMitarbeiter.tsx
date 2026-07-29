@@ -63,7 +63,7 @@ export default function AdminMitarbeiter() {
 
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [page, debouncedSearch, activeBrandingId]);
+  }, [debouncedSearch, activeBrandingId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
@@ -311,6 +311,8 @@ export default function AdminMitarbeiter() {
   const selectedCount = selectedIds.size;
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+  const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length;
+  const hasOffPageSelection = selectedCount > selectedOnPage;
 
   const toggleAllOnPage = (checked: boolean) => {
     setSelectedIds((prev) => {
@@ -354,7 +356,9 @@ export default function AdminMitarbeiter() {
           <>
             {selectedCount > 0 && (
               <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-muted/40">
-                <Badge variant="secondary" className="mr-1">{selectedCount} ausgewählt</Badge>
+                <Badge variant="secondary" className="mr-1">
+                  {selectedCount} ausgewählt{hasOffPageSelection ? " (seitenübergreifend)" : ""}
+                </Badge>
                 <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => setBulkSuspendTarget(true)}>
                   <Lock className="h-3.5 w-3.5 mr-1.5" /> Sperren
                 </Button>
