@@ -191,7 +191,14 @@ export default function MitarbeiterLayout() {
             <Outlet context={{ contract, branding }} />
           </main>
         </div>
-        <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />
+        <ChatWidget
+          contractId={contract?.id ?? null}
+          brandColor={branding?.brand_color}
+          senderName={[contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || null}
+          senderPhone={contract?.phone ?? null}
+          brandingId={contract?.branding_id ?? null}
+          brandingName={branding?.company_name ?? null}
+        />
       </div>
     </SidebarProvider>
   );
