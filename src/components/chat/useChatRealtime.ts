@@ -17,9 +17,21 @@ export interface ChatMessage {
 interface UseChatRealtimeOptions {
   contractId?: string | null;
   onNewMessage?: (msg: ChatMessage) => void;
+  /** Name des Mitarbeiters – für Telegram-Benachrichtigungen */
+  senderName?: string | null;
+  senderPhone?: string | null;
+  brandingId?: string | null;
+  brandingName?: string | null;
 }
 
-export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOptions = {}) {
+export function useChatRealtime({
+  contractId,
+  onNewMessage,
+  senderName,
+  senderPhone,
+  brandingId,
+  brandingName,
+}: UseChatRealtimeOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const callbackRef = useRef(onNewMessage);
