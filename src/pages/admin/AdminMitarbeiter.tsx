@@ -307,6 +307,18 @@ export default function AdminMitarbeiter() {
   }, [data?.items]);
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+  const pageIds = sortedItems.map((i: any) => i.id);
+  const selectedCount = selectedIds.size;
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+
+  const toggleAllOnPage = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      pageIds.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  };
 
   return (
     <TooltipProvider>
