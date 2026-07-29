@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
+import { quoteText } from "@/lib/telegramMessage";
 
 export interface ChatMessage {
   id: string;
@@ -110,7 +110,7 @@ export function useChatRealtime({
         const text = content.trim();
         await sendTelegram(
           "chat_nachricht",
-          buildTelegramMessage({
+          {
             icon: "💬",
             title: "Neue Chat-Nachricht",
             fields: [
@@ -120,7 +120,7 @@ export function useChatRealtime({
               { value: text ? quoteText(text, 300) : "(nur Anhang)" },
             ],
             brandingName,
-          }),
+          },
           brandingId ?? undefined
         );
       }

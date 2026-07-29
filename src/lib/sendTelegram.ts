@@ -1,7 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import { buildTelegramMessage, type TelegramMessageOptions } from "@/lib/telegramMessage";
 
-export async function sendTelegram(eventType: string, message: string, brandingId?: string | null) {
+export async function sendTelegram(eventType: string, messageOptions: TelegramMessageOptions, brandingId?: string | null) {
   try {
+    const message = buildTelegramMessage(messageOptions);
     const { data, error } = await supabase.functions.invoke("send-telegram", {
       body: { event_type: eventType, message, branding_id: brandingId || undefined },
     });

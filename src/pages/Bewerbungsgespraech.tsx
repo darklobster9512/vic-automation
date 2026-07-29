@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
+import { formatDateLong } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { Calendar } from "@/components/ui/calendar";
@@ -210,7 +210,7 @@ export default function Bewerbungsgespraech() {
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
       await sendTelegram(
         "gespraech_gebucht",
-        buildTelegramMessage({
+        {
           icon: "📅",
           title: isRebooking ? "Bewerbungsgespräch umgebucht" : "Bewerbungsgespräch gebucht",
           fields: [
@@ -221,7 +221,7 @@ export default function Bewerbungsgespraech() {
             { icon: "⏰", label: "Uhrzeit", value: `${selectedTime} Uhr` },
           ],
           brandingName: companyName,
-        }),
+        },
         application?.branding_id
       );
 
