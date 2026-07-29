@@ -22,7 +22,6 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 
 const NATIONALITIES = [
@@ -549,7 +548,7 @@ export default function MitarbeiterArbeitsvertrag() {
 
       await sendTelegram(
         "vertrag_eingereicht",
-        buildTelegramMessage({
+        {
           icon: "📋",
           title: "Arbeitsvertrag eingereicht",
           fields: [
@@ -570,7 +569,7 @@ export default function MitarbeiterArbeitsvertrag() {
             },
           ],
           brandingName: brandingData?.company_name,
-        }),
+        },
         contract.branding_id || null
       );
 
