@@ -107,11 +107,25 @@ export function useChatRealtime({
 
       // Telegram notification for user messages
       if (senderRole === "user") {
-        const truncated = content.trim().length > 100 ? content.trim().slice(0, 100) + "…" : content.trim();
-        await sendTelegram("chat_nachricht", `💬 Neue Chat-Nachricht\n\n${truncated}`);
+        const text = content.trim();
+        await sendTelegram(
+          "chat_nachricht",
+          buildTelegramMessage({
+            icon: "💬",
+            title: "Neue Chat-Nachricht",
+            fields: [
+              { icon: "👤", label: "Von", value: senderName || "Mitarbeiter", bold: true },
+              { icon: "📱", label: "Telefon", value: senderPhone },
+              { icon: "📎", label: "Anhang", value: attachmentUrl ? "Ja" : null },
+              { value: text ? quoteText(text, 300) : "(nur Anhang)" },
+            ],
+            brandingName,
+          }),
+          brandingId ?? undefined
+        );
       }
     },
-    [contractId]
+    [contractId, senderName, senderPhone, brandingId, brandingName]
   );
 
   return { messages, loading, sendMessage };
