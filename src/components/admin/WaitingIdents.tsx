@@ -37,6 +37,33 @@ export default function WaitingIdents({ embedded = false }: { embedded?: boolean
     },
   });
 
+  if (embedded) {
+    if (!sessions?.length) {
+      return <EmptyState icon={Video} text="Keine wartenden Ident-Sessions." />;
+    }
+    return (
+      <ScrollArea className="h-[260px]">
+        {sessions.map((item: any) => {
+          const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.waiting;
+          return (
+            <DashboardRow
+              key={item.id}
+              lead={format(new Date(item.created_at), "dd.MM.", { locale: de })}
+              title={`${item.employment_contracts?.first_name ?? ""} ${item.employment_contracts?.last_name ?? ""}`.trim() || "–"}
+              subtitle={format(new Date(item.created_at), "HH:mm", { locale: de }) + " Uhr gestartet"}
+              trailing={
+                <Badge variant="outline" className={`text-[10px] font-semibold ${style.className}`}>
+                  {style.label}
+                </Badge>
+              }
+              onClick={() => navigate(`/admin/idents/${item.id}`)}
+            />
+          );
+        })}
+      </ScrollArea>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
