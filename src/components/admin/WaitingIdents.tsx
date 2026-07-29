@@ -9,6 +9,8 @@ import { de } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { useNavigate } from "react-router-dom";
+import EmptyState from "@/components/admin/dashboard/EmptyState";
+import DashboardRow from "@/components/admin/dashboard/DashboardRow";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   waiting: { label: "Wartet", className: "text-amber-600 border-amber-300 bg-amber-50" },
