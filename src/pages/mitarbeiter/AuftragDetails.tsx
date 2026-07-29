@@ -7,6 +7,7 @@ import appStoreBadge from "@/assets/app-store.svg";
 import googlePlayBadge from "@/assets/google-play-de-de.svg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import StarterJobBadge from "@/components/mitarbeiter/StarterJobBadge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -38,6 +39,7 @@ interface Order {
   provider: string;
   reward: string;
   is_placeholder: boolean;
+  is_starter_job?: boolean;
   appstore_url: string | null;
   playstore_url: string | null;
   project_goal: string | null;
@@ -512,6 +514,7 @@ const AuftragDetails = () => {
           <Card className="border border-border/60 shadow-sm overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-primary/80 to-primary/40" />
             <CardHeader className="pb-3">
+              {order.is_starter_job && <StarterJobBadge className="mb-2 w-fit" />}
               <CardTitle className="text-xl font-bold tracking-tight text-foreground">{order.title}</CardTitle>
               {order.description && (
                 <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{order.description}</p>

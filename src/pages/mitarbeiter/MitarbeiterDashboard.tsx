@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSummary";
 import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
+import StarterJobBadge from "@/components/mitarbeiter/StarterJobBadge";
+import StarterJobNotice, { StarterJobPhase } from "@/components/mitarbeiter/StarterJobNotice";
 
 const truncateText = (text: string, maxLen: number): string => {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -35,6 +37,7 @@ interface Order {
   appstore_url: string | null;
   playstore_url: string | null;
   project_goal: string | null;
+  is_starter_job?: boolean;
 }
 
 interface OrderWithStatus extends Order {
@@ -150,6 +153,7 @@ const MitarbeiterDashboard = () => {
   const [desiredStartDate, setDesiredStartDate] = useState<string | null>(null);
   const [firstWorkdayDate, setFirstWorkdayDate] = useState<string | null>(null);
   const [templateSalary, setTemplateSalary] = useState<number | null>(null);
+  const [starterPhase, setStarterPhase] = useState<StarterJobPhase | null>(null);
 
 
 
@@ -301,6 +305,22 @@ const MitarbeiterDashboard = () => {
             attachmentsSubmitted: allSubmitted && !allApproved,
           };
         }));
+
+        // Starter job notice phase
+        const starterOrders = ordersData.filter((o) => (o as any).is_starter_job);
+        if (starterOrders.length > 0) {
+          const allReviewed = starterOrders.every((o) => orderIdsWithReview.has(o.id));
+          const allApprovedStarter = starterOrders.every((o) => (statusMap[o.id] ?? "offen") === "erfolgreich");
+          const cStatus = (contractDetails as any)?.status ?? null;
+          const cSubmitted = (contractDetails as any)?.submitted_at ?? null;
+          if (!allReviewed) setStarterPhase("todo");
+          else if (!allApprovedStarter) setStarterPhase("review_pending");
+          else if (cStatus === "genehmigt") setStarterPhase("done");
+          else if (!cSubmitted) setStarterPhase("contract_todo");
+          else setStarterPhase("contract_pending");
+        } else {
+          setStarterPhase(null);
+        }
       }
 
       // Fetch reviews with order titles
@@ -440,7 +460,7 @@ const MitarbeiterDashboard = () => {
       </motion.div>
 
       {/* Contract data hint */}
-      {contract && !contractSubmittedAt && (
+      {contract && !contractSubmittedAt && starterPhase !== "todo" && starterPhase !== "review_pending" && starterPhase !== "contract_todo" && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -535,6 +555,7 @@ const MitarbeiterDashboard = () => {
           const dashboardOrders = orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen" || o.assignment_status === "in_pruefung");
           return (
             <>
+              {starterPhase && <StarterJobNotice phase={starterPhase} />}
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">Deine Aufträge</h2>
@@ -579,6 +600,7 @@ const MitarbeiterDashboard = () => {
                               </Badge>
                             ) : <span />}
                             <div className="flex items-center gap-1.5">
+                              {order.is_starter_job && <StarterJobBadge />}
                               {order.hasReviewSubmitted && order.attachmentsPending && order.assignment_status !== "erfolgreich" && (
                                 <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                                   <Paperclip className="h-3 w-3 mr-1" />
