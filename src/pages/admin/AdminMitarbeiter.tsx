@@ -311,6 +311,8 @@ export default function AdminMitarbeiter() {
   const selectedCount = selectedIds.size;
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+  const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length;
+  const hasOffPageSelection = selectedCount > selectedOnPage;
 
   const toggleAllOnPage = (checked: boolean) => {
     setSelectedIds((prev) => {
