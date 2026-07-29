@@ -1,73 +1,23 @@
-## Ziel
+## Was ich geprüft habe (Fakten, keine Vermutung)
 
-Alle Telegram-Notifications sollen garantiert über das neue einheitliche Format laufen – nicht nur die Testnachricht.
+- `src/lib/sendTelegram.ts` nimmt **nur noch** strukturierte Optionen und baut den Text über `buildTelegramMessage`.
+- Alle 14 Frontend-Call-Sites (Auth, Bewerbungsgespraech, Probetag, ErsterArbeitstag, Arbeitsvertrag, MitarbeiterArbeitsvertrag, AuftragDetails ×3, Bewertung, useChatRealtime, AdminBewerbungen, AdminTelegram-Test) nutzen dieses Format. Kein direkter `supabase.functions.invoke("send-telegram")` mehr im Frontend.
+- Edge Functions `submit-application` und `sign-contract` nutzen `_shared/telegramMessage.ts`.
+- `send-telegram` selbst formatiert **nichts** – es schickt den empfangenen Text 1:1 an Telegram.
+- In der Datenbank gibt es **keine** Funktion/Trigger, die Telegram aufruft.
+- Alles ist committet (`d6c22aa`).
 
-## Befund aus dem Code-Audit
-
-Ich habe alle Telegram-Quellen gesucht:
-
-- Frontend-Helper: `src/lib/sendTelegram.ts`
-- Frontend-Formatter: `src/lib/telegramMessage.ts`
-- Admin-Testseite: `src/pages/admin/AdminTelegram.tsx`
-- Livechat, Bewertung, Bewerbung, Termine, Arbeitsvertrag, Ident/Auftrag
-- Edge Functions: `submit-application`, `sign-contract`, `send-telegram`
-- Direkte Bot-API-Calls: nur in `send-telegram`
-
-Aktuell ist der gefährliche Punkt: `sendTelegram(eventType, message, brandingId)` akzeptiert weiterhin beliebigen Text. Dadurch können alte/hardcodierte Nachrichten weiter durchrutschen. Genau das passiert bei `/admin/telegram`.
+Das heißt: Im aktuellen Code kann keine alte Nachricht mehr entstehen. Trotzdem kommen bei dir alte an – dafür bleiben genau zwei mögliche Ursachen, und die will ich nicht raten, sondern beweisen.
 
 ## Plan
 
-1. `sendTelegram` zentral umbauen
-   - Nicht mehr `message: string` als freien Text akzeptieren.
-   - Stattdessen strukturierte Daten akzeptieren:
+1. **Beweis-Logging** in `supabase/functions/send-telegram/index.ts`: den exakten eingehenden `event_type` und den kompletten `message`-Text loggen (plus einen Marker `v2`), damit in den Logs schwarz auf weiß steht, welcher Text ankommt und woher.
+2. Edge Functions neu deployen (`send-telegram`, `submit-application`, `sign-contract`).
+3. Testnachricht aus der Preview auslösen und die Logs lesen:
+   - Kommt der **neue** Text an → die Quelle deiner alten Nachrichten ist die **veröffentlichte Live-Seite**, die noch das alte Frontend-Bundle ausliefert (echte Bewerbungen/Chats laufen dort, nicht in der Preview). Fix: Publish/Update.
+   - Kommt der **alte** Text an → ich habe die konkrete Quelle im Log (event_type) und fixe genau die Stelle.
+4. Danach je nach Ergebnis: Republish bzw. gezielter Code-Fix, und erneut mit Log verifizieren.
 
-```ts
-sendTelegram(eventType, {
-  icon,
-  title,
-  fields,
-  brandingName,
-}, brandingId)
-```
+## Technisch
 
-   - Der Helper baut intern immer mit `buildTelegramMessage(...)`.
-   - Dadurch kann im Frontend keine Notification mehr versehentlich alten Plain-Text senden.
-
-2. Alle Frontend-Notifications anfassen
-   - `konto_erstellt`
-   - `bewerbung_eingegangen`
-   - `gespraech_gebucht`
-   - `probetag_gebucht`
-   - `erster_arbeitstag_gebucht`
-   - `vertrag_eingereicht`
-   - `bewertung_eingereicht`
-   - `ident_gestartet`
-   - `anhaenge_eingereicht`
-   - `email_tan_angefordert`
-   - `chat_nachricht`
-   - `_test`
-
-   Alle werden auf das neue strukturierte Format umgestellt.
-
-3. `/admin/telegram` Testnachricht fixen
-   - Die hartcodierte Nachricht
-
-```text
-🔔 Test-Nachricht von Vic Admin
-```
-
-   wird entfernt.
-   - Test verwendet danach denselben zentralen Formatter wie alle anderen Notifications.
-
-4. Edge Functions prüfen und absichern
-   - `submit-application` und `sign-contract` nutzen bereits den Shared-Formatter, bleiben aber Teil der Prüfung.
-   - `send-telegram` bleibt nur Transport-Funktion und sendet HTML an Telegram.
-
-5. Validierung
-   - Danach den Preview-Network-Request prüfen.
-   - Kein Request darf mehr alte Plain-Text-Nachrichten enthalten.
-   - Speziell `/admin/telegram` muss im Request Body einen HTML-formatierten Text mit `<b>...</b>` und Trenner senden.
-
-## Ergebnis
-
-Danach gibt es im Frontend keinen offenen Pfad mehr, der einfach irgendeinen hardcodierten Telegram-Text an `send-telegram` schicken kann.
+Das Logging ist temporär und wird nach der Verifikation wieder entfernt bzw. auf eine Kurzfassung (nur `event_type` + erste Zeile) reduziert, damit keine Klartext-Inhalte dauerhaft in den Logs landen.
