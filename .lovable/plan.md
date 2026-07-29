@@ -1,12 +1,34 @@
-## Änderung
+## Mehrfachauswahl auf /admin/mitarbeiter
 
-In `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` wird die Statistik-Kachel „Stundenlohn" entfernt.
+Ziel: Mitarbeiter per Checkbox auswählen und dann gesammelt sperren, entsperren oder löschen.
 
-Aktuell wird an zweiter Stelle der Statistik-Reihe je nach Branding entweder „Stundenlohn", „Festgehalt" oder „Guthaben" angezeigt. Künftig entfällt der Stundenlohn-Fall: Bei Brandings mit Stundenlohn-Abrechnung wird an dieser Stelle keine Kachel mehr gerendert, das Raster zeigt dann drei Kacheln (Zugewiesene Tests, Offene Aufträge, Bewertung).
+### Auswahl-UI
 
-„Festgehalt" und „Guthaben" bleiben für alle anderen Brandings unverändert.
+- Neue erste Spalte in der Tabelle mit einer Checkbox pro Zeile.
+- Checkbox im Tabellenkopf wählt alle Einträge der **aktuellen Seite** aus (inkl. Zwischenzustand, wenn nur ein Teil ausgewählt ist).
+- Auswahl wird als Set von Vertrags-IDs im State gehalten und automatisch geleert, wenn Seite, Suche oder Branding wechseln — so werden nie unsichtbare Einträge mitgelöscht.
+- Klick auf die Checkbox löst keine Zeilennavigation aus.
 
-## Technisch
+### Aktionsleiste
 
-- Im `stats`-Array den `isHourlyRate`-Zweig entfernen und den Eintrag herausfiltern, sodass keine leere Karte entsteht.
-- Kein Ersatz-Inhalt, keine weiteren Änderungen an Layout, Datenabfragen oder anderen Seiten.
+Sobald mindestens ein Eintrag ausgewählt ist, erscheint über der Tabelle eine Leiste:
+
+```text
+[ 5 ausgewählt ]   [ Sperren ]  [ Entsperren ]  [ Löschen ]   [ Auswahl aufheben ]
+```
+
+- **Sperren / Entsperren**: setzt `is_suspended` für alle markierten Verträge in einem einzigen Update (`.in("id", ids)`).
+- **Löschen**: ruft die bestehende `delete-employee` Edge Function nacheinander für jede ID auf (die Function nimmt eine einzelne `contractId`), mit Fortschrittsanzeige im Button und Fehlerzählung am Ende.
+
+### Sicherheitsabfragen
+
+- Sperren/Entsperren: kurzer Bestätigungsdialog mit Anzahl.
+- Löschen: bestehender AlertDialog-Stil, Text angepasst auf „X Mitarbeiter endgültig löschen?" mit dem Hinweis, dass Vertragsdaten, Aufträge und Benutzerkonten unwiderruflich entfernt werden.
+
+### Nach der Aktion
+
+Toast mit Ergebnis (z. B. „5 gesperrt" bzw. „4 gelöscht, 1 fehlgeschlagen"), Auswahl zurücksetzen und `mitarbeiter`-Query invalidieren, damit die Tabelle aktualisiert.
+
+### Technisch
+
+Nur `src/pages/admin/AdminMitarbeiter.tsx` wird geändert; die vorhandenen Einzel-Aktionen (Auge, Schloss, Papierkorb) bleiben unverändert bestehen. Genutzt wird die vorhandene shadcn-`Checkbox`-Komponente. Keine Datenbank- oder Edge-Function-Änderungen nötig.
