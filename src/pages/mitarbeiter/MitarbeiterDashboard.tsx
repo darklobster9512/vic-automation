@@ -305,6 +305,22 @@ const MitarbeiterDashboard = () => {
             attachmentsSubmitted: allSubmitted && !allApproved,
           };
         }));
+
+        // Starter job notice phase
+        const starterOrders = ordersData.filter((o) => (o as any).is_starter_job);
+        if (starterOrders.length > 0) {
+          const allReviewed = starterOrders.every((o) => orderIdsWithReview.has(o.id));
+          const allApprovedStarter = starterOrders.every((o) => (statusMap[o.id] ?? "offen") === "erfolgreich");
+          const cStatus = (contractDetails as any)?.status ?? null;
+          const cSubmitted = (contractDetails as any)?.submitted_at ?? null;
+          if (!allReviewed) setStarterPhase("todo");
+          else if (!allApprovedStarter) setStarterPhase("review_pending");
+          else if (cStatus === "genehmigt") setStarterPhase("done");
+          else if (!cSubmitted) setStarterPhase("contract_todo");
+          else setStarterPhase("contract_pending");
+        } else {
+          setStarterPhase(null);
+        }
       }
 
       // Fetch reviews with order titles
@@ -444,7 +460,7 @@ const MitarbeiterDashboard = () => {
       </motion.div>
 
       {/* Contract data hint */}
-      {contract && !contractSubmittedAt && (
+      {contract && !contractSubmittedAt && starterPhase !== "todo" && starterPhase !== "review_pending" && starterPhase !== "contract_todo" && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -539,6 +555,7 @@ const MitarbeiterDashboard = () => {
           const dashboardOrders = orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen" || o.assignment_status === "in_pruefung");
           return (
             <>
+              {starterPhase && <StarterJobNotice phase={starterPhase} />}
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">Deine Aufträge</h2>
