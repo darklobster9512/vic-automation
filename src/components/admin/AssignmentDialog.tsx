@@ -494,8 +494,13 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           {removedCount > 0 && (
             <p className="text-sm text-destructive text-center">
               {removedCount} {removedCount === 1 ? "Zuweisung wird entzogen" : "Zuweisungen werden entzogen"}
+              <br />
+              <span className="text-xs">
+                Dabei werden Ident-Session, Bewertung, Anhänge und Termine dieses Auftrags unwiderruflich gelöscht.
+              </span>
             </p>
           )}
+
           <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Abbrechen</Button>
           <Button
