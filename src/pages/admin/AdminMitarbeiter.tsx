@@ -356,7 +356,9 @@ export default function AdminMitarbeiter() {
           <>
             {selectedCount > 0 && (
               <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-muted/40">
-                <Badge variant="secondary" className="mr-1">{selectedCount} ausgewählt</Badge>
+                <Badge variant="secondary" className="mr-1">
+                  {selectedCount} ausgewählt{hasOffPageSelection ? " (seitenübergreifend)" : ""}
+                </Badge>
                 <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => setBulkSuspendTarget(true)}>
                   <Lock className="h-3.5 w-3.5 mr-1.5" /> Sperren
                 </Button>
