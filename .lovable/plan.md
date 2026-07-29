@@ -1,14 +1,11 @@
-## Auswahl bei Suche beibehalten
+## Ziel
+Im Mitarbeiter-Dashboard soll ein Klick auf die Karte "Offene Aufträge" zu `/mitarbeiter/auftraege` navigieren.
 
-Auf `/admin/mitarbeiter` wird die Mehrfachauswahl aktuell geleert, sobald sich der Suchbegriff ändert. Das soll weg.
+## Umsetzung
+In `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`:
 
-### Änderung
+1. Im `stats`-Array bekommt der Eintrag "Offene Aufträge" ein zusätzliches optionales Feld `href: "/mitarbeiter/auftraege"` (Typ des Arrays entsprechend erweitern).
+2. Im Render-Block (`stats.map`) wird die `Card` bei vorhandenem `href` per `useNavigate()`-Klick-Handler navigierbar gemacht, inkl. `cursor-pointer`, `role="button"`, `tabIndex={0}` und Enter-/Space-Tastaturunterstützung für Barrierefreiheit.
+3. Optik bleibt unverändert (bestehende Hover-Effekte greifen bereits).
 
-- Der Reset-Effekt reagiert nur noch auf den **Branding-Wechsel** (dort passt der Datenbestand nicht mehr zur Auswahl).
-- Tippen in der Suche und Blättern (Pagination) lassen die Auswahl unangetastet — gefundene Treffer können also über mehrere Suchen hinweg gesammelt werden.
-- Beim Verlassen der Seite (Seitenwechsel/Route) wird die Auswahl automatisch verworfen, weil die Komponente ausgehängt wird — dafür ist kein Zusatzcode nötig.
-- Aktionsleiste, Kopf-Checkbox (gilt weiter nur für die sichtbaren Zeilen) und Bulk-Aktionen (Sperren/Entsperren/Löschen über alle gemerkten IDs) bleiben unverändert.
-
-### Technisch
-
-Nur `src/pages/admin/AdminMitarbeiter.tsx`: In der Abhängigkeitsliste des Reset-Effekts (Zeile 64–66) `debouncedSearch` entfernen, sodass nur noch `activeBrandingId` überwacht wird.
+Andere Karten bleiben nicht klickbar.
