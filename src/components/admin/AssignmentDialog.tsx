@@ -157,15 +157,35 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
       const newlyAdded = Array.from(selected).filter((id) => !existingIdSet.has(id));
       const removed = Array.from(existingIdSet).filter((id) => !selected.has(id));
 
-      // Delete removed assignments — targeted by BOTH order_id AND contract_id
+      // Delete removed assignments — inkl. aller zugehörigen Daten (Ident, Bewertung, Anhänge, Termine)
       for (const targetId of removed) {
-        const { error: delErr } = await supabase
-          .from("order_assignments")
-          .delete()
-          .eq(mode === "order" ? "order_id" : "contract_id", sourceId)
-          .eq(mode === "order" ? "contract_id" : "order_id", targetId);
+        const orderId = mode === "order" ? sourceId : targetId;
+        const contractId = mode === "order" ? targetId : sourceId;
+
+        // Storage-Dateien der Anhänge entfernen
+        const { data: atts } = await supabase
+          .from("order_attachments")
+          .select("file_url")
+          .eq("order_id", orderId)
+          .eq("contract_id", contractId);
+        const paths = (atts ?? [])
+          .map((a: any) => {
+            const marker = "/order-attachments/";
+            const idx = (a.file_url || "").indexOf(marker);
+            return idx === -1 ? null : decodeURIComponent(a.file_url.slice(idx + marker.length));
+          })
+          .filter(Boolean) as string[];
+        if (paths.length > 0) {
+          await supabase.storage.from("order-attachments").remove(paths);
+        }
+
+        const { error: delErr } = await supabase.rpc("unassign_order" as any, {
+          _order_id: orderId,
+          _contract_id: contractId,
+        });
         if (delErr) throw delErr;
       }
+
 
       // Insert newly added assignments
       if (newlyAdded.length > 0) {
