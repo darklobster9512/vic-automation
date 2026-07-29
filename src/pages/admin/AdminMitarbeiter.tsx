@@ -226,6 +226,61 @@ export default function AdminMitarbeiter() {
     }
   };
 
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleBulkSuspend = async () => {
+    if (bulkSuspendTarget === null) return;
+    const ids = Array.from(selectedIds);
+    setBulkBusy(true);
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update({ is_suspended: bulkSuspendTarget })
+      .in("id", ids);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren.");
+    } else {
+      toast.success(`${ids.length} ${bulkSuspendTarget ? "gesperrt" : "entsperrt"}.`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["mitarbeiter"] });
+    }
+    setBulkSuspendTarget(null);
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    setBulkBusy(true);
+    setBulkProgress(0);
+    let ok = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        const { data, error } = await supabase.functions.invoke("delete-employee", {
+          body: { contractId: id },
+        });
+        if (error || data?.error) failed++;
+        else ok++;
+      } catch {
+        failed++;
+      }
+      setBulkProgress((p) => p + 1);
+    }
+    setBulkBusy(false);
+    setBulkDeleteOpen(false);
+    setSelectedIds(new Set());
+    queryClient.invalidateQueries({ queryKey: ["mitarbeiter"] });
+    if (failed === 0) toast.success(`${ok} Mitarbeiter gelöscht.`);
+    else toast.error(`${ok} gelöscht, ${failed} fehlgeschlagen.`);
+  };
+
+
   const sortedItems = useMemo(() => {
     const items = data?.items ?? [];
     const today = startOfToday();
