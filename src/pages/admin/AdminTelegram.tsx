@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Send, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { sendTelegram } from "@/lib/sendTelegram";
 
 const EVENT_TYPES = [
   { key: "bewerbung_eingegangen", label: "Neue Bewerbung", desc: "Neue Bewerbung ist eingegangen" },
@@ -146,10 +147,16 @@ export default function AdminTelegram() {
 
   const testMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.functions.invoke("send-telegram", {
-        body: { event_type: "_test", message: "🔔 Test-Nachricht von Vic Admin" },
+      await sendTelegram("_test", {
+        icon: "🔔",
+        title: "Telegram-Testnachricht",
+        fields: [
+          { icon: "✅", label: "Status", value: "Neues Benachrichtigungsformat aktiv", bold: true },
+          { icon: "📨", label: "Quelle", value: "Admin Panel" },
+          { icon: "🧩", label: "Format", value: "Einheitlicher HTML-Builder" },
+        ],
+        brandingName: "Vic Admin",
       });
-      if (error) throw error;
     },
     onSuccess: () => toast.success("Testnachricht an alle Chat-IDs gesendet"),
     onError: () => toast.error("Fehler beim Senden"),

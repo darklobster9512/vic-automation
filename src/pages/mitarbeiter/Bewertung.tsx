@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
+import { renderStars, quoteText } from "@/lib/telegramMessage";
 import { toast } from "sonner";
 
 interface ContextType {
@@ -158,7 +158,7 @@ const Bewertung = () => {
     const firstComment = answers.map((a) => a.comment.trim()).filter(Boolean)[0] || "";
     await sendTelegram(
       "bewertung_eingereicht",
-      buildTelegramMessage({
+      {
         icon: "⭐",
         title: "Bewertung eingereicht",
         fields: [
@@ -171,7 +171,7 @@ const Bewertung = () => {
           { value: firstComment ? quoteText(firstComment, 300) : null },
         ],
         brandingName: brandingCtx?.company_name,
-      }),
+      },
       contract.branding_id ?? undefined
     );
 

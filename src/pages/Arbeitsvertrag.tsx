@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,7 +254,7 @@ export default function Arbeitsvertrag() {
       // Telegram notification
       await sendTelegram(
         "vertrag_eingereicht",
-        buildTelegramMessage({
+        {
           icon: "📋",
           title: "Arbeitsvertrag eingereicht",
           fields: [
@@ -266,7 +265,7 @@ export default function Arbeitsvertrag() {
             { icon: "🗓", label: "Wunschstart", value: form.desired_start_date ? format(form.desired_start_date, "dd.MM.yyyy") : "" },
           ],
           brandingName: companyName,
-        }),
+        },
         contract?.branding_id
       );
 

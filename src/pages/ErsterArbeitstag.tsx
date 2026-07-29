@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
+import { formatDateLong } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { Calendar } from "@/components/ui/calendar";
@@ -206,7 +206,7 @@ export default function ErsterArbeitstag() {
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
       await sendTelegram(
         "erster_arbeitstag_gebucht",
-        buildTelegramMessage({
+        {
           icon: "🚀",
           title: isRebooking ? "1. Arbeitstag umgebucht" : "Erster Arbeitstag gebucht",
           fields: [
@@ -217,7 +217,7 @@ export default function ErsterArbeitstag() {
             { icon: "⏰", label: "Uhrzeit", value: `${selectedTime} Uhr` },
           ],
           brandingName: companyName,
-        }),
+        },
         contract?.branding_id
       );
 

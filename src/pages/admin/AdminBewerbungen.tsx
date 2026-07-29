@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { createShortLink } from "@/lib/createShortLink";
@@ -576,7 +575,7 @@ export default function AdminBewerbungen() {
       const name = `${variables.first_name || ""} ${variables.last_name || ""}`.trim();
       sendTelegram(
         "bewerbung_eingegangen",
-        buildTelegramMessage({
+        {
           icon: "📝",
           title: "Neue Bewerbung eingegangen",
           fields: [
@@ -587,7 +586,7 @@ export default function AdminBewerbungen() {
             { icon: "💼", label: "Bereich", value: variables.position || variables.job_field },
             { icon: "🌐", label: "Quelle", value: variables.source },
           ],
-        }),
+        },
         variables.branding_id as string | undefined
       );
       setForm(initialForm);
