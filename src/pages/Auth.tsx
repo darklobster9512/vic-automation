@@ -160,7 +160,20 @@ const Auth = () => {
         event_type: "konto_erstellt",
         metadata: {},
       });
-      await sendTelegram("konto_erstellt", `👤 Neuer Mitarbeiter registriert\n\nName: ${fullName}\nE-Mail: ${regEmail}`);
+      await sendTelegram(
+        "konto_erstellt",
+        buildTelegramMessage({
+          icon: "👤",
+          title: "Neuer Mitarbeiter registriert",
+          fields: [
+            { icon: "👤", label: "Name", value: fullName, bold: true },
+            { icon: "✉️", label: "E-Mail", value: regEmail.trim().toLowerCase() },
+            { icon: "📱", label: "Telefon", value: phone.trim() },
+          ],
+          brandingName: brandingCompany,
+        }),
+        brandingId
+      );
     }
     setLoading(false);
     if (error) toast.error(error.message);
