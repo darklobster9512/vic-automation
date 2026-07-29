@@ -8,6 +8,8 @@ import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import EmptyState from "@/components/admin/dashboard/EmptyState";
+import DashboardRow from "@/components/admin/dashboard/DashboardRow";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   ausstehend: { label: "Ausstehend", className: "text-amber-600 border-amber-300 bg-amber-50" },
