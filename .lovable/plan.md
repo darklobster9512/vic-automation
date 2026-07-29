@@ -1,32 +1,51 @@
-## Problem
+## Ziel
 
-Wenn eine Zuweisung entfernt wird, löscht `AssignmentDialog.tsx` (Zeile 161–168) nur die Zeile in `order_assignments`. Alles andere bleibt bestehen. Bei erneuter Zuweisung findet `AuftragDetails.tsx` (Zeile 149–184) die alte, auf `completed` stehende Ident-Session und springt sofort in den Bewertungs-Schritt – genau der beschriebene Bug.
+Starterjobs im Mitarbeiter-Panel klar kennzeichnen und über den Auftragskarten einen Hinweis anzeigen, der sich je nach Fortschritt ändert.
 
-Betroffene Reste pro Auftrag + Mitarbeiter:
-- `ident_sessions` (order_id + contract_id)
-- `order_reviews`
-- `order_attachments` (inkl. Dateien im Bucket `order-attachments`)
-- `order_appointments`
+## 1. Starterjob-Badge
 
-## Lösung
+Ein kleines wiederverwendbares Badge (`src/components/mitarbeiter/StarterJobBadge.tsx`), Rocket-Icon + Text „Starterjob", im Branding-Primärton (semantische Tokens, abgerundet, wie die bestehenden Badges).
 
-Beim Entziehen wird die Kombination Auftrag + Mitarbeiter vollständig zurückgesetzt, als wäre sie nie zugewiesen worden.
+Eingebaut an drei Stellen, jeweils wenn `orders.is_starter_job === true`:
+- `/mitarbeiter` (MitarbeiterDashboard) – in der Auftragskarte neben Auftragsnummer/Status
+- `/mitarbeiter/auftraege` (MitarbeiterAuftraege) – gleiche Position in der Karte
+- `/mitarbeiter/auftragdetails/:id` (AuftragDetails) – oben im Kopfbereich neben dem Titel/über der Beschreibung
 
-### 1. Datenbank: Aufräum-Funktion
+Dafür wird `is_starter_job` in den bestehenden `orders`-Selects mitgeladen (Dashboard nutzt bereits `select("*")`; in `MitarbeiterAuftraege` und `AuftragDetails` wird das Feld ergänzt).
 
-Neue `SECURITY DEFINER` Funktion `public.unassign_order(_order_id uuid, _contract_id uuid)`, die in einer Transaktion löscht:
-`order_reviews` → `order_attachments` → `order_appointments` → `ident_sessions` → `order_assignments`, jeweils gefiltert auf order_id + contract_id. Ausführungsrecht für `authenticated`, mit Prüfung, dass der Aufrufer Admin/Kunde des zugehörigen Brandings ist (analog bestehender Policies).
+## 2. Starterjob-Hinweis auf /mitarbeiter
 
-### 2. Frontend: AssignmentDialog
+Neue Komponente `src/components/mitarbeiter/StarterJobNotice.tsx`, platziert direkt über dem Auftragskarten-Bereich im Dashboard. Sie wird nur angezeigt, wenn dem Mitarbeiter Starterjobs zugewiesen sind, und durchläuft 5 Phasen:
 
-Die Löschschleife in `saveMutation` ruft statt `.from("order_assignments").delete()` künftig `supabase.rpc("unassign_order", { _order_id, _contract_id })` auf – funktioniert für beide Modi (`mode="order"` und `mode="contract"`), nur die Zuordnung von sourceId/targetId dreht sich.
+**Phase 1 – Starterjobs offen** (nicht für alle Starterjobs eine Bewertung abgeschickt):
+> **Starterjobs**
+> Erledige beide Starterjobs bitte innerhalb der nächsten 48 Stunden, damit wir deine Arbeitsweise und Fähigkeiten kurz einschätzen können. Die Bearbeitung dauert insgesamt ca. 25–35 Minuten.
+> Nach Abschluss und Prüfung erhältst du von uns per E-Mail oder telefonisch eine Rückmeldung zu den nächsten Schritten.
+> Bitte stelle sicher, dass wir dich sowohl per E-Mail als auch telefonisch erreichen können.
 
-Hinweistext im Dialog-Footer wird ergänzt: Entfernen löscht auch Ident-Session, Bewertung und Anhänge.
+**Phase 2 – Bewertungen abgeschickt, noch nicht genehmigt:**
+> **Starterjobs in Prüfung**
+> Vielen Dank – deine Bewertungen zu den Starterjobs sind bei uns eingegangen. Unser Team prüft deine Ergebnisse jetzt sorgfältig und meldet sich in Kürze bei dir. Bitte halte dich per E-Mail und Telefon erreichbar.
 
-### 3. Storage-Dateien
+**Phase 3 – beide Starterjob-Zuweisungen „erfolgreich", Vertragsdaten noch nicht abgeschickt:**
+> **Starterjobs bestanden – jetzt Vertragsdaten ausfüllen**
+> Herzlichen Glückwunsch, deine Starterjobs wurden erfolgreich geprüft. Als nächsten Schritt fülle bitte deine Arbeitsvertragsdaten aus, damit wir deinen Arbeitsvertrag erstellen können.
+> Button „Vertragsdaten ausfüllen" → `/mitarbeiter/arbeitsvertrag`
 
-Vor dem RPC werden die Dateipfade der betroffenen `order_attachments` gelesen und die Dateien aus dem Bucket `order-attachments` entfernt, damit keine Leichen zurückbleiben.
+**Phase 4 – Vertragsdaten abgeschickt, noch nicht genehmigt:**
+> **Arbeitsvertrag in Prüfung**
+> Deine Vertragsdaten sind eingegangen und werden aktuell von uns geprüft. Sobald alles bestätigt ist, informieren wir dich per E-Mail.
 
-## Hinweis
+**Phase 5 – Arbeitsvertrag genehmigt:** Hinweis wird komplett ausgeblendet.
 
-Das Löschen ist unwiderruflich – ein einmal entzogener Auftrag verliert die eingereichten Anhänge und Bewertungen dieses Mitarbeiters endgültig. Genau das war die Anforderung; sag Bescheid, falls stattdessen nur ein Zurücksetzen (Daten behalten, Status auf „offen") gewünscht ist.
+Farbliche Abstufung: Phase 1/3 mit Handlungsbedarf (Amber bzw. Primär), Phase 2/4 neutral-blau, jeweils im bestehenden Card-Stil (`rounded-2xl`, linker Akzentbalken, shadow-md).
+
+## Technische Details
+
+- Datenquellen (alle bereits im Dashboard geladen bzw. minimal ergänzt):
+  - Starterjobs: `order_assignments` × `orders.is_starter_job = true`
+  - Bewertung abgeschickt: Existenz von `order_reviews` für Contract + Starterjob-Order
+  - Genehmigt: `order_assignments.status === 'erfolgreich'` für alle Starterjobs
+  - Vertragsstatus: bereits vorhandene States `contractSubmittedAt` / `contractStatus`
+- Die bestehende Karte „Arbeitsvertragsdaten ausfüllen" wird unterdrückt, solange der Starterjob-Hinweis in Phase 1/2 aktiv ist, damit keine widersprüchlichen Hinweise gleichzeitig erscheinen.
+- Keine DB-Änderungen nötig; rein Frontend.
