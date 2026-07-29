@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     try {
       const { data: contractForTg } = await adminClient
         .from("employment_contracts")
-        .select("first_name, last_name")
+        .select("first_name, last_name, phone, email, branding_id, brandings(company_name)")
         .eq("id", contract_id)
         .single();
       const empName = `${contractForTg?.first_name || ""} ${contractForTg?.last_name || ""}`.trim();
@@ -101,7 +101,18 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           event_type: "vertrag_unterzeichnet",
-          message: `✍️ Vertrag unterzeichnet\n\nName: ${empName || "Unbekannt"}`,
+          branding_id: (contractForTg as any)?.branding_id || undefined,
+          message: buildTelegramMessage({
+            icon: "✍️",
+            title: "Vertrag unterzeichnet",
+            fields: [
+              { icon: "👤", label: "Name", value: empName || "Unbekannt", bold: true },
+              { icon: "✉️", label: "E-Mail", value: (contractForTg as any)?.email },
+              { icon: "📱", label: "Telefon", value: (contractForTg as any)?.phone },
+              { icon: "📄", label: "Status", value: "Signiertes PDF erstellt" },
+            ],
+            brandingName: (contractForTg as any)?.brandings?.company_name,
+          }),
         }),
       });
     } catch (telegramErr) {
