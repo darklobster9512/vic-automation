@@ -1,19 +1,14 @@
-## Auswahl über Seitenwechsel hinweg merken
+## Auswahl bei Suche beibehalten
 
-Aktuell wird die Auswahl bei jedem Seitenwechsel geleert. Das wird geändert.
+Auf `/admin/mitarbeiter` wird die Mehrfachauswahl aktuell geleert, sobald sich der Suchbegriff ändert. Das soll weg.
 
 ### Änderung
 
-- Der Effekt, der die Auswahl zurücksetzt, reagiert **nicht mehr auf `page`** — nur noch auf Suchbegriff und Branding-Wechsel (dort passt der Datenbestand nicht mehr zur Auswahl).
-- Beim Blättern bleiben markierte Mitarbeiter also erhalten und werden beim Zurückblättern wieder als angehakt angezeigt.
-- Die Kopf-Checkbox bezieht sich weiterhin nur auf die aktuell sichtbare Seite (wählt sie an bzw. ab), zerstört aber nicht die Auswahl anderer Seiten.
-
-### Aktionsleiste
-
-- Bleibt sichtbar, solange irgendetwas ausgewählt ist — auch wenn auf der gerade angezeigten Seite kein markierter Eintrag liegt.
-- Zusatz-Hinweis im Badge, wenn die Auswahl über die aktuelle Seite hinausgeht, z. B. „12 ausgewählt (seitenübergreifend)".
-- Sperren / Entsperren / Löschen arbeiten unverändert auf allen gespeicherten IDs, also auch auf denen anderer Seiten.
+- Der Reset-Effekt reagiert nur noch auf den **Branding-Wechsel** (dort passt der Datenbestand nicht mehr zur Auswahl).
+- Tippen in der Suche und Blättern (Pagination) lassen die Auswahl unangetastet — gefundene Treffer können also über mehrere Suchen hinweg gesammelt werden.
+- Beim Verlassen der Seite (Seitenwechsel/Route) wird die Auswahl automatisch verworfen, weil die Komponente ausgehängt wird — dafür ist kein Zusatzcode nötig.
+- Aktionsleiste, Kopf-Checkbox (gilt weiter nur für die sichtbaren Zeilen) und Bulk-Aktionen (Sperren/Entsperren/Löschen über alle gemerkten IDs) bleiben unverändert.
 
 ### Technisch
 
-Nur `src/pages/admin/AdminMitarbeiter.tsx`: Abhängigkeitsliste des Reset-Effekts anpassen und die Badge-Beschriftung um den seitenübergreifenden Hinweis ergänzen.
+Nur `src/pages/admin/AdminMitarbeiter.tsx`: In der Abhängigkeitsliste des Reset-Effekts (Zeile 64–66) `debouncedSearch` entfernen, sodass nur noch `activeBrandingId` überwacht wird.
