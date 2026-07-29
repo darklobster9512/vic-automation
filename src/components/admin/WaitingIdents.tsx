@@ -17,7 +17,7 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   data_sent: { label: "Daten gesendet", className: "text-blue-600 border-blue-300 bg-blue-50" },
 };
 
-export default function WaitingIdents() {
+export default function WaitingIdents({ embedded = false }: { embedded?: boolean }) {
   const { activeBrandingId, ready } = useBrandingFilter();
   const navigate = useNavigate();
 
