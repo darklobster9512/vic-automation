@@ -10,10 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { toast } from "sonner";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
+  contract: { id: string; first_name: string | null; last_name?: string | null; phone?: string | null; branding_id?: string | null; application_id: string } | null;
+  branding?: { company_name?: string | null } | null;
   loading: boolean;
 }
 
@@ -61,7 +63,7 @@ const StarRating = ({
 const Bewertung = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding: brandingCtx, loading: layoutLoading } = useOutletContext<ContextType>();
 
   const [order, setOrder] = useState<{ id: string; title: string; review_questions: unknown; required_attachments: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -150,8 +152,28 @@ const Bewertung = () => {
     }
 
     // Telegram notification
-    const empName = contract.first_name || "Mitarbeiter";
-    await sendTelegram("bewertung_eingereicht", `⭐ Bewertung eingereicht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}`);
+    const empName = [contract.first_name, contract.last_name].filter(Boolean).join(" ") || "Mitarbeiter";
+    const avgRating =
+      answers.reduce((sum, a) => sum + (a.rating || 0), 0) / (answers.length || 1);
+    const firstComment = answers.map((a) => a.comment.trim()).filter(Boolean)[0] || "";
+    await sendTelegram(
+      "bewertung_eingereicht",
+      buildTelegramMessage({
+        icon: "⭐",
+        title: "Bewertung eingereicht",
+        fields: [
+          { icon: "👤", label: "Mitarbeiter", value: empName, bold: true },
+          { icon: "📱", label: "Telefon", value: contract.phone },
+          { icon: "📦", label: "Auftrag", value: order.title },
+          { icon: "🏷", label: "Auftragsnummer", value: (order as any).order_number },
+          { icon: "⭐", label: "Bewertung", value: `${renderStars(avgRating)} (${avgRating.toFixed(1)}/5)` },
+          { icon: "📝", label: "Fragen", value: `${answers.length}` },
+          { value: firstComment ? quoteText(firstComment, 300) : null },
+        ],
+        brandingName: brandingCtx?.company_name,
+      }),
+      contract.branding_id ?? undefined
+    );
 
     toast.success("Bewertung erfolgreich abgeschickt!");
 

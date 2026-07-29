@@ -29,6 +29,9 @@ interface BrandingData {
 interface ContractData {
   id: string;
   first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  branding_id: string | null;
   application_id: string | null;
   status: string;
   contract_pdf_url: string | null;
@@ -67,7 +70,7 @@ export default function MitarbeiterLayout() {
           .maybeSingle(),
         supabase
           .from("employment_contracts")
-          .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at, desired_start_date")
+          .select("id, first_name, last_name, phone, branding_id, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at, desired_start_date")
           .eq("user_id", user.id)
           .maybeSingle(),
       ]);
@@ -188,7 +191,14 @@ export default function MitarbeiterLayout() {
             <Outlet context={{ contract, branding }} />
           </main>
         </div>
-        <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />
+        <ChatWidget
+          contractId={contract?.id ?? null}
+          brandColor={branding?.brand_color}
+          senderName={[contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || null}
+          senderPhone={contract?.phone ?? null}
+          brandingId={contract?.branding_id ?? null}
+          brandingName={branding?.company_name ?? null}
+        />
       </div>
     </SidebarProvider>
   );

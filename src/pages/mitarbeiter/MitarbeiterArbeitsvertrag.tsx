@@ -22,6 +22,7 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 
 const NATIONALITIES = [
@@ -546,7 +547,32 @@ export default function MitarbeiterArbeitsvertrag() {
         } as any)
         .eq("id", contract.id);
 
-      await sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
+      await sendTelegram(
+        "vertrag_eingereicht",
+        buildTelegramMessage({
+          icon: "📋",
+          title: "Arbeitsvertrag eingereicht",
+          fields: [
+            { icon: "👤", label: "Name", value: `${form.first_name} ${form.last_name}`.trim(), bold: true },
+            { icon: "✉️", label: "E-Mail", value: form.email },
+            { icon: "📱", label: "Telefon", value: form.phone },
+            {
+              icon: "💼",
+              label: "Art",
+              value:
+                employmentLabels[selectedTemplate?.employment_type || form.employment_type] ||
+                form.employment_type,
+            },
+            {
+              icon: "🗓",
+              label: "Wunschstart",
+              value: form.desired_start_date ? format(form.desired_start_date, "dd.MM.yyyy") : "",
+            },
+          ],
+          brandingName: brandingData?.company_name,
+        }),
+        contract.branding_id || null
+      );
 
       // Send vertrag_eingereicht email confirmation
       await sendEmail({

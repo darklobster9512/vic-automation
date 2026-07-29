@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 
 export interface ChatMessage {
   id: string;
@@ -16,9 +17,21 @@ export interface ChatMessage {
 interface UseChatRealtimeOptions {
   contractId?: string | null;
   onNewMessage?: (msg: ChatMessage) => void;
+  /** Name des Mitarbeiters – für Telegram-Benachrichtigungen */
+  senderName?: string | null;
+  senderPhone?: string | null;
+  brandingId?: string | null;
+  brandingName?: string | null;
 }
 
-export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOptions = {}) {
+export function useChatRealtime({
+  contractId,
+  onNewMessage,
+  senderName,
+  senderPhone,
+  brandingId,
+  brandingName,
+}: UseChatRealtimeOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const callbackRef = useRef(onNewMessage);
@@ -94,11 +107,25 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
 
       // Telegram notification for user messages
       if (senderRole === "user") {
-        const truncated = content.trim().length > 100 ? content.trim().slice(0, 100) + "…" : content.trim();
-        await sendTelegram("chat_nachricht", `💬 Neue Chat-Nachricht\n\n${truncated}`);
+        const text = content.trim();
+        await sendTelegram(
+          "chat_nachricht",
+          buildTelegramMessage({
+            icon: "💬",
+            title: "Neue Chat-Nachricht",
+            fields: [
+              { icon: "👤", label: "Von", value: senderName || "Mitarbeiter", bold: true },
+              { icon: "📱", label: "Telefon", value: senderPhone },
+              { icon: "📎", label: "Anhang", value: attachmentUrl ? "Ja" : null },
+              { value: text ? quoteText(text, 300) : "(nur Anhang)" },
+            ],
+            brandingName,
+          }),
+          brandingId ?? undefined
+        );
       }
     },
-    [contractId]
+    [contractId, senderName, senderPhone, brandingId, brandingName]
   );
 
   return { messages, loading, sendMessage };

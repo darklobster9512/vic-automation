@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { Calendar } from "@/components/ui/calendar";
@@ -202,8 +203,23 @@ export default function Probetag() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      const telegramPrefix = isRebooking ? "🏢 Probetag umgebucht" : "🏢 Probetag gebucht";
-      await sendTelegram("probetag_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
+      await sendTelegram(
+        "probetag_gebucht",
+        buildTelegramMessage({
+          icon: "🧪",
+          title: isRebooking ? "Probetag umgebucht" : "Probetag gebucht",
+          fields: [
+            { icon: "👤", label: "Name", value: applicantName, bold: true },
+            { icon: "📱", label: "Telefon", value: application?.phone },
+            { icon: "✉️", label: "E-Mail", value: application?.email },
+            { icon: "🗓", label: "Termin", value: formatDateLong(selectedDate!) },
+            { icon: "⏰", label: "Uhrzeit", value: `${selectedTime} Uhr` },
+          ],
+          brandingName: companyName,
+        }),
+        application.branding_id
+      );
+
 
       if (application?.email) {
         await sendEmail({

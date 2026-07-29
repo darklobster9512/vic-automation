@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { ArrowLeft, Target, HelpCircle, Download, Star, Upload, FileText, CheckCircle, XCircle, ListChecks, Video, AlertTriangle, Clock, MessageSquare, Smartphone, Loader2, Info, MessageCircle, RefreshCw, Mail } from "lucide-react";
 import appStoreBadge from "@/assets/app-store.svg";
 import googlePlayBadge from "@/assets/google-play-de-de.svg";
@@ -26,7 +27,7 @@ import {
 import { format } from "date-fns";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
+  contract: { id: string; first_name: string | null; last_name?: string | null; phone?: string | null; branding_id?: string | null; application_id: string } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null } | null;
   loading: boolean;
 }
@@ -351,7 +352,22 @@ const AuftragDetails = () => {
     setFlowStep("videident");
 
     // Telegram notification
-    await sendTelegram("ident_gestartet", `🎥 Ident gestartet\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
+    await sendTelegram(
+      "ident_gestartet",
+      buildTelegramMessage({
+        icon: "🎥",
+        title: "Ident gestartet",
+        fields: [
+          { icon: "👤", label: "Mitarbeiter", value: [contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || "Mitarbeiter", bold: true },
+          { icon: "📱", label: "Telefon", value: contract?.phone },
+          { icon: "📦", label: "Auftrag", value: order.title },
+          { icon: "🏷", label: "Auftragsnummer", value: (order as any).order_number },
+          { icon: "🏦", label: "Anbieter", value: (order as any).provider },
+        ],
+        brandingName: brandingCtx?.company_name,
+      }),
+      (order as any)?.branding_id ?? contract?.branding_id ?? undefined
+    );
   };
 
   const handleCompleteVideoChat = async () => {
@@ -434,7 +450,21 @@ const AuftragDetails = () => {
     setSubmittingAttachments(false);
 
     // Telegram notification
-    await sendTelegram("anhaenge_eingereicht", `📎 Anhänge eingereicht\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
+    await sendTelegram(
+      "anhaenge_eingereicht",
+      buildTelegramMessage({
+        icon: "📎",
+        title: "Anhänge eingereicht",
+        fields: [
+          { icon: "👤", label: "Mitarbeiter", value: [contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || "Mitarbeiter", bold: true },
+          { icon: "📱", label: "Telefon", value: contract?.phone },
+          { icon: "📦", label: "Auftrag", value: order.title },
+          { icon: "🏷", label: "Auftragsnummer", value: (order as any).order_number },
+        ],
+        brandingName: brandingCtx?.company_name,
+      }),
+      (order as any)?.branding_id ?? contract?.branding_id ?? undefined
+    );
   };
 
   if (layoutLoading || loading) {
@@ -858,12 +888,23 @@ const AuftragDetails = () => {
                     disabled={emailTanRequested}
                     onClick={async () => {
                       setEmailTanRequested(true);
-                      const name = contract?.first_name || "Mitarbeiter";
+                      const name = [contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || "Mitarbeiter";
                       const titel = order?.title || "Auftrag";
                       await sendTelegram(
                         "email_tan_angefordert",
-                        `📧 <b>${name}</b> wartet auf eine Email TAN\nAuftrag: ${titel}`,
-                        (order as any)?.branding_id
+                        buildTelegramMessage({
+                          icon: "📧",
+                          title: "Email-TAN angefordert",
+                          fields: [
+                            { icon: "👤", label: "Mitarbeiter", value: name, bold: true },
+                            { icon: "📱", label: "Telefon", value: contract?.phone },
+                            { icon: "📦", label: "Auftrag", value: titel },
+                            { icon: "🏷", label: "Auftragsnummer", value: (order as any)?.order_number },
+                            { value: "Wartet auf die Email-TAN." },
+                          ],
+                          brandingName: brandingCtx?.company_name,
+                        }),
+                        (order as any)?.branding_id ?? contract?.branding_id ?? undefined
                       );
                       toast.success("Anfrage gesendet");
                       setTimeout(() => setEmailTanRequested(false), 30000);

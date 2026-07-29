@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,7 +253,22 @@ export default function Arbeitsvertrag() {
       if (rpcError) throw rpcError;
 
       // Telegram notification
-      await sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
+      await sendTelegram(
+        "vertrag_eingereicht",
+        buildTelegramMessage({
+          icon: "📋",
+          title: "Arbeitsvertrag eingereicht",
+          fields: [
+            { icon: "👤", label: "Name", value: `${form.first_name} ${form.last_name}`.trim(), bold: true },
+            { icon: "✉️", label: "E-Mail", value: form.email },
+            { icon: "📱", label: "Telefon", value: form.phone },
+            { icon: "💼", label: "Art", value: employmentLabels[form.employment_type] || form.employment_type },
+            { icon: "🗓", label: "Wunschstart", value: form.desired_start_date ? format(form.desired_start_date, "dd.MM.yyyy") : "" },
+          ],
+          brandingName: companyName,
+        }),
+        contract?.branding_id
+      );
 
       // Send vertrag_eingereicht email confirmation
       if (form.email) {

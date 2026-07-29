@@ -18,10 +18,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface ChatWidgetProps {
   contractId: string | null;
   brandColor?: string | null;
+  senderName?: string | null;
+  senderPhone?: string | null;
+  brandingId?: string | null;
+  brandingName?: string | null;
 }
 
 
-export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
+export function ChatWidget({ contractId, brandColor, senderName, senderPhone, brandingId, brandingName }: ChatWidgetProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -78,6 +82,10 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
+    senderName,
+    senderPhone,
+    brandingId,
+    brandingName,
     onNewMessage: (msg: ChatMessage) => {
       if (msg.sender_role !== "user") {
         if (!openRef.current || document.hidden) {
