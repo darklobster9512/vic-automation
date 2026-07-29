@@ -1,27 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Calendar, FileCheck, CalendarClock, MessageCircle } from "lucide-react";
+import { FileText, Calendar, FileCheck, CalendarClock, MessageCircle, Video, Users, Inbox } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
 import UpcomingTrialDays from "@/components/admin/UpcomingTrialDays";
 import WaitingIdents from "@/components/admin/WaitingIdents";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import DashboardSection from "@/components/admin/dashboard/DashboardSection";
+import DashboardRow from "@/components/admin/dashboard/DashboardRow";
+import MetricList from "@/components/admin/dashboard/MetricList";
+import EmptyState from "@/components/admin/dashboard/EmptyState";
+import ActionBar from "@/components/admin/dashboard/ActionBar";
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 
-const STAT_BORDERS = [
-  "border-t-[hsl(var(--stat-blue))]",
-  "border-t-[hsl(var(--stat-green))]",
-  "border-t-[hsl(var(--stat-orange))]",
-  "border-t-[hsl(var(--stat-violet))]",
-  "border-t-[hsl(var(--stat-rose))]",
-];
+const C = {
+  blue: "hsl(var(--stat-blue))",
+  green: "hsl(var(--stat-green))",
+  orange: "hsl(var(--stat-orange))",
+  violet: "hsl(var(--stat-violet))",
+  rose: "hsl(var(--stat-rose))",
+};
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -80,9 +84,6 @@ export default function AdminDashboard() {
     refetchInterval: 10000,
   });
 
-
-
-
   const { data: recentApps } = useQuery({
     queryKey: ["dash-recent-apps", activeBrandingId],
     queryFn: async () => {
@@ -123,14 +124,6 @@ export default function AdminDashboard() {
     refetchInterval: 30000,
   });
 
-  const stats = [
-    { label: "Neue Bewerbungen", value: neuCount, loading: l1, icon: FileText, link: "/admin/bewerbungen", accent: "text-blue-600 bg-blue-50" },
-    { label: "Gespräche heute", value: interviewTodayCount, loading: l2, icon: Calendar, link: "/admin/bewerbungsgespraeche", accent: "text-emerald-600 bg-emerald-50" },
-    { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege", accent: "text-orange-600 bg-orange-50" },
-    { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine", accent: "text-violet-600 bg-violet-50" },
-    { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat", accent: "text-rose-600 bg-rose-50" },
-  ];
-
   const statusConfig: Record<string, { label: string; className: string }> = {
     neu: { label: "Neu", className: "border-blue-200 bg-blue-50 text-blue-700" },
     eingeladen: { label: "Eingeladen", className: "border-amber-200 bg-amber-50 text-amber-700" },
@@ -141,141 +134,194 @@ export default function AdminDashboard() {
     ausstehend: { label: "Ausstehend", className: "border-amber-200 bg-amber-50 text-amber-700" },
   };
 
+  const metrics = [
+    { label: "Neue Bewerbungen", value: neuCount, loading: l1, link: "/admin/bewerbungen", color: C.blue },
+    { label: "Gespräche heute", value: interviewTodayCount, loading: l2, link: "/admin/bewerbungsgespraeche", color: C.green },
+    { label: "Offene Verträge", value: contractCount, loading: l3, link: "/admin/arbeitsvertraege", color: C.orange },
+    { label: "Termine heute", value: appointmentTodayCount, loading: l4, link: "/admin/auftragstermine", color: C.violet },
+    { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, link: "/admin/livechat", color: C.rose },
+  ];
+
+  const actions = [
+    { label: "neue Bewerbungen", count: neuCount ?? 0, link: "/admin/bewerbungen", icon: FileText, color: C.blue },
+    { label: "Verträge prüfen", count: contractCount ?? 0, link: "/admin/arbeitsvertraege", icon: FileCheck, color: C.orange },
+    { label: "ungelesene Chats", count: unreadChatCount ?? 0, link: "/admin/livechat", icon: MessageCircle, color: C.rose },
+  ];
+
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="mb-6"
+      >
         <h2 className="text-2xl font-bold tracking-tight text-foreground mb-0.5">Willkommen zurück</h2>
-        <p className="text-muted-foreground text-sm mb-8">Übersicht aller wichtigen Aktivitäten.</p>
+        <p className="text-muted-foreground text-sm capitalize">
+          {format(new Date(), "EEEE, d. MMMM yyyy", { locale: de })}
+        </p>
       </motion.div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-        {stats.map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.07 }}>
-            <Card
-              className={`cursor-pointer border-t-4 ${STAT_BORDERS[i]} hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}
-              onClick={() => navigate(s.link)}
-            >
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{s.label}</CardTitle>
-                <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${s.accent}`}>
-                  <s.icon className="h-5 w-5" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {s.loading ? (
-                  <Skeleton className="h-9 w-14" />
+      <ActionBar items={actions} />
+
+      {/* Heute + Kennzahlen */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2">
+          <DashboardSection
+            title="Heute"
+            icon={CalendarClock}
+            delay={0.05}
+            tabs={[
+              {
+                id: "gespraeche",
+                label: "Gespräche",
+                count: todayInterviews?.length,
+                link: "/admin/bewerbungsgespraeche",
+                content: !todayInterviews?.length ? (
+                  <EmptyState icon={Calendar} text="Heute stehen keine Gespräche an." />
                 ) : (
-                  <div className="text-3xl font-extrabold text-foreground">{s.value}</div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      <UpcomingStartDates />
-      <UpcomingTrialDays />
-      <WaitingIdents />
-
-      {/* Detail Lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Neueste Bewerbungen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!recentApps?.length ? (
-                <p className="text-sm text-muted-foreground">Keine Bewerbungen vorhanden.</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentApps.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">{a.first_name} {a.last_name}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-[10px] font-semibold ${statusConfig[a.status]?.className ?? ""}`}>{statusConfig[a.status]?.label ?? a.status}</Badge>
-                        <span className="text-muted-foreground text-xs">{format(new Date(a.created_at), "dd.MM.yy", { locale: de })}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Heutige Gespräche</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!todayInterviews?.length ? (
-                <p className="text-sm text-muted-foreground">Keine Gespräche heute.</p>
-              ) : (
-                <div className="space-y-3">
-                  {todayInterviews.map((iv: any) => (
-                    <div key={iv.id} className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">
-                        {iv.applications?.first_name} {iv.applications?.last_name}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-[10px] font-semibold ${statusConfig[iv.status]?.className ?? ""}`}>{statusConfig[iv.status]?.label ?? iv.status}</Badge>
-                        <span className="text-muted-foreground text-xs">{iv.appointment_time?.slice(0, 5)} Uhr</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  <ScrollArea className="h-[260px]">
+                    {todayInterviews.map((iv: any) => (
+                      <DashboardRow
+                        key={iv.id}
+                        lead={`${iv.appointment_time?.slice(0, 5)}`}
+                        title={`${iv.applications?.first_name ?? ""} ${iv.applications?.last_name ?? ""}`.trim() || "–"}
+                        trailing={
+                          <Badge variant="outline" className={`text-[10px] font-semibold ${statusConfig[iv.status]?.className ?? ""}`}>
+                            {statusConfig[iv.status]?.label ?? iv.status}
+                          </Badge>
+                        }
+                        onClick={() => navigate("/admin/bewerbungsgespraeche")}
+                      />
+                    ))}
+                  </ScrollArea>
+                ),
+              },
+              {
+                id: "auftragstermine",
+                label: "Auftragstermine",
+                count: todayOrderAppts?.length,
+                link: "/admin/auftragstermine",
+                content: !todayOrderAppts?.length ? (
+                  <EmptyState icon={CalendarClock} text="Heute stehen keine Auftragstermine an." />
+                ) : (
+                  <ScrollArea className="h-[260px]">
+                    {todayOrderAppts.map((oa: any) => (
+                      <DashboardRow
+                        key={oa.id}
+                        lead={`${oa.appointment_time?.slice(0, 5)}`}
+                        title={`${oa.employment_contracts?.first_name ?? ""} ${oa.employment_contracts?.last_name ?? ""}`.trim() || "–"}
+                        onClick={() => navigate("/admin/auftragstermine")}
+                      />
+                    ))}
+                  </ScrollArea>
+                ),
+              },
+            ]}
+          />
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Eingereichte Verträge</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!submittedContracts?.length ? (
-                <p className="text-sm text-muted-foreground">Keine eingereichten Verträge.</p>
-              ) : (
-                <div className="space-y-3">
-                  {submittedContracts.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">{c.first_name} {c.last_name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {c.submitted_at ? format(new Date(c.submitted_at), "dd.MM.yy", { locale: de }) : "–"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Heutige Auftragstermine</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!todayOrderAppts?.length ? (
-                <p className="text-sm text-muted-foreground">Keine Auftragstermine heute.</p>
-              ) : (
-                <div className="space-y-3">
-                  {todayOrderAppts.map((oa: any) => (
-                    <div key={oa.id} className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">
-                        {oa.employment_contracts?.first_name} {oa.employment_contracts?.last_name}
-                      </span>
-                      <span className="text-muted-foreground text-xs">{oa.appointment_time?.slice(0, 5)} Uhr</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <MetricList metrics={metrics} delay={0.1} />
       </div>
+
+      {/* Zu erledigen + Neueste Bewerbungen */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <DashboardSection
+          title="Zu erledigen"
+          icon={FileCheck}
+          delay={0.15}
+          tabs={[
+            {
+              id: "vertraege",
+              label: "Verträge",
+              count: submittedContracts?.length,
+              link: "/admin/arbeitsvertraege",
+              content: !submittedContracts?.length ? (
+                <EmptyState icon={FileCheck} text="Keine eingereichten Verträge." />
+              ) : (
+                <ScrollArea className="h-[260px]">
+                  {submittedContracts.map((c: any) => (
+                    <DashboardRow
+                      key={c.id}
+                      title={`${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || "–"}
+                      subtitle="Eingereicht – wartet auf Prüfung"
+                      trailing={
+                        <span className="text-xs text-muted-foreground">
+                          {c.submitted_at ? format(new Date(c.submitted_at), "dd.MM.yy", { locale: de }) : "–"}
+                        </span>
+                      }
+                      onClick={() => navigate("/admin/arbeitsvertraege")}
+                    />
+                  ))}
+                </ScrollArea>
+              ),
+            },
+            {
+              id: "idents",
+              label: "Idents",
+              link: "/admin/idents",
+              content: <WaitingIdents embedded />,
+            },
+          ]}
+        />
+
+        <DashboardSection
+          title="Neueste Bewerbungen"
+          icon={Inbox}
+          delay={0.2}
+          tabs={[
+            {
+              id: "apps",
+              label: "Bewerbungen",
+              link: "/admin/bewerbungen",
+              content: !recentApps?.length ? (
+                <EmptyState icon={Inbox} text="Keine Bewerbungen vorhanden." />
+              ) : (
+                <ScrollArea className="h-[260px]">
+                  {recentApps.map((a: any) => (
+                    <DashboardRow
+                      key={a.id}
+                      title={`${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || "–"}
+                      trailing={
+                        <>
+                          <Badge variant="outline" className={`text-[10px] font-semibold ${statusConfig[a.status]?.className ?? ""}`}>
+                            {statusConfig[a.status]?.label ?? a.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(a.created_at), "dd.MM.yy", { locale: de })}
+                          </span>
+                        </>
+                      }
+                      onClick={() => navigate("/admin/bewerbungen")}
+                    />
+                  ))}
+                </ScrollArea>
+              ),
+            },
+          ]}
+        />
+      </div>
+
+      {/* Kommende Termine */}
+      <DashboardSection
+        title="Kommende Termine"
+        icon={Users}
+        delay={0.25}
+        tabs={[
+          {
+            id: "startdaten",
+            label: "Startdaten",
+            link: "/admin/mitarbeiter",
+            content: <UpcomingStartDates embedded />,
+          },
+          {
+            id: "probetage",
+            label: "Probetage",
+            link: "/admin/probetag",
+            content: <UpcomingTrialDays embedded />,
+          },
+        ]}
+      />
     </>
   );
 }
