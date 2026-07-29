@@ -27,7 +27,7 @@ import {
 import { format } from "date-fns";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
+  contract: { id: string; first_name: string | null; last_name?: string | null; phone?: string | null; branding_id?: string | null; application_id: string } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null } | null;
   loading: boolean;
 }
