@@ -204,8 +204,23 @@ export default function ErsterArbeitstag() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      const telegramPrefix = isRebooking ? "🏢 1. Arbeitstag umgebucht" : "🏢 1. Arbeitstag gebucht";
-      await sendTelegram("erster_arbeitstag_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, contract?.branding_id);
+      await sendTelegram(
+        "erster_arbeitstag_gebucht",
+        buildTelegramMessage({
+          icon: "🚀",
+          title: isRebooking ? "1. Arbeitstag umgebucht" : "Erster Arbeitstag gebucht",
+          fields: [
+            { icon: "👤", label: "Name", value: applicantName, bold: true },
+            { icon: "📱", label: "Telefon", value: (contract as any)?.phone },
+            { icon: "✉️", label: "E-Mail", value: (contract as any)?.email },
+            { icon: "🗓", label: "Datum", value: formatDateLong(selectedDate!) },
+            { icon: "⏰", label: "Uhrzeit", value: `${selectedTime} Uhr` },
+          ],
+          brandingName: companyName,
+        }),
+        contract?.branding_id
+      );
+
 
       if (contract?.email) {
         await sendEmail({
