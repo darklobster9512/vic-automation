@@ -53,7 +53,10 @@ export default function AdminBrandings() {
         transition={{ duration: 0.4 }}
         className="mb-8"
       >
-        <img src="/fortellogo.png" alt="for.tel" className="h-10 mb-4" />
+        <div className="flex items-center gap-6 mb-4">
+          <img src="/fortellogo.png" alt="for.tel" className="h-10 object-contain" />
+          <img src="/limexlogo.png" alt="limex" className="h-10 object-contain" />
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground">Brandings</h2>
