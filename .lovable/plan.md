@@ -1,34 +1,19 @@
-## Mehrfachauswahl auf /admin/mitarbeiter
+## Auswahl über Seitenwechsel hinweg merken
 
-Ziel: Mitarbeiter per Checkbox auswählen und dann gesammelt sperren, entsperren oder löschen.
+Aktuell wird die Auswahl bei jedem Seitenwechsel geleert. Das wird geändert.
 
-### Auswahl-UI
+### Änderung
 
-- Neue erste Spalte in der Tabelle mit einer Checkbox pro Zeile.
-- Checkbox im Tabellenkopf wählt alle Einträge der **aktuellen Seite** aus (inkl. Zwischenzustand, wenn nur ein Teil ausgewählt ist).
-- Auswahl wird als Set von Vertrags-IDs im State gehalten und automatisch geleert, wenn Seite, Suche oder Branding wechseln — so werden nie unsichtbare Einträge mitgelöscht.
-- Klick auf die Checkbox löst keine Zeilennavigation aus.
+- Der Effekt, der die Auswahl zurücksetzt, reagiert **nicht mehr auf `page`** — nur noch auf Suchbegriff und Branding-Wechsel (dort passt der Datenbestand nicht mehr zur Auswahl).
+- Beim Blättern bleiben markierte Mitarbeiter also erhalten und werden beim Zurückblättern wieder als angehakt angezeigt.
+- Die Kopf-Checkbox bezieht sich weiterhin nur auf die aktuell sichtbare Seite (wählt sie an bzw. ab), zerstört aber nicht die Auswahl anderer Seiten.
 
 ### Aktionsleiste
 
-Sobald mindestens ein Eintrag ausgewählt ist, erscheint über der Tabelle eine Leiste:
-
-```text
-[ 5 ausgewählt ]   [ Sperren ]  [ Entsperren ]  [ Löschen ]   [ Auswahl aufheben ]
-```
-
-- **Sperren / Entsperren**: setzt `is_suspended` für alle markierten Verträge in einem einzigen Update (`.in("id", ids)`).
-- **Löschen**: ruft die bestehende `delete-employee` Edge Function nacheinander für jede ID auf (die Function nimmt eine einzelne `contractId`), mit Fortschrittsanzeige im Button und Fehlerzählung am Ende.
-
-### Sicherheitsabfragen
-
-- Sperren/Entsperren: kurzer Bestätigungsdialog mit Anzahl.
-- Löschen: bestehender AlertDialog-Stil, Text angepasst auf „X Mitarbeiter endgültig löschen?" mit dem Hinweis, dass Vertragsdaten, Aufträge und Benutzerkonten unwiderruflich entfernt werden.
-
-### Nach der Aktion
-
-Toast mit Ergebnis (z. B. „5 gesperrt" bzw. „4 gelöscht, 1 fehlgeschlagen"), Auswahl zurücksetzen und `mitarbeiter`-Query invalidieren, damit die Tabelle aktualisiert.
+- Bleibt sichtbar, solange irgendetwas ausgewählt ist — auch wenn auf der gerade angezeigten Seite kein markierter Eintrag liegt.
+- Zusatz-Hinweis im Badge, wenn die Auswahl über die aktuelle Seite hinausgeht, z. B. „12 ausgewählt (seitenübergreifend)".
+- Sperren / Entsperren / Löschen arbeiten unverändert auf allen gespeicherten IDs, also auch auf denen anderer Seiten.
 
 ### Technisch
 
-Nur `src/pages/admin/AdminMitarbeiter.tsx` wird geändert; die vorhandenen Einzel-Aktionen (Auge, Schloss, Papierkorb) bleiben unverändert bestehen. Genutzt wird die vorhandene shadcn-`Checkbox`-Komponente. Keine Datenbank- oder Edge-Function-Änderungen nötig.
+Nur `src/pages/admin/AdminMitarbeiter.tsx`: Abhängigkeitsliste des Reset-Effekts anpassen und die Badge-Beschriftung um den seitenübergreifenden Hinweis ergänzen.
