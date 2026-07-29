@@ -574,7 +574,22 @@ export default function AdminBewerbungen() {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
       const name = `${variables.first_name || ""} ${variables.last_name || ""}`.trim();
-      sendTelegram("bewerbung_eingegangen", `📝 Neue Bewerbung eingegangen\n\nName: ${name}\nE-Mail: ${variables.email || "–"}`, variables.branding_id as string | undefined);
+      sendTelegram(
+        "bewerbung_eingegangen",
+        buildTelegramMessage({
+          icon: "📝",
+          title: "Neue Bewerbung eingegangen",
+          fields: [
+            { icon: "👤", label: "Name", value: name, bold: true },
+            { icon: "✉️", label: "E-Mail", value: variables.email },
+            { icon: "📱", label: "Telefon", value: variables.phone },
+            { icon: "📍", label: "Ort", value: [variables.zip_code, variables.city].filter(Boolean).join(" ") },
+            { icon: "💼", label: "Bereich", value: variables.position || variables.job_field },
+            { icon: "🌐", label: "Quelle", value: variables.source },
+          ],
+        }),
+        variables.branding_id as string | undefined
+      );
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);
