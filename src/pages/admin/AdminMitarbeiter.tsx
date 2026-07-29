@@ -63,7 +63,7 @@ export default function AdminMitarbeiter() {
 
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [page, debouncedSearch, activeBrandingId]);
+  }, [debouncedSearch, activeBrandingId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
