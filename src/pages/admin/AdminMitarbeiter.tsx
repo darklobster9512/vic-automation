@@ -352,10 +352,34 @@ export default function AdminMitarbeiter() {
           </div>
         ) : (
           <>
+            {selectedCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-muted/40">
+                <Badge variant="secondary" className="mr-1">{selectedCount} ausgewählt</Badge>
+                <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => setBulkSuspendTarget(true)}>
+                  <Lock className="h-3.5 w-3.5 mr-1.5" /> Sperren
+                </Button>
+                <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => setBulkSuspendTarget(false)}>
+                  <Unlock className="h-3.5 w-3.5 mr-1.5" /> Entsperren
+                </Button>
+                <Button variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setBulkDeleteOpen(true)}>
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Löschen
+                </Button>
+                <Button variant="ghost" size="sm" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>
+                  Auswahl aufheben
+                </Button>
+              </div>
+            )}
             <div className="premium-card overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
+                        onCheckedChange={(v) => toggleAllOnPage(v === true)}
+                        aria-label="Alle auf dieser Seite auswählen"
+                      />
+                    </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Telefon</TableHead>
                     <TableHead>E-Mail</TableHead>
