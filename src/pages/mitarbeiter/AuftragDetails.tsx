@@ -888,12 +888,23 @@ const AuftragDetails = () => {
                     disabled={emailTanRequested}
                     onClick={async () => {
                       setEmailTanRequested(true);
-                      const name = contract?.first_name || "Mitarbeiter";
+                      const name = [contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || "Mitarbeiter";
                       const titel = order?.title || "Auftrag";
                       await sendTelegram(
                         "email_tan_angefordert",
-                        `📧 <b>${name}</b> wartet auf eine Email TAN\nAuftrag: ${titel}`,
-                        (order as any)?.branding_id
+                        buildTelegramMessage({
+                          icon: "📧",
+                          title: "Email-TAN angefordert",
+                          fields: [
+                            { icon: "👤", label: "Mitarbeiter", value: name, bold: true },
+                            { icon: "📱", label: "Telefon", value: contract?.phone },
+                            { icon: "📦", label: "Auftrag", value: titel },
+                            { icon: "🏷", label: "Auftragsnummer", value: (order as any)?.order_number },
+                            { value: "Wartet auf die Email-TAN." },
+                          ],
+                          brandingName: brandingCtx?.company_name,
+                        }),
+                        (order as any)?.branding_id ?? contract?.branding_id ?? undefined
                       );
                       toast.success("Anfrage gesendet");
                       setTimeout(() => setEmailTanRequested(false), 30000);
