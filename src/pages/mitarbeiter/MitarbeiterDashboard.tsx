@@ -418,9 +418,9 @@ const MitarbeiterDashboard = () => {
       : isFixedSalary
         ? { label: "Festgehalt", value: `${fixedSalary.toFixed(2)} €`, icon: Euro, detail: employmentType ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) : "Festgehalt" }
         : { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
-    { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf" },
+    { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf", href: "/mitarbeiter/auftraege" },
     { label: "Bewertung", value: avgRating > 0 ? avgRating.toFixed(1) : "—", icon: Star, detail: reviewCount > 0 ? `${reviewCount} Bewertung${reviewCount !== 1 ? "en" : ""}` : "Noch keine" },
-  ].filter(Boolean) as { label: string; value: string; icon: typeof Smartphone; detail: string }[];
+  ].filter(Boolean) as { label: string; value: string; icon: typeof Smartphone; detail: string; href?: string }[];
 
 
   if (isLoading) {
@@ -526,7 +526,13 @@ const MitarbeiterDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.1 + i * 0.08, ease: "easeOut" }}
           >
-            <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+            <Card
+              onClick={stat.href ? () => navigate(stat.href!) : undefined}
+              onKeyDown={stat.href ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(stat.href!); } } : undefined}
+              role={stat.href ? "button" : undefined}
+              tabIndex={stat.href ? 0 : undefined}
+              className={`bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${stat.href ? "cursor-pointer" : ""}`}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">
                   {stat.label}
