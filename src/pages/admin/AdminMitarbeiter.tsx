@@ -620,6 +620,54 @@ export default function AdminMitarbeiter() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={bulkSuspendTarget !== null} onOpenChange={(v) => { if (!v) setBulkSuspendTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedCount} {selectedCount === 1 ? "Mitarbeiter" : "Mitarbeiter"} {bulkSuspendTarget ? "sperren" : "entsperren"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkSuspendTarget
+                ? "Die ausgewählten Mitarbeiter werden sofort ausgesperrt und sehen nur noch eine Sperrseite."
+                : "Die ausgewählten Mitarbeiter erhalten wieder vollen Zugang zum Dashboard."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkBusy}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkSuspend(); }}
+              disabled={bulkBusy}
+              className={bulkSuspendTarget
+                ? "bg-destructive hover:bg-destructive/90 shadow-sm hover:shadow-md transition-all"
+                : "bg-green-600 hover:bg-green-700 shadow-sm hover:shadow-md transition-all"}
+            >
+              {bulkBusy ? "Bitte warten..." : bulkSuspendTarget ? "Sperren" : "Entsperren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(v) => { if (!v && !bulkBusy) setBulkDeleteOpen(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{selectedCount} Mitarbeiter endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle ausgewählten Mitarbeiter werden unwiderruflich gelöscht – inklusive Vertragsdaten, Aufträge und Benutzerkonten. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkBusy}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              disabled={bulkBusy}
+              className="bg-destructive hover:bg-destructive/90 shadow-sm hover:shadow-md transition-all"
+            >
+              {bulkBusy ? `Lösche ${bulkProgress}/${selectedCount}...` : "Endgültig löschen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
     </TooltipProvider>
   );
