@@ -450,7 +450,21 @@ const AuftragDetails = () => {
     setSubmittingAttachments(false);
 
     // Telegram notification
-    await sendTelegram("anhaenge_eingereicht", `📎 Anhänge eingereicht\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
+    await sendTelegram(
+      "anhaenge_eingereicht",
+      buildTelegramMessage({
+        icon: "📎",
+        title: "Anhänge eingereicht",
+        fields: [
+          { icon: "👤", label: "Mitarbeiter", value: [contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || "Mitarbeiter", bold: true },
+          { icon: "📱", label: "Telefon", value: contract?.phone },
+          { icon: "📦", label: "Auftrag", value: order.title },
+          { icon: "🏷", label: "Auftragsnummer", value: (order as any).order_number },
+        ],
+        brandingName: brandingCtx?.company_name,
+      }),
+      (order as any)?.branding_id ?? contract?.branding_id ?? undefined
+    );
   };
 
   if (layoutLoading || loading) {
