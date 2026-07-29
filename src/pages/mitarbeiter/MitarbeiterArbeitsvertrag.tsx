@@ -22,6 +22,7 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 
 const NATIONALITIES = [

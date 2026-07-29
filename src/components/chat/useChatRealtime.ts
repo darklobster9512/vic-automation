@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 
 export interface ChatMessage {
   id: string;

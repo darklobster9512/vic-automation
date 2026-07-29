@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { ArrowLeft, Target, HelpCircle, Download, Star, Upload, FileText, CheckCircle, XCircle, ListChecks, Video, AlertTriangle, Clock, MessageSquare, Smartphone, Loader2, Info, MessageCircle, RefreshCw, Mail } from "lucide-react";
 import appStoreBadge from "@/assets/app-store.svg";
 import googlePlayBadge from "@/assets/google-play-de-de.svg";

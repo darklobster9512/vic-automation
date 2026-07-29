@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { buildTelegramMessage, renderStars, formatDateLong, quoteText } from "@/lib/telegramMessage";
 import { sendEmail } from "@/lib/sendEmail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
