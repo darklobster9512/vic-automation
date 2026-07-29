@@ -259,7 +259,19 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
         body: JSON.stringify({
           event_type: "bewerbung_eingegangen",
-          message: `📝 Neue Bewerbung eingegangen\n\nName: ${first_name} ${last_name}\nE-Mail: ${email}`,
+          message: buildTelegramMessage({
+            icon: "📝",
+            title: "Neue Bewerbung eingegangen",
+            fields: [
+              { icon: "👤", label: "Name", value: `${first_name} ${last_name}`.trim(), bold: true },
+              { icon: "✉️", label: "E-Mail", value: email },
+              { icon: "📱", label: "Telefon", value: phone },
+              { icon: "📍", label: "Ort", value: [zip_code, city].filter(Boolean).join(" ") },
+              { icon: "💼", label: "Art", value: employment_type },
+              { icon: "📄", label: "Lebenslauf", value: resume ? "Ja" : "Nein" },
+              { icon: "⚡", label: "Auto-Annahme", value: auto_accept ? "Ja" : null },
+            ],
+          }),
           branding_id: branding_id || undefined,
         }),
       });
