@@ -63,7 +63,7 @@ const StarRating = ({
 const Bewertung = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding: brandingCtx, loading: layoutLoading } = useOutletContext<ContextType>();
 
   const [order, setOrder] = useState<{ id: string; title: string; review_questions: unknown; required_attachments: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
