@@ -397,7 +397,14 @@ export default function AdminMitarbeiter() {
                   {sortedItems.map((item: any) => {
                     const count = assignmentCounts?.[item.id] || 0;
                     return (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.id} data-state={selectedIds.has(item.id) ? "selected" : undefined}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(item.id)}
+                            onCheckedChange={(v) => toggleOne(item.id, v === true)}
+                            aria-label={`${item.first_name ?? ""} ${item.last_name ?? ""} auswählen`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           <span className="cursor-pointer underline hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/admin/mitarbeiter/${item.id}`); }}>
                             {item.first_name} {item.last_name}
