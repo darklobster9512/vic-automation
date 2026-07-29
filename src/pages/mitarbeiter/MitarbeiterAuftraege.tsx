@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import StarterJobBadge from "@/components/mitarbeiter/StarterJobBadge";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
@@ -32,6 +33,7 @@ interface Assignment {
   hasIdentSession: boolean;
   hasReviewSubmitted: boolean;
   estimated_hours: string | null;
+  is_starter_job: boolean;
 }
 
 const truncateText = (text: string, maxLen: number): string => {
@@ -185,7 +187,7 @@ const MitarbeiterAuftraege = () => {
       const orderIds = rawAssignments.map((a) => a.order_id);
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments, description, estimated_hours")
+        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments, description, estimated_hours, is_starter_job")
         .in("id", orderIds);
 
 
@@ -245,6 +247,7 @@ const MitarbeiterAuftraege = () => {
               reward: order.reward,
               description: order.description ?? null,
               estimated_hours: order.estimated_hours ?? null,
+              is_starter_job: (order as any).is_starter_job ?? false,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allSubmitted,
               attachmentsSubmitted: allSubmitted && !allApproved,
@@ -339,6 +342,7 @@ const MitarbeiterAuftraege = () => {
                         </Badge>
                       ) : <span />}
                       <div className="flex items-center gap-1.5">
+                        {a.is_starter_job && <StarterJobBadge />}
                         {a.hasReviewSubmitted && a.attachmentsPending && a.status !== "erfolgreich" && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                             <Paperclip className="h-3 w-3 mr-1" />
