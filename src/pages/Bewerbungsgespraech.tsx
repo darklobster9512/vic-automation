@@ -207,8 +207,23 @@ export default function Bewerbungsgespraech() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      const telegramPrefix = isRebooking ? "📅 Bewerbungsgespräch umgebucht" : "📅 Bewerbungsgespräch gebucht";
-      await sendTelegram("gespraech_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
+      await sendTelegram(
+        "gespraech_gebucht",
+        buildTelegramMessage({
+          icon: "📅",
+          title: isRebooking ? "Bewerbungsgespräch umgebucht" : "Bewerbungsgespräch gebucht",
+          fields: [
+            { icon: "👤", label: "Name", value: applicantName, bold: true },
+            { icon: "📱", label: "Telefon", value: application?.phone },
+            { icon: "✉️", label: "E-Mail", value: application?.email },
+            { icon: "🗓", label: "Termin", value: formatDateLong(selectedDate!) },
+            { icon: "⏰", label: "Uhrzeit", value: `${selectedTime} Uhr` },
+          ],
+          brandingName: companyName,
+        }),
+        application?.branding_id
+      );
+
 
       if (application?.email) {
         await sendEmail({
