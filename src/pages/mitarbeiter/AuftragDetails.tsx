@@ -352,7 +352,22 @@ const AuftragDetails = () => {
     setFlowStep("videident");
 
     // Telegram notification
-    await sendTelegram("ident_gestartet", `🎥 Ident gestartet\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
+    await sendTelegram(
+      "ident_gestartet",
+      buildTelegramMessage({
+        icon: "🎥",
+        title: "Ident gestartet",
+        fields: [
+          { icon: "👤", label: "Mitarbeiter", value: [contract?.first_name, contract?.last_name].filter(Boolean).join(" ") || "Mitarbeiter", bold: true },
+          { icon: "📱", label: "Telefon", value: contract?.phone },
+          { icon: "📦", label: "Auftrag", value: order.title },
+          { icon: "🏷", label: "Auftragsnummer", value: (order as any).order_number },
+          { icon: "🏦", label: "Anbieter", value: (order as any).provider },
+        ],
+        brandingName: brandingCtx?.company_name,
+      }),
+      (order as any)?.branding_id ?? contract?.branding_id ?? undefined
+    );
   };
 
   const handleCompleteVideoChat = async () => {
