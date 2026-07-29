@@ -20,7 +20,7 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   abgelehnt: { label: "Abgelehnt", className: "text-red-600 border-red-300 bg-red-50" },
 };
 
-export default function UpcomingTrialDays() {
+export default function UpcomingTrialDays({ embedded = false }: { embedded?: boolean }) {
   const today = new Date().toISOString().split("T")[0];
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -39,7 +39,33 @@ export default function UpcomingTrialDays() {
     },
   });
 
-  return (
+  if (embedded) {
+    if (!upcoming?.length) {
+      return <EmptyState icon={Calendar} text="Keine anstehenden Probetag-Termine." />;
+    }
+    return (
+      <ScrollArea className="h-[260px]">
+        {upcoming.map((item: any) => {
+          const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.ausstehend;
+          return (
+            <DashboardRow
+              key={item.id}
+              lead={format(parseISO(item.appointment_date), "dd.MM.", { locale: de })}
+              title={`${item.applications?.first_name ?? ""} ${item.applications?.last_name ?? ""}`.trim() || "–"}
+              subtitle={`${format(parseISO(item.appointment_date), "EEEE", { locale: de })} · ${item.appointment_time?.slice(0, 5)} Uhr`}
+              trailing={
+                <Badge variant="outline" className={`text-[10px] font-semibold ${style.className}`}>
+                  {style.label}
+                </Badge>
+              }
+            />
+          );
+        })}
+      </ScrollArea>
+    );
+  }
+
+
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
