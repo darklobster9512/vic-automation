@@ -1,18 +1,18 @@
 ## Ziel
-Inhalte von **for.tel Solutions GmbH** (`a49c0302…`) nach **LIMEX Solutions GmbH** (`371a2e6c…`) duplizieren.
+Die Starter-Jobs von **for.tel Solutions GmbH** nach **LIMEX Solutions GmbH** kopieren.
 
 ## Ausgangslage (geprüft)
-- for.tel hat **5 Vertragsvorlagen** (Minijob 5h, Teilzeit 10h, Teilzeit 10h RV02, Teilzeit 20h, Teilzeit 25h) – alle aktiv.
-- for.tel hat **10 Bankdrop-** und **8 Exchanger-Aufträge** (alle Videochat, keine Starter-Jobs).
-- LIMEX hat aktuell **0 Vertragsvorlagen und 0 Aufträge** – es entstehen also keine Duplikate.
+- for.tel hat genau **2 Starter-Jobs** (beide Typ „Platzhalter", Vergütung 0, ca. 0,5 h, kein Videochat):
+  - Bewertung / Analyse Onlineshop Seeberger
+  - Bewertung / Analyse Onlineshop Thalia
+- LIMEX hat aktuell **0 Starter-Jobs** (18 Aufträge insgesamt) – es entstehen keine Duplikate.
 
 ## Umsetzung
 Ein Datenkopier-Schritt (SQL-Insert, keine Schemaänderung):
 
-1. **Vertragsvorlagen**: alle 5 Vorlagen 1:1 nach LIMEX kopieren (Titel, Beschäftigungsart, Gehalt, Inhalt, aktiv-Status). Neue IDs, neue Zeitstempel, `branding_id` = LIMEX.
-2. **Aufträge**: alle 18 Bankdrop-/Exchanger-Aufträge kopieren, inklusive Titel, Anbieter, Vergütung, Beschreibung, Projektziel, Arbeitsschritte, benötigte Anhänge, Bewertungsfragen, Store-Links, geschätzte Stunden, Videochat-Flag.
-3. **Nicht kopiert**: Zuweisungen an Mitarbeiter, Bewertungen, Anhänge, Ident-Sessions – nur die Vorlagen/Aufträge selbst.
+1. Beide Starter-Jobs 1:1 nach LIMEX kopieren: Titel, Anbieter, Vergütung, Beschreibung, Projektziel, Arbeitsschritte, benötigte Anhänge, Bewertungsfragen, Store-Links, geschätzte Stunden, Videochat-Flag, Starter-Job-Flag.
+2. Neue IDs und Zeitstempel, `branding_id` = LIMEX.
+3. Falls im Text ein Firmenname fest hinterlegt ist, wird er beim Kopieren auf LIMEX angepasst (wird vor dem Insert geprüft).
 
-## Hinweise
-- Falls in den Vorlagentexten der Firmenname fest eingetragen ist (statt Platzhalter), passe ich ihn beim Kopieren auf LIMEX an – das prüfe ich vor dem Insert.
-- Die 104 Platzhalter-Aufträge von for.tel werden bewusst **nicht** mitkopiert.
+## Hinweis
+Es existiert ein Automatismus, der Starter-Jobs neuen Mitarbeitern automatisch zuweist. Nach dem Kopieren erhalten also neue LIMEX-Mitarbeiter diese beiden Aufträge automatisch. Bestehende LIMEX-Mitarbeiter bekommen sie **nicht** rückwirkend – sag Bescheid, falls das gewünscht ist.
