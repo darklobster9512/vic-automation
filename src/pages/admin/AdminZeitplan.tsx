@@ -14,7 +14,9 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Trash2, Ban, Check, CalendarOff, ClipboardList } from "lucide-react";
+import { Trash2, Ban, Check, CalendarOff, ClipboardList, Coffee } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+
 
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
 import FirstWorkdayBlocker from "@/components/admin/FirstWorkdayBlocker";
@@ -113,7 +115,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; slot_index?: number }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -132,6 +134,12 @@ export default function AdminZeitplan() {
       if (params.interview_slots_per_time !== undefined) {
         upsertData.interview_slots_per_time = params.interview_slots_per_time;
       }
+      if (params.lunch_break_enabled !== undefined) {
+        upsertData.lunch_break_enabled = params.lunch_break_enabled;
+        upsertData.lunch_break_start = params.lunch_break_start ? params.lunch_break_start + ":00" : null;
+        upsertData.lunch_break_end = params.lunch_break_end ? params.lunch_break_end + ":00" : null;
+      }
+
       const { error } = await supabase
         .from("branding_schedule_settings")
         .upsert(upsertData, { onConflict: "branding_id,schedule_type,slot_index" as any });
@@ -195,6 +203,39 @@ export default function AdminZeitplan() {
     () => generateTimeSlots(blockViewStart, blockViewEnd, blockViewInterval),
     [blockViewStart, blockViewEnd, blockViewInterval]
   );
+
+  // Lunch break of the currently selected slot
+  const currentSlotRow = slotSetting ?? (effectiveSlot === 1 ? primarySetting : null);
+  const lunchEnabled = !!currentSlotRow?.lunch_break_enabled;
+  const lunchStart = currentSlotRow?.lunch_break_start?.slice(0, 5) || "12:00";
+  const lunchEnd = currentSlotRow?.lunch_break_end?.slice(0, 5) || "13:00";
+
+  const lunchTimes = useMemo(() => {
+    if (!lunchEnabled) return new Set<string>();
+    return new Set(timeSlots.filter((t) => t >= lunchStart && t < lunchEnd));
+  }, [lunchEnabled, lunchStart, lunchEnd, timeSlots]);
+
+  const saveLunch = (enabled: boolean, start: string, end: string) => {
+    if (enabled && start >= end) {
+      toast({ title: "Startzeit muss vor Endzeit liegen", variant: "destructive" });
+      return;
+    }
+    const base = currentSlotRow ?? primarySetting;
+    saveSettingsMutation.mutate({
+      schedule_type: "interview",
+      slot_index: effectiveSlot,
+      start_time: base?.start_time?.slice(0, 5) ?? DEFAULT_START,
+      end_time: base?.end_time?.slice(0, 5) ?? DEFAULT_END,
+      slot_interval_minutes: primarySetting?.slot_interval_minutes ?? DEFAULT_INTERVAL,
+      available_days: base?.available_days ?? DEFAULT_DAYS,
+      weekend_start_time: base?.weekend_start_time?.slice(0, 5) ?? null,
+      weekend_end_time: base?.weekend_end_time?.slice(0, 5) ?? null,
+      lunch_break_enabled: enabled,
+      lunch_break_start: enabled ? start : null,
+      lunch_break_end: enabled ? end : null,
+    });
+  };
+
 
   // Blocked slots relevant for the currently selected slot (own + global/legacy)
   const slotBlockedSlots = useMemo(
@@ -287,7 +328,16 @@ export default function AdminZeitplan() {
               <CardTitle className="text-lg">Zeiten blockieren{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle>
               <CardDescription>Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster für diesen Slot.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <LunchBreakForm
+                key={`lunch-${effectiveSlot}-${currentSlotRow?.id || "new"}-${lunchEnabled}-${lunchStart}-${lunchEnd}`}
+                enabled={lunchEnabled}
+                start={lunchStart}
+                end={lunchEnd}
+                onSave={saveLunch}
+                isSaving={saveSettingsMutation.isPending}
+              />
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} locale={de} className="pointer-events-auto" />
@@ -304,23 +354,29 @@ export default function AdminZeitplan() {
                       <p className="text-sm font-medium mb-3">{format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}</p>
                       <div className="grid grid-cols-3 gap-1.5 max-h-[340px] overflow-y-auto">
                         {timeSlots.map((time) => {
+                          const isLunch = lunchTimes.has(time);
                           const isBlocked = blockedForDate.has(time);
                           return (
                             <button
                               key={time}
+                              disabled={isLunch}
+                              title={isLunch ? "Mittagspause" : undefined}
                               onClick={() => isBlocked ? unblockMutation.mutate(blockedForDate.get(time)!) : blockMutation.mutate(time)}
                               className={cn(
                                 "py-2 px-2 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1",
-                                isBlocked
-                                  ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
-                                  : "bg-card border-border hover:bg-muted text-foreground"
+                                isLunch
+                                  ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-70"
+                                  : isBlocked
+                                    ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
+                                    : "bg-card border-border hover:bg-muted text-foreground"
                               )}
                             >
-                              {isBlocked ? <Ban className="h-3 w-3" /> : <Check className="h-3 w-3 text-muted-foreground" />}
+                              {isLunch ? <Coffee className="h-3 w-3" /> : isBlocked ? <Ban className="h-3 w-3" /> : <Check className="h-3 w-3 text-muted-foreground" />}
                               {time}
                             </button>
                           );
                         })}
+
                       </div>
                     </>
                   )}
@@ -497,3 +553,62 @@ function BrandingScheduleForm({
     </div>
   );
 }
+
+// Lunch break settings for the active slot
+function LunchBreakForm({
+  enabled,
+  start,
+  end,
+  onSave,
+  isSaving,
+}: {
+  enabled: boolean;
+  start: string;
+  end: string;
+  onSave: (enabled: boolean, start: string, end: string) => void;
+  isSaving: boolean;
+}) {
+  const [on, setOn] = useState(enabled);
+  const [from, setFrom] = useState(start);
+  const [to, setTo] = useState(end);
+
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <Label className="text-sm font-medium">Mittagspause aktivieren</Label>
+          <p className="text-xs text-muted-foreground">
+            Alle Zeitfenster im Pausenzeitraum werden für diesen Slot dauerhaft blockiert.
+          </p>
+        </div>
+        <Switch checked={on} onCheckedChange={setOn} />
+      </div>
+      {on && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Von</Label>
+            <Select value={from} onValueChange={setFrom}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Bis</Label>
+            <Select value={to} onValueChange={setTo}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+      <Button variant="outline" size="sm" onClick={() => onSave(on, from, to)} disabled={isSaving}>
+        {isSaving ? "Speichern..." : "Mittagspause speichern"}
+      </Button>
+    </div>
+  );
+}
+

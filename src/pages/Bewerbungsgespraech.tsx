@@ -132,6 +132,9 @@ export default function Bewerbungsgespraech() {
       days: number[];
       weekendStart: string | null;
       weekendEnd: string | null;
+      lunchEnabled: boolean;
+      lunchStart: string | null;
+      lunchEnd: string | null;
     }> = [];
     for (let i = 1; i <= slotsPerTime; i++) {
       const row = list.find((s: any) => s.slot_index === i) ?? (i === 1 ? primarySetting : null);
@@ -143,10 +146,13 @@ export default function Bewerbungsgespraech() {
         days: row.available_days ?? [1, 2, 3, 4, 5, 6],
         weekendStart: row.weekend_start_time?.slice(0, 5) || null,
         weekendEnd: row.weekend_end_time?.slice(0, 5) || null,
+        lunchEnabled: !!row.lunch_break_enabled,
+        lunchStart: row.lunch_break_start?.slice(0, 5) || null,
+        lunchEnd: row.lunch_break_end?.slice(0, 5) || null,
       });
     }
     if (!result.length) {
-      result.push({ slotIndex: 1, start: "08:00", end: "18:00", days: [1, 2, 3, 4, 5, 6], weekendStart: null, weekendEnd: null });
+      result.push({ slotIndex: 1, start: "08:00", end: "18:00", days: [1, 2, 3, 4, 5, 6], weekendStart: null, weekendEnd: null, lunchEnabled: false, lunchStart: null, lunchEnd: null });
     }
     return result;
   }, [scheduleSettingsList, slotsPerTime, primarySetting]);
@@ -167,9 +173,14 @@ export default function Bewerbungsgespraech() {
       if (!l.days.includes(isoDay)) return { slotIndex: l.slotIndex, times: [] };
       const start = isWeekend && l.weekendStart ? l.weekendStart : l.start;
       const end = isWeekend && l.weekendEnd ? l.weekendEnd : l.end;
-      return { slotIndex: l.slotIndex, times: generateTimeSlots(start, end, scheduleInterval) };
+      let times = generateTimeSlots(start, end, scheduleInterval);
+      if (l.lunchEnabled && l.lunchStart && l.lunchEnd) {
+        times = times.filter((t) => !(t >= l.lunchStart! && t < l.lunchEnd!));
+      }
+      return { slotIndex: l.slotIndex, times };
     });
   }, [selectedDate, lanes, scheduleInterval]);
+
 
   const TIME_SLOTS = useMemo(() => {
     if (!selectedDate) {
