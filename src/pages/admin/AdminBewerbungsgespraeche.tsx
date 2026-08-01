@@ -53,8 +53,37 @@ export default function AdminBewerbungsgespraeche() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [failTarget, setFailTarget] = useState<any | null>(null);
   const [failReason, setFailReason] = useState("");
+  const [successTarget, setSuccessTarget] = useState<any | null>(null);
+  const [successNote, setSuccessNote] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+
+  // Notizen zu Bewerbungsgesprächen (für Anzeige beim Klick auf den Status)
+  const { data: interviewNotes } = useQuery({
+    queryKey: ["interview-notes", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("branding_notes")
+        .select("id, content, author_email, created_at")
+        .eq("page_context", "bewerbungsgespraeche")
+        .eq("branding_id", activeBrandingId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const notesForItem = (item: any, status: string) => {
+    const app = item?.applications;
+    if (!app) return [];
+    const label = status === "erfolgreich" ? "Erfolgreich" : "Fehlgeschlagen";
+    const prefix = `${app.first_name} ${app.last_name} — ${label}:`;
+    return (interviewNotes ?? [])
+      .filter((n: any) => typeof n.content === "string" && n.content.startsWith(prefix))
+      .map((n: any) => ({ ...n, text: n.content.slice(prefix.length).trim() }));
+  };
+
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
