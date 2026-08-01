@@ -42,6 +42,7 @@ export default function AdminIdents() {
   const navigate = useNavigate();
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["ident-sessions", activeBrandingId],
