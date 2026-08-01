@@ -77,8 +77,7 @@ Deno.serve(async (req) => {
 
     // Send SMS via elitegateway.net
     if (action === "send") {
-      const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const sbAdmin = createClient(sbUrl, sbServiceKey);
+
 
       let apiKey: string | null = null;
       if (brandingId) {
