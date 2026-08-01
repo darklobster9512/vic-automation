@@ -163,30 +163,11 @@ export default function AdminBewerbungsgespraeche() {
     }
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
-
-    // Send email on success — links to contract data submission
-    if (newStatus === "erfolgreich" && item.applications?.email) {
-      const app = item.applications;
-      const vertragsLink = await buildBrandingUrl(app.brandings?.id, "");
-
-      await sendEmail({
-        to: app.email,
-        recipient_name: `${app.first_name} ${app.last_name}`,
-        subject: "Ihr Bewerbungsgespräch war erfolgreich",
-        body_title: "Willkommen im Team",
-        body_lines: [
-          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "wir haben Ihre Starteraufträge erfolgreich geprüft und würden Sie sehr gerne bei uns im Team begrüßen.",
-          "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
-        ],
-        button_text: vertragsLink ? "Vertragsdaten einreichen" : undefined,
-        button_url: vertragsLink || undefined,
-        branding_id: app.brandings?.id || null,
-        event_type: "gespraech_erfolgreich",
-        metadata: { appointment_id: item.id, application_id: item.application_id },
-      });
-    }
+    // Kein automatischer E-Mail-Versand mehr beim Genehmigen des Gesprächs.
+    // Die "Gespräch erfolgreich"-Mail geht erst raus, wenn beide Starterjob-
+    // Bewertungen genehmigt wurden (siehe src/lib/starterJobSuccessEmail.ts).
   };
+
 
   const handleSendPanelLink = async (item: any) => {
     const app = item.applications;
