@@ -34,6 +34,7 @@ import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
 import AdminCaller from "./pages/admin/AdminCaller";
+import AdminCallerZugaenge from "./pages/admin/AdminCallerZugaenge";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import AdminProbetag from "./pages/admin/AdminProbetag";
 import AdminErsterArbeitstag from "./pages/admin/AdminErsterArbeitstag";
@@ -106,6 +107,7 @@ const AuthenticatedRoutes = () => (
         <Route path="vertragsvorlagen/:id" element={<AdminVertragsvorlageForm />} />
         <Route path="kunden" element={<AdminKunden />} />
         <Route path="caller" element={<AdminCaller />} />
+        <Route path="caller-zugaenge" element={<AdminCallerZugaenge />} />
       </Route>
       <Route
         path="/mitarbeiter"

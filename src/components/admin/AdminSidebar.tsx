@@ -34,6 +34,7 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/telegram",
   "/admin/kunden",
   "/admin/caller",
+  "/admin/caller-zugaenge",
 ];
 
 const navGroups = [
@@ -79,6 +80,7 @@ const navGroups = [
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
       { title: "Caller", url: "/admin/caller", icon: Phone },
+      { title: "Caller-Zugänge", url: "/admin/caller-zugaenge", icon: KeyRound },
     ],
   },
 ];
