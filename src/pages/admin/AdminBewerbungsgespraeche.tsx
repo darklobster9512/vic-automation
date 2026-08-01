@@ -659,7 +659,7 @@ export default function AdminBewerbungsgespraeche() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => handleStatusUpdate(item, "erfolgreich")}
+                              onClick={() => { setSuccessNote(""); setSuccessTarget(item); }}
                               title="Als erfolgreich markieren"
                             >
                               <CheckCircle className="h-4 w-4" />
