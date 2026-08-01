@@ -60,9 +60,10 @@ export default function AdminZeitplan() {
   const { activeBrandingId, ready } = useBrandingFilter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
+  const [activeSlot, setActiveSlot] = useState(1);
 
-  // Load branding-specific settings for interview
-  const { data: interviewSetting } = useQuery({
+  // Load branding-specific settings for interview (all slots)
+  const { data: interviewSettings } = useQuery({
     queryKey: ["branding-schedule-settings", activeBrandingId, "interview"],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
@@ -71,26 +72,38 @@ export default function AdminZeitplan() {
         .select("*")
         .eq("branding_id", activeBrandingId!) as any)
         .eq("schedule_type", "interview")
-        .maybeSingle();
+        .order("slot_index", { ascending: true });
       if (error) throw error;
-      return data;
+      return (data || []) as any[];
     },
   });
+
+  const primarySetting = useMemo(
+    () => (interviewSettings || []).find((s: any) => s.slot_index === 1) ?? (interviewSettings || [])[0] ?? null,
+    [interviewSettings]
+  );
+  const slotCount = Math.max(1, primarySetting?.interview_slots_per_time ?? 1);
+  const slotSetting = useMemo(
+    () => (interviewSettings || []).find((s: any) => s.slot_index === activeSlot) ?? null,
+    [interviewSettings, activeSlot]
+  );
+  const effectiveSlot = Math.min(activeSlot, slotCount);
 
   // Load blocked slots for active branding + auto-delete past ones
   const { data: blockedSlots } = useQuery({
     queryKey: ["schedule-blocked-slots", activeBrandingId],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("schedule_blocked_slots")
-        .select("*")
+        .select("*") as any)
         .eq("branding_id", activeBrandingId!)
         .order("blocked_date", { ascending: true });
       if (error) throw error;
       const today = format(new Date(), "yyyy-MM-dd");
-      const past = (data || []).filter((s) => s.blocked_date < today);
-      const current = (data || []).filter((s) => s.blocked_date >= today);
+      const rows = (data || []) as any[];
+      const past = rows.filter((s) => s.blocked_date < today);
+      const current = rows.filter((s) => s.blocked_date >= today);
       if (past.length > 0) {
         supabase.from("schedule_blocked_slots").delete().in("id", past.map((s) => s.id)).then(() => {});
       }
@@ -100,7 +113,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; slot_index?: number }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -108,6 +121,7 @@ export default function AdminZeitplan() {
         slot_interval_minutes: params.slot_interval_minutes,
         available_days: params.available_days,
         schedule_type: params.schedule_type,
+        slot_index: params.slot_index ?? 1,
       };
       if (params.weekend_start_time !== undefined) {
         upsertData.weekend_start_time = params.weekend_start_time ? params.weekend_start_time + ":00" : null;
@@ -120,8 +134,19 @@ export default function AdminZeitplan() {
       }
       const { error } = await supabase
         .from("branding_schedule_settings")
-        .upsert(upsertData, { onConflict: "branding_id,schedule_type" as any });
+        .upsert(upsertData, { onConflict: "branding_id,schedule_type,slot_index" as any });
       if (error) throw error;
+
+      // Keep interval & slots-per-time in sync across all interview slots
+      if (params.schedule_type === "interview") {
+        const sync: any = { slot_interval_minutes: params.slot_interval_minutes };
+        if (params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
+        await (supabase
+          .from("branding_schedule_settings")
+          .update(sync) as any)
+          .eq("branding_id", activeBrandingId!)
+          .eq("schedule_type", "interview");
+      }
     },
     onSuccess: () => {
       toast({ title: "Einstellungen gespeichert" });
@@ -141,7 +166,8 @@ export default function AdminZeitplan() {
           blocked_time: time + ":00",
           reason: blockReason || null,
           branding_id: activeBrandingId,
-        });
+          slot_index: effectiveSlot,
+        } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -161,27 +187,32 @@ export default function AdminZeitplan() {
     onError: () => toast({ title: "Fehler beim Freigeben", variant: "destructive" }),
   });
 
-  const blockViewStart = interviewSetting?.start_time?.slice(0, 5) ?? DEFAULT_START;
-  const blockViewEnd = interviewSetting?.end_time?.slice(0, 5) ?? DEFAULT_END;
-  const blockViewInterval = interviewSetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
+  const blockViewStart = (slotSetting ?? primarySetting)?.start_time?.slice(0, 5) ?? DEFAULT_START;
+  const blockViewEnd = (slotSetting ?? primarySetting)?.end_time?.slice(0, 5) ?? DEFAULT_END;
+  const blockViewInterval = primarySetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
 
   const timeSlots = useMemo(
     () => generateTimeSlots(blockViewStart, blockViewEnd, blockViewInterval),
     [blockViewStart, blockViewEnd, blockViewInterval]
   );
 
+  // Blocked slots relevant for the currently selected slot (own + global/legacy)
+  const slotBlockedSlots = useMemo(
+    () => (blockedSlots || []).filter((s: any) => s.slot_index == null || s.slot_index === effectiveSlot),
+    [blockedSlots, effectiveSlot]
+  );
+
   const blockedForDate = useMemo(() => {
-    if (!selectedDate || !blockedSlots) return new Map<string, string>();
+    if (!selectedDate) return new Map<string, string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const map = new Map<string, string>();
-    blockedSlots.filter((s) => s.blocked_date === dateStr).forEach((s) => map.set(s.blocked_time?.slice(0, 5), s.id));
+    slotBlockedSlots.filter((s: any) => s.blocked_date === dateStr).forEach((s: any) => map.set(s.blocked_time?.slice(0, 5), s.id));
     return map;
-  }, [selectedDate, blockedSlots]);
+  }, [selectedDate, slotBlockedSlots]);
 
   const blockedByDate = useMemo(() => {
-    if (!blockedSlots) return [];
-    const groups = new Map<string, typeof blockedSlots>();
-    blockedSlots.forEach((s) => {
+    const groups = new Map<string, any[]>();
+    slotBlockedSlots.forEach((s: any) => {
       const arr = groups.get(s.blocked_date) || [];
       arr.push(s);
       groups.set(s.blocked_date, arr);
@@ -189,7 +220,7 @@ export default function AdminZeitplan() {
     return Array.from(groups.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, slots]) => ({ date, slots }));
-  }, [blockedSlots]);
+  }, [slotBlockedSlots]);
 
   return (
     <div className="space-y-6">
@@ -214,16 +245,37 @@ export default function AdminZeitplan() {
 
         {/* Tab 1: Bewerbungsgespräche */}
         <TabsContent value="interviews" className="space-y-6">
+          {slotCount > 1 && (
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setActiveSlot(n)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
+                    effectiveSlot === n
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card border-border hover:bg-muted text-foreground"
+                  )}
+                >
+                  Slot {n}
+                </button>
+              ))}
+            </div>
+          )}
+
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Zeiteinstellungen</CardTitle>
-              <CardDescription>Zeitspanne, Intervall und verfügbare Wochentage für Bewerbungsgespräche.</CardDescription>
+              <CardTitle className="text-lg">Zeiteinstellungen{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle>
+              <CardDescription>
+                Zeitspanne und verfügbare Wochentage für diesen Slot. Intervall und „Slots pro Uhrzeit" gelten für alle Slots.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <BrandingScheduleForm
-                key={interviewSetting?.id || "interview-new"}
-                existing={interviewSetting ?? undefined}
-                onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview" })}
+                key={`interview-${effectiveSlot}-${slotSetting?.id || "new"}`}
+                existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined } as any) ?? undefined}
+                onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview", slot_index: effectiveSlot })}
                 isSaving={saveSettingsMutation.isPending}
                 showSlotsPerTime
               />
@@ -232,8 +284,8 @@ export default function AdminZeitplan() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Zeiten blockieren</CardTitle>
-              <CardDescription>Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster.</CardDescription>
+              <CardTitle className="text-lg">Zeiten blockieren{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle>
+              <CardDescription>Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster für diesen Slot.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
@@ -279,15 +331,16 @@ export default function AdminZeitplan() {
 
           {blockedByDate.length > 0 && (
             <Card>
-              <CardHeader><CardTitle className="text-lg">Blockierte Zeitfenster</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg">Blockierte Zeitfenster{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {blockedByDate.map(({ date, slots }) => (
                   <div key={date}>
                     <p className="text-sm font-medium mb-2">{format(new Date(date), "EEEE, dd. MMMM yyyy", { locale: de })}</p>
                     <div className="flex flex-wrap gap-2">
-                      {slots.map((s) => (
+                      {slots.map((s: any) => (
                         <Badge key={s.id} variant="secondary" className="gap-1.5 pr-1">
                           {s.blocked_time?.slice(0, 5)} Uhr
+                          {s.slot_index == null && <span className="text-muted-foreground">(alle Slots)</span>}
                           {s.reason && <span className="text-muted-foreground">({s.reason})</span>}
                           <button onClick={() => unblockMutation.mutate(s.id)} className="ml-1 hover:text-destructive transition-colors">
                             <Trash2 className="h-3 w-3" />
@@ -316,6 +369,7 @@ export default function AdminZeitplan() {
     </div>
   );
 }
+
 
 // Sub-component for schedule settings
 function BrandingScheduleForm({
