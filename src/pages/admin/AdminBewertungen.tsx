@@ -175,7 +175,7 @@ const AdminBewertungen = () => {
     // Check if order has required attachments and if they're all approved
     const { data: order } = await supabase
       .from("orders")
-      .select("required_attachments")
+      .select("required_attachments, is_starter_job")
       .eq("id", g.order_id)
       .single();
 
