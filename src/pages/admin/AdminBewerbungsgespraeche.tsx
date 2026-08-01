@@ -378,16 +378,48 @@ export default function AdminBewerbungsgespraeche() {
     }
   };
 
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "erfolgreich":
-        return <Badge className="bg-green-600 text-white border-green-600">Erfolgreich</Badge>;
-      case "fehlgeschlagen":
-        return <Badge variant="destructive">Fehlgeschlagen</Badge>;
-      default:
-        return <Badge variant="outline">Neu</Badge>;
+  const statusBadge = (status: string, item?: any) => {
+    if (status !== "erfolgreich" && status !== "fehlgeschlagen") {
+      return <Badge variant="outline">Neu</Badge>;
     }
+
+    const badge =
+      status === "erfolgreich" ? (
+        <Badge className="bg-green-600 text-white border-green-600 cursor-pointer hover:opacity-90">Erfolgreich</Badge>
+      ) : (
+        <Badge variant="destructive" className="cursor-pointer hover:opacity-90">Fehlgeschlagen</Badge>
+      );
+
+    if (!item) return badge;
+
+    const notes = notesForItem(item, status);
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <span onClick={(e) => e.stopPropagation()}>{badge}</span>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3" onClick={(e) => e.stopPropagation()}>
+          <p className="text-sm font-semibold mb-2">Notiz zum Gespräch</p>
+          {notes.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">Keine Notiz hinterlegt</p>
+          ) : (
+            <ul className="space-y-2">
+              {notes.map((n: any) => (
+                <li key={n.id} className="text-xs">
+                  <p className="text-foreground whitespace-pre-wrap">{n.text || "—"}</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    {n.author_email} · {format(new Date(n.created_at), "dd.MM.yyyy HH:mm")} Uhr
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PopoverContent>
+      </Popover>
+    );
   };
+
 
   return (
     <>
