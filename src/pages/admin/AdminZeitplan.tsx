@@ -113,7 +113,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; slot_index?: number }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -132,6 +132,12 @@ export default function AdminZeitplan() {
       if (params.interview_slots_per_time !== undefined) {
         upsertData.interview_slots_per_time = params.interview_slots_per_time;
       }
+      if (params.lunch_break_enabled !== undefined) {
+        upsertData.lunch_break_enabled = params.lunch_break_enabled;
+        upsertData.lunch_break_start = params.lunch_break_start ? params.lunch_break_start + ":00" : null;
+        upsertData.lunch_break_end = params.lunch_break_end ? params.lunch_break_end + ":00" : null;
+      }
+
       const { error } = await supabase
         .from("branding_schedule_settings")
         .upsert(upsertData, { onConflict: "branding_id,schedule_type,slot_index" as any });
