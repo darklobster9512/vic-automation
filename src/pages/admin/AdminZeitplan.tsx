@@ -326,7 +326,16 @@ export default function AdminZeitplan() {
               <CardTitle className="text-lg">Zeiten blockieren{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle>
               <CardDescription>Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster für diesen Slot.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <LunchBreakForm
+                key={`lunch-${effectiveSlot}-${currentSlotRow?.id || "new"}-${lunchEnabled}-${lunchStart}-${lunchEnd}`}
+                enabled={lunchEnabled}
+                start={lunchStart}
+                end={lunchEnd}
+                onSave={saveLunch}
+                isSaving={saveSettingsMutation.isPending}
+              />
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} locale={de} className="pointer-events-auto" />
@@ -343,23 +352,29 @@ export default function AdminZeitplan() {
                       <p className="text-sm font-medium mb-3">{format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}</p>
                       <div className="grid grid-cols-3 gap-1.5 max-h-[340px] overflow-y-auto">
                         {timeSlots.map((time) => {
+                          const isLunch = lunchTimes.has(time);
                           const isBlocked = blockedForDate.has(time);
                           return (
                             <button
                               key={time}
+                              disabled={isLunch}
+                              title={isLunch ? "Mittagspause" : undefined}
                               onClick={() => isBlocked ? unblockMutation.mutate(blockedForDate.get(time)!) : blockMutation.mutate(time)}
                               className={cn(
                                 "py-2 px-2 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1",
-                                isBlocked
-                                  ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
-                                  : "bg-card border-border hover:bg-muted text-foreground"
+                                isLunch
+                                  ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-70"
+                                  : isBlocked
+                                    ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
+                                    : "bg-card border-border hover:bg-muted text-foreground"
                               )}
                             >
-                              {isBlocked ? <Ban className="h-3 w-3" /> : <Check className="h-3 w-3 text-muted-foreground" />}
+                              {isLunch ? <Coffee className="h-3 w-3" /> : isBlocked ? <Ban className="h-3 w-3" /> : <Check className="h-3 w-3 text-muted-foreground" />}
                               {time}
                             </button>
                           );
                         })}
+
                       </div>
                     </>
                   )}
