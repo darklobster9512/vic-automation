@@ -553,3 +553,62 @@ function BrandingScheduleForm({
     </div>
   );
 }
+
+// Lunch break settings for the active slot
+function LunchBreakForm({
+  enabled,
+  start,
+  end,
+  onSave,
+  isSaving,
+}: {
+  enabled: boolean;
+  start: string;
+  end: string;
+  onSave: (enabled: boolean, start: string, end: string) => void;
+  isSaving: boolean;
+}) {
+  const [on, setOn] = useState(enabled);
+  const [from, setFrom] = useState(start);
+  const [to, setTo] = useState(end);
+
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <Label className="text-sm font-medium">Mittagspause aktivieren</Label>
+          <p className="text-xs text-muted-foreground">
+            Alle Zeitfenster im Pausenzeitraum werden für diesen Slot dauerhaft blockiert.
+          </p>
+        </div>
+        <Switch checked={on} onCheckedChange={setOn} />
+      </div>
+      {on && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Von</Label>
+            <Select value={from} onValueChange={setFrom}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Bis</Label>
+            <Select value={to} onValueChange={setTo}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+      <Button variant="outline" size="sm" onClick={() => onSave(on, from, to)} disabled={isSaving}>
+        {isSaving ? "Speichern..." : "Mittagspause speichern"}
+      </Button>
+    </div>
+  );
+}
+
