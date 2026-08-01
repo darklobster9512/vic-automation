@@ -420,8 +420,10 @@ const AdminBewertungen = () => {
           if (isPerOrder && reward > 0) {
             balanceDelta.set(g.contract_id, (balanceDelta.get(g.contract_id) ?? 0) + reward);
           }
+          if (starterOrderSet.has(g.order_id)) starterContracts.add(g.contract_id);
           ok++;
         } else {
+
           partial++;
         }
       } catch (e) {
