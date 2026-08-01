@@ -153,6 +153,9 @@ export type Database = {
           end_time: string
           id: string
           interview_slots_per_time: number
+          lunch_break_enabled: boolean
+          lunch_break_end: string | null
+          lunch_break_start: string | null
           schedule_type: string
           slot_index: number
           slot_interval_minutes: number
@@ -168,6 +171,9 @@ export type Database = {
           end_time?: string
           id?: string
           interview_slots_per_time?: number
+          lunch_break_enabled?: boolean
+          lunch_break_end?: string | null
+          lunch_break_start?: string | null
           schedule_type?: string
           slot_index?: number
           slot_interval_minutes?: number
@@ -183,6 +189,9 @@ export type Database = {
           end_time?: string
           id?: string
           interview_slots_per_time?: number
+          lunch_break_enabled?: boolean
+          lunch_break_end?: string | null
+          lunch_break_start?: string | null
           schedule_type?: string
           slot_index?: number
           slot_interval_minutes?: number
