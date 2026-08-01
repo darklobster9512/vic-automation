@@ -154,6 +154,7 @@ export type Database = {
           id: string
           interview_slots_per_time: number
           schedule_type: string
+          slot_index: number
           slot_interval_minutes: number
           start_time: string
           weekend_end_time: string | null
@@ -168,6 +169,7 @@ export type Database = {
           id?: string
           interview_slots_per_time?: number
           schedule_type?: string
+          slot_index?: number
           slot_interval_minutes?: number
           start_time?: string
           weekend_end_time?: string | null
@@ -182,6 +184,7 @@ export type Database = {
           id?: string
           interview_slots_per_time?: number
           schedule_type?: string
+          slot_index?: number
           slot_interval_minutes?: number
           start_time?: string
           weekend_end_time?: string | null
@@ -1543,6 +1546,7 @@ export type Database = {
           created_by: string | null
           id: string
           reason: string | null
+          slot_index: number | null
         }
         Insert: {
           blocked_date: string
@@ -1552,6 +1556,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           reason?: string | null
+          slot_index?: number | null
         }
         Update: {
           blocked_date?: string
@@ -1561,6 +1566,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           reason?: string | null
+          slot_index?: number | null
         }
         Relationships: [
           {
