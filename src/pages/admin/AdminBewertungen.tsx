@@ -470,7 +470,9 @@ const AdminBewertungen = () => {
     parts.push(`${ok} genehmigt`);
     if (partial) parts.push(`${partial} teilweise (Anhänge offen)`);
     if (failed) parts.push(`${failed} FEHLGESCHLAGEN`);
+    if (mailsSent) parts.push(`${mailsSent} Einladungs-Mail(s)`);
     const summary = parts.join(", ") + " — keine SMS versendet.";
+
     if (failed) {
       toast.error(summary, { id: toastId, duration: 10000 });
     } else {
