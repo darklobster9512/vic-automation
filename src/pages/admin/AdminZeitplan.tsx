@@ -14,7 +14,9 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Trash2, Ban, Check, CalendarOff, ClipboardList } from "lucide-react";
+import { Trash2, Ban, Check, CalendarOff, ClipboardList, Coffee } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+
 
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
 import FirstWorkdayBlocker from "@/components/admin/FirstWorkdayBlocker";
