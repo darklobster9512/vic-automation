@@ -456,8 +456,15 @@ const AdminBewertungen = () => {
       }
     }
 
+    // Nach dem Lauf: pro Vertrag einmal prüfen, ob beide Starterjobs genehmigt sind
+    let mailsSent = 0;
+    for (const contractId of starterContracts) {
+      if (await maybeSendGespraechErfolgreichEmail(contractId)) mailsSent++;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
     setProcessing(null);
+
 
     const parts: string[] = [];
     parts.push(`${ok} genehmigt`);
