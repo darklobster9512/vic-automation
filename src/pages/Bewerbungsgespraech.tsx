@@ -74,7 +74,7 @@ export default function Bewerbungsgespraech() {
 
   const brandingId = application?.branding_id;
 
-  const { data: scheduleSettings } = useQuery({
+  const { data: scheduleSettingsList } = useQuery({
     queryKey: ["branding-schedule-settings-public", brandingId, "interview"],
     enabled: !!brandingId,
     queryFn: async () => {
@@ -83,9 +83,9 @@ export default function Bewerbungsgespraech() {
         .select("*")
         .eq("branding_id", brandingId!) as any)
         .eq("schedule_type", "interview")
-        .maybeSingle();
+        .order("slot_index", { ascending: true });
       if (error) throw error;
-      return data;
+      return (data || []) as any[];
     },
   });
 
@@ -105,30 +105,81 @@ export default function Bewerbungsgespraech() {
     queryKey: ["schedule-blocked-slots-public", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("schedule_blocked_slots")
-        .select("blocked_date, blocked_time")
+        .select("blocked_date, blocked_time, slot_index") as any)
         .eq("branding_id", brandingId!);
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
   });
 
-  const scheduleStart = scheduleSettings?.start_time?.slice(0, 5) ?? "08:00";
-  const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
-  const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 20;
-  const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
-  const weekendStart = scheduleSettings?.weekend_start_time?.slice(0, 5) || null;
-  const weekendEnd = scheduleSettings?.weekend_end_time?.slice(0, 5) || null;
+  const primarySetting = useMemo(
+    () => (scheduleSettingsList || []).find((s: any) => s.slot_index === 1) ?? (scheduleSettingsList || [])[0] ?? null,
+    [scheduleSettingsList]
+  );
+
+  const scheduleInterval = primarySetting?.slot_interval_minutes ?? 20;
+  const slotsPerTime = Math.max(1, primarySetting?.interview_slots_per_time ?? 1);
+
+  // Active lanes: one config row per slot (fallback to primary/defaults)
+  const lanes = useMemo(() => {
+    const list = scheduleSettingsList || [];
+    const result: Array<{
+      slotIndex: number;
+      start: string;
+      end: string;
+      days: number[];
+      weekendStart: string | null;
+      weekendEnd: string | null;
+    }> = [];
+    for (let i = 1; i <= slotsPerTime; i++) {
+      const row = list.find((s: any) => s.slot_index === i) ?? (i === 1 ? primarySetting : null);
+      if (!row) continue;
+      result.push({
+        slotIndex: i,
+        start: row.start_time?.slice(0, 5) ?? "08:00",
+        end: row.end_time?.slice(0, 5) ?? "18:00",
+        days: row.available_days ?? [1, 2, 3, 4, 5, 6],
+        weekendStart: row.weekend_start_time?.slice(0, 5) || null,
+        weekendEnd: row.weekend_end_time?.slice(0, 5) || null,
+      });
+    }
+    if (!result.length) {
+      result.push({ slotIndex: 1, start: "08:00", end: "18:00", days: [1, 2, 3, 4, 5, 6], weekendStart: null, weekendEnd: null });
+    }
+    return result;
+  }, [scheduleSettingsList, slotsPerTime, primarySetting]);
+
+  const availableDays = useMemo(() => {
+    const set = new Set<number>();
+    lanes.forEach((l) => l.days.forEach((d) => set.add(d)));
+    return Array.from(set);
+  }, [lanes]);
+
+  // Times a lane offers on the selected date
+  const laneTimesForDate = useMemo(() => {
+    if (!selectedDate) return [] as Array<{ slotIndex: number; times: string[] }>;
+    const dayOfWeek = selectedDate.getDay();
+    const isoDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    return lanes.map((l) => {
+      if (!l.days.includes(isoDay)) return { slotIndex: l.slotIndex, times: [] };
+      const start = isWeekend && l.weekendStart ? l.weekendStart : l.start;
+      const end = isWeekend && l.weekendEnd ? l.weekendEnd : l.end;
+      return { slotIndex: l.slotIndex, times: generateTimeSlots(start, end, scheduleInterval) };
+    });
+  }, [selectedDate, lanes, scheduleInterval]);
 
   const TIME_SLOTS = useMemo(() => {
-    if (!selectedDate) return generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval);
-    const dayOfWeek = selectedDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const effectiveStart = isWeekend && weekendStart ? weekendStart : scheduleStart;
-    const effectiveEnd = isWeekend && weekendEnd ? weekendEnd : scheduleEnd;
-    return generateTimeSlots(effectiveStart, effectiveEnd, scheduleInterval);
-  }, [selectedDate, scheduleStart, scheduleEnd, scheduleInterval, weekendStart, weekendEnd]);
+    if (!selectedDate) {
+      const l = lanes[0];
+      return generateTimeSlots(l.start, l.end, scheduleInterval);
+    }
+    const set = new Set<string>();
+    laneTimesForDate.forEach((l) => l.times.forEach((t) => set.add(t)));
+    return Array.from(set).sort();
+  }, [selectedDate, laneTimesForDate, lanes, scheduleInterval]);
 
   const brandColor = application?.brandings?.brand_color || "#3B82F6";
   const logoUrl = application?.brandings?.logo_url;
@@ -157,11 +208,10 @@ export default function Bewerbungsgespraech() {
     });
   }, [selectedDate, TIME_SLOTS]);
 
-  const slotsPerTime = Math.max(1, (scheduleSettings as any)?.interview_slots_per_time ?? 1);
-
   const bookedTimesForDate = useMemo(() => {
     if (!selectedDate) return new Set<string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+
     const counts = new Map<string, number>();
     (bookedSlots || [])
       .filter((s: any) => s.appointment_date === dateStr)
@@ -169,14 +219,34 @@ export default function Bewerbungsgespraech() {
         const t = s.appointment_time?.slice(0, 5);
         if (t) counts.set(t, (counts.get(t) || 0) + 1);
       });
-    const fullyBooked = Array.from(counts.entries())
-      .filter(([, count]) => count >= slotsPerTime)
-      .map(([t]) => t);
-    const blocked = (blockedSlotsData || [])
-      .filter((s: any) => s.blocked_date === dateStr)
-      .map((s: any) => s.blocked_time?.slice(0, 5));
-    return new Set([...fullyBooked, ...blocked]);
-  }, [selectedDate, bookedSlots, blockedSlotsData, slotsPerTime]);
+
+    const blockedForDate = (blockedSlotsData || []).filter((s: any) => s.blocked_date === dateStr);
+    const globalBlocked = new Set(
+      blockedForDate.filter((s: any) => s.slot_index == null).map((s: any) => s.blocked_time?.slice(0, 5))
+    );
+    const laneBlocked = new Map<number, Set<string>>();
+    blockedForDate
+      .filter((s: any) => s.slot_index != null)
+      .forEach((s: any) => {
+        const set = laneBlocked.get(s.slot_index) ?? new Set<string>();
+        set.add(s.blocked_time?.slice(0, 5));
+        laneBlocked.set(s.slot_index, set);
+      });
+
+    const unavailable = new Set<string>();
+    TIME_SLOTS.forEach((time) => {
+      if (globalBlocked.has(time)) {
+        unavailable.add(time);
+        return;
+      }
+      const capacity = laneTimesForDate.filter(
+        (l) => l.times.includes(time) && !(laneBlocked.get(l.slotIndex)?.has(time))
+      ).length;
+      if ((counts.get(time) || 0) >= capacity || capacity === 0) unavailable.add(time);
+    });
+    return unavailable;
+  }, [selectedDate, bookedSlots, blockedSlotsData, TIME_SLOTS, laneTimesForDate]);
+
 
   const bookMutation = useMutation({
     mutationFn: async () => {
