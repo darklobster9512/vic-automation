@@ -538,7 +538,7 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell className="text-muted-foreground">
                         {item.applications?.employment_type || "–"}
                       </TableCell>
-                      <TableCell>{statusBadge(item.status)}</TableCell>
+                      <TableCell>{statusBadge(item.status, item)}</TableCell>
                       <TableCell>
                         {item._trialDay ? (
                           <div className="text-xs space-y-0.5">
