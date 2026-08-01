@@ -27,16 +27,18 @@ async function sha256(value: string) {
     .join("");
 }
 
-async function invokeFn(name: string, body: unknown) {
+async function invokeFn(name: string, body: unknown, extraHeaders: Record<string, string> = {}) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       apikey: SERVICE_ROLE_KEY,
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
   });
+
   const text = await res.text();
   let parsed: any = null;
   try { parsed = text ? JSON.parse(text) : null; } catch { /* ignore */ }
