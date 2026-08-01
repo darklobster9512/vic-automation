@@ -367,15 +367,21 @@ const AdminBewertungen = () => {
 
     const { data: ordersPrefetch } = await supabase
       .from("orders")
-      .select("id, required_attachments")
+      .select("id, required_attachments, is_starter_job")
       .in("id", orderIds);
     const orderReqMap = new Map<string, any[]>();
-    (ordersPrefetch ?? []).forEach((o: any) =>
-      orderReqMap.set(o.id, Array.isArray(o.required_attachments) ? o.required_attachments : [])
-    );
+    const starterOrderSet = new Set<string>();
+    (ordersPrefetch ?? []).forEach((o: any) => {
+      orderReqMap.set(o.id, Array.isArray(o.required_attachments) ? o.required_attachments : []);
+      if (o.is_starter_job) starterOrderSet.add(o.id);
+    });
+
+    // Verträge, bei denen ein Starterjob genehmigt wurde → später Mail-Prüfung
+    const starterContracts = new Set<string>();
 
     // Pending-balance-Deltas pro contract sammeln, um Race-Conditions bei parallelem update zu vermeiden
     const balanceDelta = new Map<string, number>();
+
 
     const processOne = async (g: GroupedReview) => {
       try {
