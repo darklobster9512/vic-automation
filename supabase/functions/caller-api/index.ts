@@ -335,7 +335,8 @@ Deno.serve(async (req) => {
         recipientName: `${a.first_name} ${a.last_name}`.trim(),
         brandingId: key.branding_id,
         source: "caller",
-      });
+      }, { "x-caller-key": rawKey.trim() });
+
       await log(key, "send_panel_link", appointmentId, { to: a.phone });
       return json({ ok: true });
     }
