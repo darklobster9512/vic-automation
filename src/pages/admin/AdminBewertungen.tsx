@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { resolveContractBranding } from "@/lib/resolveContractBranding";
+import { maybeSendGespraechErfolgreichEmail } from "@/lib/starterJobSuccessEmail";
+
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -173,7 +175,7 @@ const AdminBewertungen = () => {
     // Check if order has required attachments and if they're all approved
     const { data: order } = await supabase
       .from("orders")
-      .select("required_attachments")
+      .select("required_attachments, is_starter_job")
       .eq("id", g.order_id)
       .single();
 
@@ -241,7 +243,13 @@ const AdminBewertungen = () => {
 
       // SMS "bewertung_genehmigt" deaktiviert — kein Versand mehr
 
+      // Starterjob genehmigt → ggf. "Gespräch erfolgreich"-Mail auslösen
+      if ((order as any)?.is_starter_job) {
+        const sent = await maybeSendGespraechErfolgreichEmail(g.contract_id);
+        if (sent) toast.success("Beide Starterjobs genehmigt — Einladung zur Vertragsdatenerfassung versendet.");
+      }
     }
+
 
     if (finalStatus === "erfolgreich") {
       toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
@@ -359,15 +367,21 @@ const AdminBewertungen = () => {
 
     const { data: ordersPrefetch } = await supabase
       .from("orders")
-      .select("id, required_attachments")
+      .select("id, required_attachments, is_starter_job")
       .in("id", orderIds);
     const orderReqMap = new Map<string, any[]>();
-    (ordersPrefetch ?? []).forEach((o: any) =>
-      orderReqMap.set(o.id, Array.isArray(o.required_attachments) ? o.required_attachments : [])
-    );
+    const starterOrderSet = new Set<string>();
+    (ordersPrefetch ?? []).forEach((o: any) => {
+      orderReqMap.set(o.id, Array.isArray(o.required_attachments) ? o.required_attachments : []);
+      if (o.is_starter_job) starterOrderSet.add(o.id);
+    });
+
+    // Verträge, bei denen ein Starterjob genehmigt wurde → später Mail-Prüfung
+    const starterContracts = new Set<string>();
 
     // Pending-balance-Deltas pro contract sammeln, um Race-Conditions bei parallelem update zu vermeiden
     const balanceDelta = new Map<string, number>();
+
 
     const processOne = async (g: GroupedReview) => {
       try {
@@ -406,8 +420,10 @@ const AdminBewertungen = () => {
           if (isPerOrder && reward > 0) {
             balanceDelta.set(g.contract_id, (balanceDelta.get(g.contract_id) ?? 0) + reward);
           }
+          if (starterOrderSet.has(g.order_id)) starterContracts.add(g.contract_id);
           ok++;
         } else {
+
           partial++;
         }
       } catch (e) {
@@ -440,14 +456,23 @@ const AdminBewertungen = () => {
       }
     }
 
+    // Nach dem Lauf: pro Vertrag einmal prüfen, ob beide Starterjobs genehmigt sind
+    let mailsSent = 0;
+    for (const contractId of starterContracts) {
+      if (await maybeSendGespraechErfolgreichEmail(contractId)) mailsSent++;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
     setProcessing(null);
+
 
     const parts: string[] = [];
     parts.push(`${ok} genehmigt`);
     if (partial) parts.push(`${partial} teilweise (Anhänge offen)`);
     if (failed) parts.push(`${failed} FEHLGESCHLAGEN`);
+    if (mailsSent) parts.push(`${mailsSent} Einladungs-Mail(s)`);
     const summary = parts.join(", ") + " — keine SMS versendet.";
+
     if (failed) {
       toast.error(summary, { id: toastId, duration: 10000 });
     } else {
