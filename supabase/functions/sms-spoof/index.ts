@@ -3,8 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-caller-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+async function sha256(value: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,32 +19,61 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate caller
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const sbUrl = Deno.env.get("SUPABASE_URL")!;
     const sbAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const callerClient = createClient(sbUrl, sbAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sbAdmin = createClient(sbUrl, sbServiceKey);
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const authHeader = req.headers.get("Authorization");
+    const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+    const callerKey = req.headers.get("x-caller-key")?.trim() || null;
+
+    let callerUserId: string | null = null;
+    let forcedBrandingId: string | null = null;
+    let authorized = false;
+
+    // 1) Panel user (unchanged behaviour)
+    if (bearer && bearer !== sbServiceKey) {
+      const callerClient = createClient(sbUrl, sbAnonKey, {
+        global: { headers: { Authorization: `Bearer ${bearer}` } },
+      });
+      const { data: claimsData } = await callerClient.auth.getClaims(bearer);
+      if (claimsData?.claims) {
+        callerUserId = claimsData.claims.sub as string;
+        authorized = true;
+      }
+    }
+
+    // 2) Caller API key
+    if (!authorized && callerKey) {
+      const hash = await sha256(callerKey);
+      const { data: keyRow } = await sbAdmin
+        .from("caller_api_keys")
+        .select("id, branding_id, is_active")
+        .eq("token_hash", hash)
+        .maybeSingle();
+      if (keyRow && (keyRow as any).is_active) {
+        authorized = true;
+        forcedBrandingId = (keyRow as any).branding_id ?? null;
+      }
+    }
+
+    // 3) Internal service-role invocation
+    if (!authorized && bearer && bearer === sbServiceKey) {
+      authorized = true;
+    }
+
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const callerUserId = claimsData.claims.sub;
 
-    const { action, to, senderID, text, recipientName, templateId, brandingId, source } = await req.json();
+    const payload = await req.json();
+    const { action, to, senderID, text, recipientName, templateId, source } = payload;
+    const brandingId = forcedBrandingId ?? payload.brandingId;
+
 
     // Send SMS via elitegateway.net
     if (action === "send") {
