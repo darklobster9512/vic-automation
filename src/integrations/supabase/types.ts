@@ -383,6 +383,91 @@ export type Database = {
         }
         Relationships: []
       }
+      caller_activity_log: {
+        Row: {
+          action: string
+          appointment_id: string | null
+          branding_id: string | null
+          caller_key_id: string | null
+          caller_label: string
+          created_at: string
+          details: Json
+          id: string
+        }
+        Insert: {
+          action: string
+          appointment_id?: string | null
+          branding_id?: string | null
+          caller_key_id?: string | null
+          caller_label: string
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Update: {
+          action?: string
+          appointment_id?: string | null
+          branding_id?: string | null
+          caller_key_id?: string | null
+          caller_label?: string
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caller_activity_log_caller_key_id_fkey"
+            columns: ["caller_key_id"]
+            isOneToOne: false
+            referencedRelation: "caller_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caller_api_keys: {
+        Row: {
+          branding_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          label: string
+          last_used_at: string | null
+          slots: number[]
+          token_hash: string
+        }
+        Insert: {
+          branding_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          last_used_at?: string | null
+          slots?: number[]
+          token_hash: string
+        }
+        Update: {
+          branding_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          slots?: number[]
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caller_api_keys_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           attachment_url: string | null
@@ -1935,6 +2020,14 @@ export type Database = {
         Returns: {
           appointment_date: string
           appointment_time: string
+        }[]
+      }
+      interview_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_id: string
+          slot: number
+          slot_total: number
         }[]
       }
       is_caller: { Args: { _user_id: string }; Returns: boolean }

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -34,6 +34,7 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/telegram",
   "/admin/kunden",
   "/admin/caller",
+  "/admin/caller-zugaenge",
 ];
 
 const navGroups = [
@@ -79,6 +80,7 @@ const navGroups = [
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
       { title: "Caller", url: "/admin/caller", icon: Phone },
+      { title: "Caller-Zugänge", url: "/admin/caller-zugaenge", icon: KeyRound },
     ],
   },
 ];
