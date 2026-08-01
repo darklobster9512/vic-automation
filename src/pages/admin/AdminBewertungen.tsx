@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { resolveContractBranding } from "@/lib/resolveContractBranding";
+import { maybeSendGespraechErfolgreichEmail } from "@/lib/starterJobSuccessEmail";
+
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
