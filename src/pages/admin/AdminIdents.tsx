@@ -182,6 +182,8 @@ export default function AdminIdents() {
   const activeSessions = sessions.filter(s => (s.status === "waiting" || s.status === "data_sent") && matchSession(s));
   const filteredPendingIdents = pendingIdents.filter(matchPending);
   const completedSessions = sessions.filter(s => (s.status === "completed" || s.status === "cancelled") && matchSession(s));
+  const doneSessions = completedSessions.filter(s => s.status === "completed");
+  const cancelledSessions = completedSessions.filter(s => s.status === "cancelled");
   const hasAnyContent = sessions.length > 0 || pendingIdents.length > 0;
 
   if (isLoading) {
