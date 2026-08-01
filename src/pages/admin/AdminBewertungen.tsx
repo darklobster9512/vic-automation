@@ -243,7 +243,13 @@ const AdminBewertungen = () => {
 
       // SMS "bewertung_genehmigt" deaktiviert — kein Versand mehr
 
+      // Starterjob genehmigt → ggf. "Gespräch erfolgreich"-Mail auslösen
+      if ((order as any)?.is_starter_job) {
+        const sent = await maybeSendGespraechErfolgreichEmail(g.contract_id);
+        if (sent) toast.success("Beide Starterjobs genehmigt — Einladung zur Vertragsdatenerfassung versendet.");
+      }
     }
+
 
     if (finalStatus === "erfolgreich") {
       toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
