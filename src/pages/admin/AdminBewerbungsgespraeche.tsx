@@ -53,8 +53,37 @@ export default function AdminBewerbungsgespraeche() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [failTarget, setFailTarget] = useState<any | null>(null);
   const [failReason, setFailReason] = useState("");
+  const [successTarget, setSuccessTarget] = useState<any | null>(null);
+  const [successNote, setSuccessNote] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+
+  // Notizen zu Bewerbungsgesprächen (für Anzeige beim Klick auf den Status)
+  const { data: interviewNotes } = useQuery({
+    queryKey: ["interview-notes", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("branding_notes")
+        .select("id, content, author_email, created_at")
+        .eq("page_context", "bewerbungsgespraeche")
+        .eq("branding_id", activeBrandingId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const notesForItem = (item: any, status: string) => {
+    const app = item?.applications;
+    if (!app) return [];
+    const label = status === "erfolgreich" ? "Erfolgreich" : "Fehlgeschlagen";
+    const prefix = `${app.first_name} ${app.last_name} — ${label}:`;
+    return (interviewNotes ?? [])
+      .filter((n: any) => typeof n.content === "string" && n.content.startsWith(prefix))
+      .map((n: any) => ({ ...n, text: n.content.slice(prefix.length).trim() }));
+  };
+
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -349,16 +378,48 @@ export default function AdminBewerbungsgespraeche() {
     }
   };
 
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "erfolgreich":
-        return <Badge className="bg-green-600 text-white border-green-600">Erfolgreich</Badge>;
-      case "fehlgeschlagen":
-        return <Badge variant="destructive">Fehlgeschlagen</Badge>;
-      default:
-        return <Badge variant="outline">Neu</Badge>;
+  const statusBadge = (status: string, item?: any) => {
+    if (status !== "erfolgreich" && status !== "fehlgeschlagen") {
+      return <Badge variant="outline">Neu</Badge>;
     }
+
+    const badge =
+      status === "erfolgreich" ? (
+        <Badge className="bg-green-600 text-white border-green-600 cursor-pointer hover:opacity-90">Erfolgreich</Badge>
+      ) : (
+        <Badge variant="destructive" className="cursor-pointer hover:opacity-90">Fehlgeschlagen</Badge>
+      );
+
+    if (!item) return badge;
+
+    const notes = notesForItem(item, status);
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <span onClick={(e) => e.stopPropagation()}>{badge}</span>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3" onClick={(e) => e.stopPropagation()}>
+          <p className="text-sm font-semibold mb-2">Notiz zum Gespräch</p>
+          {notes.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">Keine Notiz hinterlegt</p>
+          ) : (
+            <ul className="space-y-2">
+              {notes.map((n: any) => (
+                <li key={n.id} className="text-xs">
+                  <p className="text-foreground whitespace-pre-wrap">{n.text || "—"}</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    {n.author_email} · {format(new Date(n.created_at), "dd.MM.yyyy HH:mm")} Uhr
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PopoverContent>
+      </Popover>
+    );
   };
+
 
   return (
     <>
@@ -477,7 +538,7 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell className="text-muted-foreground">
                         {item.applications?.employment_type || "–"}
                       </TableCell>
-                      <TableCell>{statusBadge(item.status)}</TableCell>
+                      <TableCell>{statusBadge(item.status, item)}</TableCell>
                       <TableCell>
                         {item._trialDay ? (
                           <div className="text-xs space-y-0.5">
@@ -598,7 +659,7 @@ export default function AdminBewerbungsgespraeche() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => handleStatusUpdate(item, "erfolgreich")}
+                              onClick={() => { setSuccessNote(""); setSuccessTarget(item); }}
                               title="Als erfolgreich markieren"
                             >
                               <CheckCircle className="h-4 w-4" />
@@ -728,6 +789,7 @@ export default function AdminBewerbungsgespraeche() {
                     author_email: authorEmail,
                   });
                   queryClient.invalidateQueries({ queryKey: ["branding-notes"] });
+                  queryClient.invalidateQueries({ queryKey: ["interview-notes"] });
                 }
                 setFailTarget(null);
                 setFailReason("");
@@ -738,6 +800,55 @@ export default function AdminBewerbungsgespraeche() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!successTarget} onOpenChange={(open) => { if (!open) { setSuccessTarget(null); setSuccessNote(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gespräch erfolgreich</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Das Gespräch von{" "}
+              <span className="font-medium text-foreground">{successTarget?.applications?.first_name} {successTarget?.applications?.last_name}</span>{" "}
+              wird als erfolgreich markiert. Optional können Sie eine Notiz hinterlegen.
+            </p>
+            <Textarea
+              placeholder="Notiz (optional)…"
+              value={successNote}
+              onChange={(e) => setSuccessNote(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setSuccessTarget(null); setSuccessNote(""); }}>Abbrechen</Button>
+            <Button
+              onClick={async () => {
+                const item = successTarget;
+                const app = item?.applications;
+                const note = successNote.trim();
+                await handleStatusUpdate(item, "erfolgreich");
+                if (note && app?.branding_id) {
+                  const { data: userData } = await supabase.auth.getUser();
+                  const authorEmail = userData.user?.email ?? "unbekannt";
+                  await supabase.from("branding_notes").insert({
+                    branding_id: app.branding_id,
+                    page_context: "bewerbungsgespraeche",
+                    content: `${app.first_name} ${app.last_name} — Erfolgreich: ${note}`,
+                    author_email: authorEmail,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["branding-notes"] });
+                  queryClient.invalidateQueries({ queryKey: ["interview-notes"] });
+                }
+                setSuccessTarget(null);
+                setSuccessNote("");
+              }}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
