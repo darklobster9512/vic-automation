@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Video, Clock, User, MessageSquare, Hourglass, Search } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Video, Clock, User, MessageSquare, Hourglass, Search, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -40,6 +42,7 @@ export default function AdminIdents() {
   const navigate = useNavigate();
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["ident-sessions", activeBrandingId],
@@ -179,6 +182,8 @@ export default function AdminIdents() {
   const activeSessions = sessions.filter(s => (s.status === "waiting" || s.status === "data_sent") && matchSession(s));
   const filteredPendingIdents = pendingIdents.filter(matchPending);
   const completedSessions = sessions.filter(s => (s.status === "completed" || s.status === "cancelled") && matchSession(s));
+  const doneSessions = completedSessions.filter(s => s.status === "completed");
+  const cancelledSessions = completedSessions.filter(s => s.status === "cancelled");
   const hasAnyContent = sessions.length > 0 || pendingIdents.length > 0;
 
   if (isLoading) {
@@ -287,32 +292,53 @@ export default function AdminIdents() {
           )}
 
           {completedSessions.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Abgeschlossen</h3>
-              <div className="grid gap-3">
-                {completedSessions.map(session => (
-                  <Card
-                    key={session.id}
-                    className="border border-border/60 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
-                    onClick={() => navigate(`/admin/idents/${session.id}`)}
-                  >
-                    <CardContent className="py-3 flex items-center gap-4">
-                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{getContractName(session.contract_id)}</p>
-                        <p className="text-xs text-muted-foreground truncate">{getOrderTitle(session.order_id)}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {statusBadge(session.status)}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+            <Collapsible open={archiveOpen} onOpenChange={setArchiveOpen} className="space-y-3">
+              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider hover:bg-muted/50 transition-colors">
+                <ChevronRight className={`h-4 w-4 transition-transform ${archiveOpen ? "rotate-90" : ""}`} />
+                Archiv
+                <Badge variant="secondary" className="ml-auto normal-case tracking-normal">{completedSessions.length}</Badge>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <Tabs defaultValue="completed" className="space-y-3">
+                  <TabsList>
+                    <TabsTrigger value="completed">Abgeschlossen ({doneSessions.length})</TabsTrigger>
+                    <TabsTrigger value="cancelled">Abgebrochen ({cancelledSessions.length})</TabsTrigger>
+                  </TabsList>
+                  {([["completed", doneSessions], ["cancelled", cancelledSessions]] as const).map(([value, list]) => (
+                    <TabsContent key={value} value={value} className="space-y-3">
+                      {list.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-6 text-center">Keine Einträge.</p>
+                      ) : (
+                        <div className="grid gap-3">
+                          {list.map(session => (
+                            <Card
+                              key={session.id}
+                              className="border border-border/60 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+                              onClick={() => navigate(`/admin/idents/${session.id}`)}
+                            >
+                              <CardContent className="py-3 flex items-center gap-4">
+                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">{getContractName(session.contract_id)}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{getOrderTitle(session.order_id)}</p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  {statusBadge(session.status)}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CollapsibleContent>
+            </Collapsible>
           )}
+
         </div>
       )}
     </div>
