@@ -202,6 +202,39 @@ export default function AdminZeitplan() {
     [blockViewStart, blockViewEnd, blockViewInterval]
   );
 
+  // Lunch break of the currently selected slot
+  const currentSlotRow = slotSetting ?? (effectiveSlot === 1 ? primarySetting : null);
+  const lunchEnabled = !!currentSlotRow?.lunch_break_enabled;
+  const lunchStart = currentSlotRow?.lunch_break_start?.slice(0, 5) || "12:00";
+  const lunchEnd = currentSlotRow?.lunch_break_end?.slice(0, 5) || "13:00";
+
+  const lunchTimes = useMemo(() => {
+    if (!lunchEnabled) return new Set<string>();
+    return new Set(timeSlots.filter((t) => t >= lunchStart && t < lunchEnd));
+  }, [lunchEnabled, lunchStart, lunchEnd, timeSlots]);
+
+  const saveLunch = (enabled: boolean, start: string, end: string) => {
+    if (enabled && start >= end) {
+      toast({ title: "Startzeit muss vor Endzeit liegen", variant: "destructive" });
+      return;
+    }
+    const base = currentSlotRow ?? primarySetting;
+    saveSettingsMutation.mutate({
+      schedule_type: "interview",
+      slot_index: effectiveSlot,
+      start_time: base?.start_time?.slice(0, 5) ?? DEFAULT_START,
+      end_time: base?.end_time?.slice(0, 5) ?? DEFAULT_END,
+      slot_interval_minutes: primarySetting?.slot_interval_minutes ?? DEFAULT_INTERVAL,
+      available_days: base?.available_days ?? DEFAULT_DAYS,
+      weekend_start_time: base?.weekend_start_time?.slice(0, 5) ?? null,
+      weekend_end_time: base?.weekend_end_time?.slice(0, 5) ?? null,
+      lunch_break_enabled: enabled,
+      lunch_break_start: enabled ? start : null,
+      lunch_break_end: enabled ? end : null,
+    });
+  };
+
+
   // Blocked slots relevant for the currently selected slot (own + global/legacy)
   const slotBlockedSlots = useMemo(
     () => (blockedSlots || []).filter((s: any) => s.slot_index == null || s.slot_index === effectiveSlot),
