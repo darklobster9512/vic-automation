@@ -158,19 +158,31 @@ export default function AdminArbeitsvertraege() {
             ? new Date(selectedContract.desired_start_date).toLocaleDateString("de-DE")
             : null;
 
+        let projectManagerName = "";
+        if (brandingId) {
+          const { data: pmBranding } = await supabase
+            .from("brandings")
+            .select("project_manager_name")
+            .eq("id", brandingId)
+            .maybeSingle();
+          projectManagerName = ((pmBranding as any)?.project_manager_name || "").trim();
+        }
+
         await sendEmail({
           to: selectedContract.email,
           recipient_name: `${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim(),
           subject: "Herzlichen Glückwunsch – Sie sind nun vollwertiger Mitarbeiter",
           body_title: "Willkommen im Team!",
           body_lines: [
-            `Sehr geehrte/r ${selectedContract.first_name || ""} ${selectedContract.last_name || ""},`,
+            `Sehr geehrte/r ${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim() + ",",
             "herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter.",
             startDateDisplay
               ? `Ab Ihrem Startdatum (${startDateDisplay}) werden Ihnen Aufträge zugewiesen.`
               : "Sie werden in Kürze Ihre ersten Aufträge erhalten.",
             "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
-            "Michael Schreiber wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
+            ...(projectManagerName
+              ? [`${projectManagerName} wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.`]
+              : []),
             "Wir freuen uns auf die Zusammenarbeit!",
           ],
           button_text: "Termin für 1. Arbeitstag buchen",
