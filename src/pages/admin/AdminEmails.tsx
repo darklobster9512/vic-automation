@@ -351,7 +351,7 @@ export default function AdminEmails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url, main_job_title, domain, subdomain_prefix, custom_email_link_enabled, custom_email_link")
+        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url, main_job_title, domain, subdomain_prefix, custom_email_link_enabled, custom_email_link, project_manager_name")
         .order("company_name");
       if (error) throw error;
       return data;
@@ -400,7 +400,13 @@ export default function AdminEmails() {
         companyName,
         brandColor,
         bodyTitle: tpl.bodyTitle,
-        bodyLines: tpl.bodyLines(companyName, mainJobTitle),
+        bodyLines: tpl
+          .bodyLines(companyName, mainJobTitle)
+          .flatMap((line) => {
+            if (!line.includes("Michael Schreiber")) return [line];
+            const pm = ((branding as any)?.project_manager_name || "").trim();
+            return pm ? [line.replace("Michael Schreiber", pm)] : [];
+          }),
         buttonText: tpl.buttonText,
         buttonUrl: dynamicButtonUrl,
         footerLines: tpl.footerLines,
