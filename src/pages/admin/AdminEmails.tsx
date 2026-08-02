@@ -400,7 +400,13 @@ export default function AdminEmails() {
         companyName,
         brandColor,
         bodyTitle: tpl.bodyTitle,
-        bodyLines: tpl.bodyLines(companyName, mainJobTitle),
+        bodyLines: tpl
+          .bodyLines(companyName, mainJobTitle)
+          .flatMap((line) => {
+            if (!line.includes("Michael Schreiber")) return [line];
+            const pm = ((branding as any)?.project_manager_name || "").trim();
+            return pm ? [line.replace("Michael Schreiber", pm)] : [];
+          }),
         buttonText: tpl.buttonText,
         buttonUrl: dynamicButtonUrl,
         footerLines: tpl.footerLines,
