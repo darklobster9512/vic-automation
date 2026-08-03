@@ -1,29 +1,22 @@
-# PLZ und Stadt in einer Zeile (Vertragsvorlagen)
+# Doppelte Bewerber bei LIMEX Solutions entfernen
 
-## Ausgangslage
-Alle 13 Vertragsvorlagen enthalten im Adressblock die Platzhalter in vier getrennten Absätzen:
+## Befund (geprüft in der Datenbank)
 
-```text
-{{ Name }}
-{{ Strasse }}
-{{ PLZ }}
-{{ Stadt }}
-```
+- LIMEX Solutions hat aktuell **254 Bewerbungen**, alle mit Telefonnummer.
+- Nach Telefonnummer (nur Ziffern verglichen) gibt es **15 Dubletten-Gruppen** mit je 2 Einträgen.
+- Zu löschen wären damit **15 Einträge** (der jeweils neuere je Gruppe).
+- Alle betroffenen Einträge haben Status „neu" und **keine** Bewerbungsgespräche, Probetage oder Arbeitsverträge — es gehen also keine verknüpften Daten verloren.
 
-Dadurch stehen PLZ und Stadt im gerenderten Vertrag untereinander.
+Beispiele: Tobias Kabelitz, Julian Junghanns, Michaela Schmid, Marija Chichoski, Ralf B., Frank Schröter, Alexander Schlecht, Alexandra Pfister, Ingrid Braunschläger, Sandra Kloß, Stefanie Hofmann, Sandra Gerstenberg, Melanie Welsch u. a. — jeweils zweimal mit identischer Nummer erfasst.
 
-## Änderung
-Die beiden Absätze werden zu einem zusammengeführt:
+## Vorgehen
 
-```text
-{{ Name }}
-{{ Strasse }}
-{{ PLZ }} {{ Stadt }}
-```
+1. Je Telefonnummer wird der **älteste** Eintrag behalten (erste Bewerbung), alle neueren Duplikate werden gelöscht.
+2. Löschung erfolgt ausschließlich innerhalb des Brandings LIMEX Solutions.
+3. Vor dem Löschen wird nochmals geprüft, dass kein zu löschender Eintrag zwischenzeitlich einen Termin oder Vertrag bekommen hat — solche Einträge würden stattdessen behalten.
+4. Danach Gegenprüfung: 254 → 239 Bewerbungen, 0 verbleibende Dubletten.
 
-Umsetzung als einmaliges Daten-Update auf der Tabelle `contract_templates`: Der Absatz mit `{{ Stadt }}` wird entfernt und `{{ Stadt }}` direkt hinter `{{ PLZ }}` (mit Leerzeichen) in denselben Absatz gesetzt. Betrifft alle 13 Vorlagen über alle Brandings hinweg; Zentrierung und restlicher Text bleiben unverändert.
+## Technisch
 
-## Technische Details
-- Regex-basiertes SQL-Update: `{{ PLZ }}</p><p ...>{{ Stadt }}` → `{{ PLZ }} {{ Stadt }}`, tolerant gegenüber Leerzeichen-Varianten.
-- Keine Code-Änderung nötig – die Platzhalter-Ersetzung in `MitarbeiterArbeitsvertrag.tsx` und `MeineDaten.tsx` funktioniert unverändert.
-- Bereits unterzeichnete Verträge (PDFs) bleiben unberührt; nur künftige Anzeigen/Unterzeichnungen nutzen das neue Layout.
+- Ein Datenlösch-Statement auf `applications`, gefiltert über `branding_id` von LIMEX, Duplikat-Erkennung per `regexp_replace(phone, '[^0-9]', '', 'g')` und `row_number()` nach `created_at`.
+- Keine Schema- oder Code-Änderungen.
