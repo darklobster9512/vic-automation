@@ -547,12 +547,29 @@ function BrandingScheduleForm({
           />
         </div>
       )}
+      {showSlotsPerTime && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <Label className="text-sm font-medium">Vorlaufzeit (Stunden)</Label>
+          <p className="text-xs text-muted-foreground">
+            Wie weit im Voraus muss ein Termin mindestens gebucht werden? Standard: 12 Stunden. Bei 0 sind alle künftigen Zeiten sofort buchbar. Gilt für alle Slots dieses Brandings.
+          </p>
+          <Input
+            type="number"
+            min={0}
+            max={168}
+            value={leadTime}
+            onChange={(e) => setLeadTime(Math.max(0, Math.min(168, Number(e.target.value) || 0)))}
+            className="w-32 mt-2"
+          />
+        </div>
+      )}
       <Button onClick={() => onSave({
         start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
-        ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime } : {}),
+        ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime, min_lead_time_hours: leadTime } : {}),
       })} disabled={isSaving}>
+
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
       </Button>
     </div>
