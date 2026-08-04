@@ -313,21 +313,26 @@ export default function AdminZeitplan() {
         {/* Tab 1: Bewerbungsgespräche */}
         <TabsContent value="interviews" className="space-y-6">
           {slotCount > 1 && (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setActiveSlot(n)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
-                    effectiveSlot === n
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card border-border hover:bg-muted text-foreground"
-                  )}
-                >
-                  Slot {n}
-                </button>
-              ))}
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setActiveSlot(n)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
+                      effectiveSlot === n
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border hover:bg-muted text-foreground"
+                    )}
+                  >
+                    Slot {n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                „Slots pro Uhrzeit" und „Vorlaufzeit" gelten brandingweit und werden unter Slot 1 eingestellt.
+              </p>
             </div>
           )}
 
@@ -335,7 +340,7 @@ export default function AdminZeitplan() {
             <CardHeader>
               <CardTitle className="text-lg">Zeiteinstellungen{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle>
               <CardDescription>
-                Zeitspanne und verfügbare Wochentage für diesen Slot. Intervall und „Slots pro Uhrzeit" gelten für alle Slots.
+                Zeitspanne und verfügbare Wochentage für diesen Slot. Intervall, „Slots pro Uhrzeit" und Vorlaufzeit gelten für alle Slots.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -344,10 +349,13 @@ export default function AdminZeitplan() {
                 existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined } as any) ?? undefined}
                 onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview", slot_index: effectiveSlot })}
                 isSaving={saveSettingsMutation.isPending}
-                showSlotsPerTime
+                showSlotsPerTime={effectiveSlot === 1}
+                slotsPerTimeValue={slotCount}
+                leadTimeValue={primarySetting?.min_lead_time_hours ?? 12}
               />
             </CardContent>
           </Card>
+
 
           <Card>
             <CardHeader>
