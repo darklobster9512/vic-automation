@@ -148,16 +148,38 @@ export default function AdminZeitplan() {
         .upsert(upsertData, { onConflict: "branding_id,schedule_type,slot_index" as any });
       if (error) throw error;
 
-      // Keep interval & slots-per-time in sync across all interview slots
       if (params.schedule_type === "interview") {
+        const isPrimary = (params.slot_index ?? 1) === 1;
+        // Interval is global; slots-per-time & lead time only propagate from slot 1
         const sync: any = { slot_interval_minutes: params.slot_interval_minutes };
-        if (params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
-        if (params.min_lead_time_hours !== undefined) sync.min_lead_time_hours = params.min_lead_time_hours;
+        if (isPrimary && params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
+        if (isPrimary && params.min_lead_time_hours !== undefined) sync.min_lead_time_hours = params.min_lead_time_hours;
         await (supabase
           .from("branding_schedule_settings")
           .update(sync) as any)
           .eq("branding_id", activeBrandingId!)
           .eq("schedule_type", "interview");
+
+        // Ensure a config row exists for every slot (2..N), cloned from slot 1
+        if (isPrimary && params.interview_slots_per_time && params.interview_slots_per_time > 1) {
+          const existingIdx = new Set((interviewSettings || []).map((s: any) => s.slot_index));
+          const missing: any[] = [];
+          for (let i = 2; i <= params.interview_slots_per_time; i++) {
+            if (existingIdx.has(i)) continue;
+            missing.push({
+              ...upsertData,
+              slot_index: i,
+              interview_slots_per_time: params.interview_slots_per_time,
+              min_lead_time_hours: params.min_lead_time_hours ?? 12,
+            });
+          }
+          if (missing.length) {
+            const { error: mErr } = await supabase
+              .from("branding_schedule_settings")
+              .upsert(missing, { onConflict: "branding_id,schedule_type,slot_index" as any });
+            if (mErr) throw mErr;
+          }
+        }
       }
     },
     onSuccess: () => {
