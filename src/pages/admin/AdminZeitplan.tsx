@@ -148,16 +148,38 @@ export default function AdminZeitplan() {
         .upsert(upsertData, { onConflict: "branding_id,schedule_type,slot_index" as any });
       if (error) throw error;
 
-      // Keep interval & slots-per-time in sync across all interview slots
       if (params.schedule_type === "interview") {
+        const isPrimary = (params.slot_index ?? 1) === 1;
+        // Interval is global; slots-per-time & lead time only propagate from slot 1
         const sync: any = { slot_interval_minutes: params.slot_interval_minutes };
-        if (params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
-        if (params.min_lead_time_hours !== undefined) sync.min_lead_time_hours = params.min_lead_time_hours;
+        if (isPrimary && params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
+        if (isPrimary && params.min_lead_time_hours !== undefined) sync.min_lead_time_hours = params.min_lead_time_hours;
         await (supabase
           .from("branding_schedule_settings")
           .update(sync) as any)
           .eq("branding_id", activeBrandingId!)
           .eq("schedule_type", "interview");
+
+        // Ensure a config row exists for every slot (2..N), cloned from slot 1
+        if (isPrimary && params.interview_slots_per_time && params.interview_slots_per_time > 1) {
+          const existingIdx = new Set((interviewSettings || []).map((s: any) => s.slot_index));
+          const missing: any[] = [];
+          for (let i = 2; i <= params.interview_slots_per_time; i++) {
+            if (existingIdx.has(i)) continue;
+            missing.push({
+              ...upsertData,
+              slot_index: i,
+              interview_slots_per_time: params.interview_slots_per_time,
+              min_lead_time_hours: params.min_lead_time_hours ?? 12,
+            });
+          }
+          if (missing.length) {
+            const { error: mErr } = await supabase
+              .from("branding_schedule_settings")
+              .upsert(missing, { onConflict: "branding_id,schedule_type,slot_index" as any });
+            if (mErr) throw mErr;
+          }
+        }
       }
     },
     onSuccess: () => {
@@ -291,21 +313,26 @@ export default function AdminZeitplan() {
         {/* Tab 1: Bewerbungsgespräche */}
         <TabsContent value="interviews" className="space-y-6">
           {slotCount > 1 && (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setActiveSlot(n)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
-                    effectiveSlot === n
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card border-border hover:bg-muted text-foreground"
-                  )}
-                >
-                  Slot {n}
-                </button>
-              ))}
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setActiveSlot(n)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
+                      effectiveSlot === n
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border hover:bg-muted text-foreground"
+                    )}
+                  >
+                    Slot {n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                „Slots pro Uhrzeit" und „Vorlaufzeit" gelten brandingweit und werden unter Slot 1 eingestellt.
+              </p>
             </div>
           )}
 
@@ -313,7 +340,7 @@ export default function AdminZeitplan() {
             <CardHeader>
               <CardTitle className="text-lg">Zeiteinstellungen{slotCount > 1 ? ` – Slot ${effectiveSlot}` : ""}</CardTitle>
               <CardDescription>
-                Zeitspanne und verfügbare Wochentage für diesen Slot. Intervall und „Slots pro Uhrzeit" gelten für alle Slots.
+                Zeitspanne und verfügbare Wochentage für diesen Slot. Intervall, „Slots pro Uhrzeit" und Vorlaufzeit gelten für alle Slots.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -322,10 +349,13 @@ export default function AdminZeitplan() {
                 existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined } as any) ?? undefined}
                 onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview", slot_index: effectiveSlot })}
                 isSaving={saveSettingsMutation.isPending}
-                showSlotsPerTime
+                showSlotsPerTime={effectiveSlot === 1}
+                slotsPerTimeValue={slotCount}
+                leadTimeValue={primarySetting?.min_lead_time_hours ?? 12}
               />
             </CardContent>
           </Card>
+
 
           <Card>
             <CardHeader>
@@ -437,11 +467,15 @@ function BrandingScheduleForm({
   onSave,
   isSaving,
   showSlotsPerTime = false,
+  slotsPerTimeValue,
+  leadTimeValue,
 }: {
   existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number };
   onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number }) => void;
   isSaving: boolean;
   showSlotsPerTime?: boolean;
+  slotsPerTimeValue?: number;
+  leadTimeValue?: number;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
   const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || DEFAULT_END);
@@ -449,8 +483,8 @@ function BrandingScheduleForm({
   const [ds, setDs] = useState<number[]>(existing?.available_days || DEFAULT_DAYS);
   const [wst, setWst] = useState(existing?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
-  const [slotsPerTime, setSlotsPerTime] = useState<number>(existing?.interview_slots_per_time ?? 1);
-  const [leadTime, setLeadTime] = useState<number>(existing?.min_lead_time_hours ?? 12);
+  const [slotsPerTime, setSlotsPerTime] = useState<number>(slotsPerTimeValue ?? existing?.interview_slots_per_time ?? 1);
+  const [leadTime, setLeadTime] = useState<number>(leadTimeValue ?? existing?.min_lead_time_hours ?? 12);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
