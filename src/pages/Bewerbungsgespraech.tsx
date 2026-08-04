@@ -207,17 +207,23 @@ export default function Bewerbungsgespraech() {
     vollzeit: "Vollzeit",
   };
 
+  const leadTimeHours = useMemo(() => {
+    const primary = (scheduleSettingsList || []).find((s: any) => s.slot_index === 1) ?? (scheduleSettingsList || [])[0];
+    const v = (primary as any)?.min_lead_time_hours;
+    return typeof v === "number" ? v : 12;
+  }, [scheduleSettingsList]);
+
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
     const now = new Date();
-    const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const cutoff = new Date(now.getTime() + leadTimeHours * 60 * 60 * 1000);
     return TIME_SLOTS.filter((time) => {
       const [h, m] = time.split(":").map(Number);
       const slotDate = new Date(selectedDate);
       slotDate.setHours(h, m, 0, 0);
       return slotDate > cutoff;
     });
-  }, [selectedDate, TIME_SLOTS]);
+  }, [selectedDate, TIME_SLOTS, leadTimeHours]);
 
   const bookedTimesForDate = useMemo(() => {
     if (!selectedDate) return new Set<string>();

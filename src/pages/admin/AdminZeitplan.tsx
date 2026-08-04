@@ -115,7 +115,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -134,6 +134,9 @@ export default function AdminZeitplan() {
       if (params.interview_slots_per_time !== undefined) {
         upsertData.interview_slots_per_time = params.interview_slots_per_time;
       }
+      if (params.min_lead_time_hours !== undefined) {
+        upsertData.min_lead_time_hours = params.min_lead_time_hours;
+      }
       if (params.lunch_break_enabled !== undefined) {
         upsertData.lunch_break_enabled = params.lunch_break_enabled;
         upsertData.lunch_break_start = params.lunch_break_start ? params.lunch_break_start + ":00" : null;
@@ -149,6 +152,7 @@ export default function AdminZeitplan() {
       if (params.schedule_type === "interview") {
         const sync: any = { slot_interval_minutes: params.slot_interval_minutes };
         if (params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
+        if (params.min_lead_time_hours !== undefined) sync.min_lead_time_hours = params.min_lead_time_hours;
         await (supabase
           .from("branding_schedule_settings")
           .update(sync) as any)
@@ -434,8 +438,8 @@ function BrandingScheduleForm({
   isSaving,
   showSlotsPerTime = false,
 }: {
-  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number };
-  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number }) => void;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number };
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number }) => void;
   isSaving: boolean;
   showSlotsPerTime?: boolean;
 }) {
@@ -446,6 +450,7 @@ function BrandingScheduleForm({
   const [wst, setWst] = useState(existing?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
   const [slotsPerTime, setSlotsPerTime] = useState<number>(existing?.interview_slots_per_time ?? 1);
+  const [leadTime, setLeadTime] = useState<number>(existing?.min_lead_time_hours ?? 12);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
@@ -542,12 +547,29 @@ function BrandingScheduleForm({
           />
         </div>
       )}
+      {showSlotsPerTime && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <Label className="text-sm font-medium">Vorlaufzeit (Stunden)</Label>
+          <p className="text-xs text-muted-foreground">
+            Wie weit im Voraus muss ein Termin mindestens gebucht werden? Standard: 12 Stunden. Bei 0 sind alle künftigen Zeiten sofort buchbar. Gilt für alle Slots dieses Brandings.
+          </p>
+          <Input
+            type="number"
+            min={0}
+            max={168}
+            value={leadTime}
+            onChange={(e) => setLeadTime(Math.max(0, Math.min(168, Number(e.target.value) || 0)))}
+            className="w-32 mt-2"
+          />
+        </div>
+      )}
       <Button onClick={() => onSave({
         start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
-        ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime } : {}),
+        ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime, min_lead_time_hours: leadTime } : {}),
       })} disabled={isSaving}>
+
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
       </Button>
     </div>

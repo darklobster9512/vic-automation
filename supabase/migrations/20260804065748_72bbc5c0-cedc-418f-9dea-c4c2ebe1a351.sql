@@ -1,0 +1,1 @@
+ALTER TABLE public.branding_schedule_settings ADD COLUMN IF NOT EXISTS min_lead_time_hours integer NOT NULL DEFAULT 12;
