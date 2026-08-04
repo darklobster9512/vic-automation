@@ -137,7 +137,7 @@ export default function Bewerbungsgespraech() {
       lunchEnd: string | null;
     }> = [];
     for (let i = 1; i <= slotsPerTime; i++) {
-      const row = list.find((s: any) => s.slot_index === i) ?? (i === 1 ? primarySetting : null);
+      const row = list.find((s: any) => s.slot_index === i) ?? primarySetting;
       if (!row) continue;
       result.push({
         slotIndex: i,
