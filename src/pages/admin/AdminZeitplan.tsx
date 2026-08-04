@@ -152,6 +152,7 @@ export default function AdminZeitplan() {
       if (params.schedule_type === "interview") {
         const sync: any = { slot_interval_minutes: params.slot_interval_minutes };
         if (params.interview_slots_per_time !== undefined) sync.interview_slots_per_time = params.interview_slots_per_time;
+        if (params.min_lead_time_hours !== undefined) sync.min_lead_time_hours = params.min_lead_time_hours;
         await (supabase
           .from("branding_schedule_settings")
           .update(sync) as any)
