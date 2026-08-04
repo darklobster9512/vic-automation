@@ -134,6 +134,9 @@ export default function AdminZeitplan() {
       if (params.interview_slots_per_time !== undefined) {
         upsertData.interview_slots_per_time = params.interview_slots_per_time;
       }
+      if (params.min_lead_time_hours !== undefined) {
+        upsertData.min_lead_time_hours = params.min_lead_time_hours;
+      }
       if (params.lunch_break_enabled !== undefined) {
         upsertData.lunch_break_enabled = params.lunch_break_enabled;
         upsertData.lunch_break_start = params.lunch_break_start ? params.lunch_break_start + ":00" : null;
