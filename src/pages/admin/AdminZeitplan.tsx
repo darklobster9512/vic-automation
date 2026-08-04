@@ -483,8 +483,8 @@ function BrandingScheduleForm({
   const [ds, setDs] = useState<number[]>(existing?.available_days || DEFAULT_DAYS);
   const [wst, setWst] = useState(existing?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
-  const [slotsPerTime, setSlotsPerTime] = useState<number>(existing?.interview_slots_per_time ?? 1);
-  const [leadTime, setLeadTime] = useState<number>(existing?.min_lead_time_hours ?? 12);
+  const [slotsPerTime, setSlotsPerTime] = useState<number>(slotsPerTimeValue ?? existing?.interview_slots_per_time ?? 1);
+  const [leadTime, setLeadTime] = useState<number>(leadTimeValue ?? existing?.min_lead_time_hours ?? 12);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
