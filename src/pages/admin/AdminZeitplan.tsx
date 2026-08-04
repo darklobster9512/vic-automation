@@ -467,11 +467,15 @@ function BrandingScheduleForm({
   onSave,
   isSaving,
   showSlotsPerTime = false,
+  slotsPerTimeValue,
+  leadTimeValue,
 }: {
   existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number };
   onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number }) => void;
   isSaving: boolean;
   showSlotsPerTime?: boolean;
+  slotsPerTimeValue?: number;
+  leadTimeValue?: number;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
   const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || DEFAULT_END);
