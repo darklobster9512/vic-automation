@@ -196,6 +196,38 @@ export default function AdminBewerbungsgespraeche() {
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
+  // Anzahl der konfigurierten Slots pro Uhrzeit (gilt brandingweit, Slot-1-Zeile)
+  const { data: slotsPerTime } = useQuery({
+    queryKey: ["interview-slots-per-time", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("branding_schedule_settings")
+        .select("slot_index, interview_slots_per_time")
+        .eq("branding_id", activeBrandingId!) as any)
+        .eq("schedule_type", "interview")
+        .order("slot_index", { ascending: true });
+      if (error) throw error;
+      const primary = (data || [])[0];
+      return Math.max(1, primary?.interview_slots_per_time ?? 1);
+    },
+  });
+
+  const handleSlotChange = async (item: any, newSlot: number | null) => {
+    const { error } = await (supabase
+      .from("interview_appointments") as any)
+      .update({ slot_index: newSlot })
+      .eq("id", item.id);
+    if (error) {
+      toast.error("Slot konnte nicht geändert werden.");
+      return;
+    }
+    toast.success(newSlot ? `Auf Slot ${newSlot} gesetzt.` : "Slot auf automatisch gesetzt.");
+    queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
+  };
+
+
+
   const handleStatusUpdate = async (item: any, newStatus: string) => {
     const { error } = await supabase.rpc("update_interview_status", {
       _appointment_id: item.id,
