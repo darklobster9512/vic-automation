@@ -46,7 +46,7 @@ export async function maybeSendGespraechErfolgreichEmail(contractId: string): Pr
     // 3) Empfängerdaten
     const { data: contract } = await supabase
       .from("employment_contracts")
-      .select("email, first_name, last_name")
+      .select("email, first_name, last_name, phone")
       .eq("id", contractId)
       .maybeSingle();
 
