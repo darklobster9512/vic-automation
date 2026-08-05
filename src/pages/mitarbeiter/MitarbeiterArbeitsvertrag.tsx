@@ -321,8 +321,9 @@ export default function MitarbeiterArbeitsvertrag() {
         }
       }
 
-      initialLoadDone.current = true;
+      if (cd) initialLoadDone.current = true;
       setLoadingData(false);
+
     };
 
     fetchData();
