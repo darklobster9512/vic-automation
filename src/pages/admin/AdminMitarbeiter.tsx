@@ -69,7 +69,7 @@ export default function AdminMitarbeiter() {
   }, [activeBrandingId]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
+    queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch, showEmptyDrafts],
     enabled: ready,
     queryFn: async () => {
       let query = supabase
@@ -78,12 +78,20 @@ export default function AdminMitarbeiter() {
         .eq("branding_id", activeBrandingId!)
         .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"]);
 
+      if (!showEmptyDrafts) {
+        // Leere, nie ausgefüllte Vertragsentwürfe ausblenden:
+        // status 'offen' UND weder Name noch E-Mail noch Telefon vorhanden.
+        query = query.or(
+          "status.neq.offen,first_name.not.is.null,last_name.not.is.null,email.not.is.null,phone.not.is.null"
+        );
+      }
 
       if (debouncedSearch) {
         query = query.or(
           `first_name.ilike.%${debouncedSearch}%,last_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
         );
       }
+
 
       const { data: contracts, error, count } = await query
         .order("created_at", { ascending: false })
