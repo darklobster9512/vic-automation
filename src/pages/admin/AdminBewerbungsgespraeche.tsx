@@ -139,13 +139,16 @@ export default function AdminBewerbungsgespraeche() {
 
       // Compute slot index per (date,time) group across ALL bookings for this branding
       // so labels are stable independent of pagination.
-      const { data: allForBranding } = await supabase
+      // Manuell gesetzte slot_index gewinnen; die automatische Nummerierung
+      // (nach Buchungsreihenfolge) überspringt bereits manuell belegte Slots.
+      const { data: allForBranding } = await (supabase
         .from("interview_appointments")
-        .select("id, appointment_date, appointment_time, created_at, applications!inner(branding_id)")
+        .select("id, appointment_date, appointment_time, created_at, slot_index, applications!inner(branding_id)") as any)
         .eq("applications.branding_id", activeBrandingId!)
         .order("created_at", { ascending: true });
       const slotIndexMap: Record<string, number> = {};
       const slotTotalMap: Record<string, number> = {};
+      const takenMap: Record<string, number[]> = {};
       const groups: Record<string, any[]> = {};
       (allForBranding || []).forEach((row: any) => {
         const key = `${row.appointment_date}|${row.appointment_time}`;
@@ -153,11 +156,21 @@ export default function AdminBewerbungsgespraeche() {
         groups[key].push(row);
       });
       Object.entries(groups).forEach(([key, rows]) => {
-        rows.forEach((r, i) => {
-          slotIndexMap[r.id] = i + 1;
+        const manual = new Set<number>(
+          rows.filter((r: any) => r.slot_index != null).map((r: any) => r.slot_index as number)
+        );
+        rows.filter((r: any) => r.slot_index != null).forEach((r: any) => {
+          slotIndexMap[r.id] = r.slot_index;
         });
-        rows.forEach((r) => {
+        let next = 1;
+        rows.filter((r: any) => r.slot_index == null).forEach((r: any) => {
+          while (manual.has(next)) next++;
+          slotIndexMap[r.id] = next;
+          next++;
+        });
+        rows.forEach((r: any) => {
           slotTotalMap[r.id] = rows.length;
+          takenMap[r.id] = rows.filter((o: any) => o.id !== r.id).map((o: any) => slotIndexMap[o.id]);
         });
       });
 
@@ -166,6 +179,7 @@ export default function AdminBewerbungsgespraeche() {
         _trialDay: trialDayMap[item.application_id] || null,
         _slotIndex: slotIndexMap[item.id] || 1,
         _slotTotal: slotTotalMap[item.id] || 1,
+        _takenSlots: takenMap[item.id] || [],
       }));
 
       // Secondary sort by slot index so within the same (date,time) Slot 1, 2, 3 ascending
@@ -174,6 +188,7 @@ export default function AdminBewerbungsgespraeche() {
         if (a.appointment_time !== b.appointment_time) return 0;
         return a._slotIndex - b._slotIndex;
       });
+
 
       return { items, total: count || 0 };
     },
