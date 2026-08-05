@@ -45,6 +45,7 @@ export default function AdminMitarbeiter() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showEmptyDrafts, setShowEmptyDrafts] = useState(false);
   const [bulkSuspendTarget, setBulkSuspendTarget] = useState<boolean | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
