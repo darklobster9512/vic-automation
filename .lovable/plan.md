@@ -1,48 +1,30 @@
-# Slot-System: Prüfergebnis und Absicherung der Doppelbuchung
+# Slot manuell wechseln bei Bewerbungsgesprächen
 
-## Was ich geprüft habe
+## Problem
 
-Alle Bewerbungsgespräch-Termine, gruppiert nach Branding + Datum + Uhrzeit:
+Der Slot eines Gesprächs ist heute nicht gespeichert, sondern wird berechnet: innerhalb einer Datum+Uhrzeit-Gruppe entscheidet die Reihenfolge der Buchung (`created_at`), wer Slot 1, 2, 3 ist. Deshalb lässt er sich aktuell nicht manuell ändern — weder im Admin-Panel noch im Caller-Panel.
 
-```text
-for.tel Solutions      181 Zeitpunkte mit 1 Buchung, 118 mit 2 Buchungen (letzte Doppelbelegung 08.07.)
-LIMEX Solutions         11 Zeitpunkte, alle mit 1 Buchung
-Efficient Flow           9 Zeitpunkte, alle mit 1 Buchung
-```
+## Lösung
 
-Befunde:
+Ein fester Slot wird optional pro Termin gespeichert. Wo nichts gesetzt ist, bleibt alles wie bisher (Reihenfolge nach Buchungszeit).
 
-1. **Kein einziger Zeitpunkt wurde je über die Kapazität hinaus belegt** — nirgends 3 Buchungen, und die 2er-Belegungen gab es nur bei for.tel, wo „Slots pro Uhrzeit = 2" eingestellt ist. Insofern hat das System bisher nie überbucht.
-2. **Seit dem 08.07. gibt es bei for.tel keine einzige Doppelbelegung mehr** — passend zur heute gefundenen fehlenden Slot-2-Konfigurationszeile, wodurch real nur 1 Spur buchbar war. Das ist mit dem heutigen Fix behoben; ab jetzt sollten wieder 2 pro Uhrzeit möglich sein.
-3. **Fehlermeldungen gab es keine.** In den Postgres-Logs steht kein einziger Fehler zu `interview_appointments`. Das liegt aber nicht daran, dass alles sauber abgesichert ist, sondern daran, dass es gar keine Absicherung gibt, die einen Fehler werfen könnte: auf `interview_appointments` existieren nur zwei Unique-Indizes (`id` und `application_id`), keiner auf Datum + Uhrzeit. Die Kapazitätsprüfung passiert ausschließlich im Browser (`Bewerbungsgespraech.tsx`), und gebucht wird mit einem direkten `insert`.
+### 1. Datenbank
+- Neue Spalte `slot_index` (Zahl, optional) an `interview_appointments`.
+- `interview_slots_for_branding` so anpassen, dass ein manuell gesetzter Slot Vorrang hat und nur die übrigen Termine automatisch durchnummeriert werden (die verbleibenden freien Nummern werden nach Buchungszeit vergeben).
 
-Konsequenz: Buchen zwei Bewerber denselben letzten freien Platz im selben Moment (oder lädt jemand die Seite mit veralteten Daten), landen **beide** Datensätze in der Datenbank — ohne Fehler, ohne Hinweis. Genau deshalb ist auch kein Error zu finden.
+### 2. Admin-Oberfläche (/admin/bewerbungsgespraeche)
+- Das Slot-Badge in der Uhrzeit-Spalte wird anklickbar (auch wenn nur 1 Slot belegt ist, solange das Branding mehrere Spuren hat).
+- Klick öffnet ein kleines Popup mit Auswahl „Slot 1 … Slot N" (N = „Slots pro Uhrzeit" des Brandings) plus Option „Automatisch".
+- Beim Speichern:
+  - Ist der Ziel-Slot zur selben Datum/Uhrzeit schon belegt, werden die beiden Termine getauscht (der andere bekommt den bisherigen Slot fest zugewiesen) — mit Hinweis im Bestätigungstext.
+  - Ist er frei, wird nur der gewählte Termin gesetzt.
+- Danach Liste neu laden, Erfolgsmeldung.
 
-## Was gebaut werden soll
-
-**Serverseitige Buchung mit atomarer Kapazitätsprüfung**
-
-Eine neue `SECURITY DEFINER`-Funktion `book_interview_public(_application_id, _date, _time)` übernimmt das Buchen komplett:
-
-1. Sperrt die Buchungen dieses Brandings für Datum + Uhrzeit (`FOR UPDATE`), damit zwei gleichzeitige Anfragen sich nicht überholen.
-2. Ermittelt die reale Kapazität für diesen Zeitpunkt: Anzahl der Slot-Spuren, die an diesem Wochentag zu dieser Uhrzeit laufen (Start-/Endzeit, Wochenendzeiten, Mittagspause, blockierte Zeiten pro Spur und global) — dieselbe Logik wie im Frontend, nur in SQL.
-3. Prüft die Vorlaufzeit (`min_lead_time_hours`) gegen die gewünschte Uhrzeit.
-4. Löscht einen eventuell vorhandenen alten Termin derselben Bewerbung (Umbuchung), legt den neuen an und setzt den Bewerbungsstatus auf `termin_gebucht`.
-5. Ist der Zeitpunkt voll, blockiert oder außerhalb der Vorlaufzeit, kommt eine klare Fehlermeldung („Dieser Termin ist bereits vergeben") zurück.
-
-**Frontend**
-
-`src/pages/Bewerbungsgespraech.tsx` ruft in `bookMutation` statt Delete + Insert + Status-RPC nur noch diese eine Funktion auf. Die bisherige Frontend-Filterung bleibt als Komfort erhalten (belegte Zeiten weiter ausgegraut). Bei der Fehlermeldung „bereits vergeben" werden die Slot-Daten neu geladen und ein Toast zeigt an, dass die Zeit gerade weggeschnappt wurde.
-
-**Monitoring**
-
-Optional als Teil dieser Änderung: eine einmalige Prüfabfrage nach Überbelegungen, die künftig jederzeit wiederholbar ist — aktuell ist das Ergebnis sauber (0 Fälle).
+### 3. Konsistenz
+- Die Slot-Berechnung in der Liste nutzt künftig denselben Vorrang (manuell vor automatisch), damit Anzeige und Caller-Zuordnung identisch sind.
+- Das Caller-Panel nutzt bereits `interview_slots_for_branding` und erbt die Änderung automatisch — ein manuell gewechselter Slot landet damit sofort beim richtigen Caller.
 
 ## Technische Details
-
-- Neue Migration mit `book_interview_public(...)` (`SECURITY DEFINER`, `SET search_path = public`), Kapazitätsberechnung aus `branding_schedule_settings` (`schedule_type = 'interview'`, Fallback auf `slot_index = 1`) und `schedule_blocked_slots` (`slot_index IS NULL` = gilt für alle Spuren).
-- Sperre über `SELECT ... FROM interview_appointments ia JOIN applications a ... WHERE a.branding_id = ... AND date/time = ... FOR UPDATE`.
-- `EXECUTE`-Rechte für `anon` und `authenticated`, da die Buchungsseite ohne Session läuft (`publicSupabase`).
-- Kein Unique-Index auf (Datum, Uhrzeit) — die Kapazität ist konfigurierbar (1..N), das lässt sich mit einem Index nicht abbilden.
-- Telegram-/E-Mail-/SMS-Versand bleibt wie bisher im Frontend nach erfolgreicher Buchung.
-- Probetag und 1. Arbeitstag bleiben unverändert (`book_first_workday_public` prüft dort bereits serverseitig).
+- Migration: `ALTER TABLE public.interview_appointments ADD COLUMN slot_index integer;` plus Neufassung von `interview_slots_for_branding` (manuelle Werte zuerst, Rest per `ROW_NUMBER()` über die freien Nummern).
+- Frontend: `src/pages/admin/AdminBewerbungsgespraeche.tsx` — Gruppierungslogik (Zeilen 140–176) berücksichtigt `slot_index`; neues Popover/Dialog am Slot-Badge; Update per `supabase.from("interview_appointments").update({ slot_index })`.
+- Slot-Anzahl kommt aus `branding_schedule_settings` (`schedule_type = 'interview'`, `slot_index = 1`, Feld `interview_slots_per_time`).
