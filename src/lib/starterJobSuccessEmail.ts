@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { resolveContractBranding } from "@/lib/resolveContractBranding";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { createShortLink } from "@/lib/createShortLink";
+import { sendSms } from "@/lib/sendSms";
 
 /**
  * Ab diesem Zeitpunkt gilt die neue Logik: die "Gespräch erfolgreich"-Mail wird
