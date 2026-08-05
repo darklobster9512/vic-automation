@@ -73,8 +73,8 @@ export default function AdminMitarbeiter() {
         .from("employment_contracts")
         .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id", { count: "exact" })
         .eq("branding_id", activeBrandingId!)
-        .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
-        .not("first_name", "is", null);
+        .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"]);
+
 
       if (debouncedSearch) {
         query = query.or(
