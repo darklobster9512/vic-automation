@@ -1,26 +1,34 @@
-# „Unbekannt" bei /admin/bewertungen beheben
+# Julia Roxana Einloft: Account "verschwunden" – Ursache und Fix
 
-## Korrektur
+## Was tatsächlich passiert ist
 
-Du hast recht: Der Vertrag gehört zum Branding **LIMEX Solutions GmbH** (`371a2e6c…`), nicht zu for.tel. Ich hatte die Branding-IDs vorher vertauscht.
+Der Account existiert noch. Nichts wurde gelöscht.
 
-## Was tatsächlich los ist
+Bestätigt per Datenbank-Abfrage:
+- Auth-User `de8b9b4c…` (juliar.einloft@gmail.com) existiert, erstellt 05.08.2026 08:08, letzter Login 05.08.2026 12:27. Metadaten enthalten korrekt "Julia Roxana Einloft" und Telefon.
+- Ihr Vertrag `9d8e4447…` (Branding LIMEX Solutions) existiert ebenfalls, Status `offen` – aber `first_name`, `last_name`, `email`, `phone` sind **NULL**.
+- Genau deshalb erscheint sie nicht in `/admin/mitarbeiter`: Die Liste filtert dort hart mit `.not("first_name", "is", null)`.
+- Und deshalb stehen ihre beiden genehmigten Bewertungen unter "Unbekannt".
 
-Die beiden genehmigten Bewertungen mit „Unbekannt" (Starterjobs Seeberger + Thalia, LIMEX) hängen alle am Vertrag `9d8e4447…`:
+Bei der Registrierung wurden die Namen mitgeschrieben (der Code in `Auth.tsx` schreibt sie, und die Auth-Metadaten belegen, dass die Felder ausgefüllt waren). Die Felder wurden also **nachträglich geleert**.
 
-- Der Vertrag hat **keinen Vor-/Nachnamen** gespeichert (Status „offen", Vertragsdaten noch nicht eingereicht) und **keine verknüpfte Bewerbung** (`application_id` ist leer).
-- Der einzige Name im System steht im Profil des verknüpften Benutzers: **Julia Roxana Einloft** (juliar.einloft@gmail.com), ebenfalls LIMEX.
-- Melanie Schnurr hat einen eigenen LIMEX-Vertrag (`33d427ab…`, Status „eingereicht"), aber dazu existieren **null** Bewertungen.
+Die einzige Stelle im Code, die diese Felder auf `null` setzen kann, ist der Auto-Save im Arbeitsvertrag-Formular (`MitarbeiterArbeitsvertrag.tsx`, Zeile ~147-182): Er schreibt bei jeder Formularänderung `first_name: formData.first_name || null` usw. Der Schutz `initialLoadDone` wird auf `true` gesetzt, **auch wenn das Laden des Vertrags keine Daten geliefert hat** (z. B. kurzzeitig fehlgeschlagene/leere Abfrage direkt nach dem Login). In dem Fall ist das Formular leer, der Auto-Save feuert und überschreibt die vorhandenen Namen mit NULL. Das passt exakt zum Zeitpunkt ihres Logins um 12:27.
 
-Die Bewertungsseite liest den Namen ausschließlich aus `employment_contracts.first_name/last_name` — deshalb „Unbekannt".
+Es ist bisher ein Einzelfall – projektweit gibt es genau diesen einen Vertrag mit User-Account und leeren Namen.
 
 ## Fix
 
-In `src/pages/admin/AdminBewertungen.tsx` eine Namens-Fallback-Kette einbauen:
+1. **Daten reparieren**: Vertrag `9d8e4447…` wieder mit Name, E-Mail und Telefon aus Auth-Metadaten/Profil befüllen. Damit taucht sie sofort wieder in `/admin/mitarbeiter` auf und die Bewertungen zeigen ihren Namen.
 
-1. `employment_contracts.first_name + last_name` (wie bisher)
-2. sonst `profiles.full_name` / `display_name` über `employment_contracts.user_id`
-3. sonst `applications.first_name + last_name` über `application_id`
-4. sonst E-Mail, erst danach „Unbekannt"
+2. **Auto-Save absichern** (`src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`):
+   - `initialLoadDone` nur setzen, wenn der Vertrag tatsächlich geladen wurde (`cd` vorhanden).
+   - Im Update-Payload leere Felder nicht mehr auf `null` schreiben: nur Felder senden, die einen Wert haben, damit ein leeres Formular nie bestehende Daten löschen kann.
 
-Technisch: zusätzlich `user_id, application_id, email` im Vertrags-Query mitladen, danach in je einem Batch-Query die zugehörigen Profile bzw. Bewerbungen holen und beim Aufbau der `contractMap` die Fallbacks anwenden. Keine Datenbankänderung nötig.
+3. **Anzeige robuster machen**:
+   - `/admin/mitarbeiter`: Filter `first_name is not null` entfernen und stattdessen als Fallback Profil-/Bewerbungsname bzw. E-Mail anzeigen, damit kein Mitarbeiter mehr unsichtbar wird.
+   - `/admin/bewertungen`: Name-Fallback-Kette Vertrag → Profil → Bewerbung → E-Mail statt "Unbekannt".
+
+## Technische Details
+
+- Datenreparatur per SQL-Update auf `employment_contracts` (nur diese eine Zeile).
+- Keine Schemaänderung nötig.
