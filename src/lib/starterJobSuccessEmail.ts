@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { resolveContractBranding } from "@/lib/resolveContractBranding";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { createShortLink } from "@/lib/createShortLink";
+import { sendSms } from "@/lib/sendSms";
 
 /**
  * Ab diesem Zeitpunkt gilt die neue Logik: die "Gespräch erfolgreich"-Mail wird
@@ -46,7 +48,7 @@ export async function maybeSendGespraechErfolgreichEmail(contractId: string): Pr
     // 3) Empfängerdaten
     const { data: contract } = await supabase
       .from("employment_contracts")
-      .select("email, first_name, last_name")
+      .select("email, first_name, last_name, phone")
       .eq("id", contractId)
       .maybeSingle();
 
@@ -89,6 +91,46 @@ export async function maybeSendGespraechErfolgreichEmail(contractId: string): Pr
       event_type: "gespraech_erfolgreich",
       metadata: { contract_id: contractId, trigger: "starter_jobs_approved" },
     });
+
+    // 6) Zusätzlich SMS mit Portal-Shortlink (Fehler brechen den Mailversand nicht)
+    try {
+      const phone = contract?.phone?.trim();
+      if (phone) {
+        const { data: tpl } = await supabase
+          .from("sms_templates")
+          .select("message")
+          .eq("event_type", "gespraech_erfolgreich")
+          .maybeSingle();
+
+        const rawTemplate =
+          tpl?.message ||
+          "Hallo {name}, Ihre Starteraufträge wurden erfolgreich geprüft! Bitte reichen Sie jetzt Ihre Vertragsdaten ein: {link}";
+
+        let smsLink = "";
+        if (vertragsLink) {
+          try {
+            smsLink = await createShortLink(vertragsLink, brandingId ?? null);
+          } catch {
+            smsLink = vertragsLink;
+          }
+        }
+
+        const text = rawTemplate
+          .replace(/{name}/g, contract?.first_name || fullName || "")
+          .replace(/{link}/g, smsLink)
+          .trim();
+
+        await sendSms({
+          to: phone,
+          text,
+          event_type: "gespraech_erfolgreich",
+          recipient_name: fullName || undefined,
+          branding_id: brandingId || null,
+        });
+      }
+    } catch (smsErr) {
+      console.error("gespraech_erfolgreich SMS failed:", smsErr);
+    }
 
     return true;
   } catch (err) {
