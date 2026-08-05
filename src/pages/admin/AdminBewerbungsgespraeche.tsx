@@ -561,13 +561,50 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge>
-                          {item._slotTotal > 1 && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                              {item._slotIndex}. Slot
-                            </Badge>
-                          )}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="focus:outline-none">
+                                <Badge
+                                  variant={item.slot_index != null ? "default" : "secondary"}
+                                  className="text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80"
+                                >
+                                  {item._slotIndex}. Slot
+                                </Badge>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-52 p-2" align="start">
+                              <p className="text-xs font-medium mb-2">Slot ändern</p>
+                              <div className="space-y-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSlotChange(item, null)}
+                                  className={`w-full text-left text-sm rounded-md px-2 py-1.5 hover:bg-muted ${item.slot_index == null ? "bg-muted font-medium" : ""}`}
+                                >
+                                  Automatisch
+                                </button>
+                                {Array.from({ length: Math.max(slotsPerTime || 1, item._slotIndex) }, (_, i) => i + 1).map((s) => {
+                                  const taken = (item._takenSlots || []).includes(s);
+                                  return (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      disabled={taken}
+                                      onClick={() => handleSlotChange(item, s)}
+                                      className={`w-full text-left text-sm rounded-md px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted ${item.slot_index === s ? "bg-muted font-medium" : ""}`}
+                                    >
+                                      Slot {s}{taken ? " (belegt)" : ""}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-2">
+                                Standard ist die automatische Reihenfolge. Manuelle Auswahl gilt nur für diesen Termin.
+                              </p>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </TableCell>
+
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}
                       </TableCell>
