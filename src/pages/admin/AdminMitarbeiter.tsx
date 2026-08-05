@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -43,6 +45,7 @@ export default function AdminMitarbeiter() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showEmptyDrafts, setShowEmptyDrafts] = useState(false);
   const [bulkSuspendTarget, setBulkSuspendTarget] = useState<boolean | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -66,7 +69,7 @@ export default function AdminMitarbeiter() {
   }, [activeBrandingId]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
+    queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch, showEmptyDrafts],
     enabled: ready,
     queryFn: async () => {
       let query = supabase
@@ -75,12 +78,20 @@ export default function AdminMitarbeiter() {
         .eq("branding_id", activeBrandingId!)
         .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"]);
 
+      if (!showEmptyDrafts) {
+        // Leere, nie ausgefüllte Vertragsentwürfe ausblenden:
+        // status 'offen' UND weder Name noch E-Mail noch Telefon vorhanden.
+        query = query.or(
+          "status.neq.offen,first_name.not.is.null,last_name.not.is.null,email.not.is.null,phone.not.is.null"
+        );
+      }
 
       if (debouncedSearch) {
         query = query.or(
           `first_name.ilike.%${debouncedSearch}%,last_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
         );
       }
+
 
       const { data: contracts, error, count } = await query
         .order("created_at", { ascending: false })
@@ -333,7 +344,7 @@ export default function AdminMitarbeiter() {
       <UpcomingStartDates />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        <div className="relative mb-4">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Name, E-Mail, Telefon oder Branding suchen..."
@@ -342,6 +353,18 @@ export default function AdminMitarbeiter() {
             className="pl-9"
           />
         </div>
+
+        <div className="flex items-center gap-2 mb-4">
+          <Switch
+            id="show-empty-drafts"
+            checked={showEmptyDrafts}
+            onCheckedChange={(v) => { setShowEmptyDrafts(v); setPage(0); setSelectedIds(new Set()); }}
+          />
+          <Label htmlFor="show-empty-drafts" className="text-sm text-muted-foreground cursor-pointer">
+            Leere Vertragsentwürfe anzeigen
+          </Label>
+        </div>
+
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
