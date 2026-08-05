@@ -150,30 +150,38 @@ export default function MitarbeiterArbeitsvertrag() {
     saveTimerRef.current = setTimeout(async () => {
       const bdMatch = formData.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
       const birthDateIso = bdMatch ? `${bdMatch[3]}-${bdMatch[2]}-${bdMatch[1]}` : null;
-      await supabase.from("employment_contracts").update({
-        first_name: formData.first_name || null,
-        last_name: formData.last_name || null,
-        email: formData.email || null,
-        phone: formData.phone || null,
+      const candidate: Record<string, any> = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        phone: formData.phone,
         birth_date: birthDateIso,
-        birth_place: formData.birth_place || null,
-        nationality: formData.nationality || null,
-        street: formData.street || null,
-        zip_code: formData.zip_code || null,
-        city: formData.city || null,
-        marital_status: formData.marital_status || null,
-        employment_type: currentTemplate?.employment_type || formData.employment_type || null,
+        birth_place: formData.birth_place,
+        nationality: formData.nationality,
+        street: formData.street,
+        zip_code: formData.zip_code,
+        city: formData.city,
+        marital_status: formData.marital_status,
+        employment_type: currentTemplate?.employment_type || formData.employment_type,
         desired_start_date: formData.desired_start_date ? format(formData.desired_start_date, "yyyy-MM-dd") : null,
-        social_security_number: formData.social_security_number || null,
-        tax_id: formData.tax_id || null,
-        health_insurance: formData.health_insurance || null,
-        iban: formData.iban || null,
-        bic: formData.bic || null,
-        bank_name: formData.bank_name || null,
+        social_security_number: formData.social_security_number,
+        tax_id: formData.tax_id,
+        health_insurance: formData.health_insurance,
+        iban: formData.iban,
+        bic: formData.bic,
+        bank_name: formData.bank_name,
         id_type: currentIdType,
         template_id: currentTemplate?.id || null,
-      } as any).eq("id", contract.id);
+      };
+      // Never overwrite existing data with empty values
+      const payload: Record<string, any> = {};
+      Object.entries(candidate).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && v !== "") payload[k] = v;
+      });
+      if (Object.keys(payload).length === 0) return;
+      await supabase.from("employment_contracts").update(payload as any).eq("id", contract.id);
     }, 1500);
+
   }, [contract]);
 
   // Trigger auto-save on form/idType/template changes
