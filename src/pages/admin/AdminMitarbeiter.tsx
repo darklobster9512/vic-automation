@@ -73,8 +73,8 @@ export default function AdminMitarbeiter() {
         .from("employment_contracts")
         .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id", { count: "exact" })
         .eq("branding_id", activeBrandingId!)
-        .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
-        .not("first_name", "is", null);
+        .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"]);
+
 
       if (debouncedSearch) {
         query = query.or(
@@ -411,9 +411,10 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell className="font-medium">
                           <span className="cursor-pointer underline hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/admin/mitarbeiter/${item.id}`); }}>
-                            {item.first_name} {item.last_name}
+                            {`${item.first_name ?? ""} ${item.last_name ?? ""}`.trim() || item.email || "Ohne Namen"}
                           </span>
                         </TableCell>
+
                         <TableCell className="text-muted-foreground">
                           {item.phone ? (
                             <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.phone); toast.success("Telefonnummer kopiert!"); }}>{item.phone}</span>
