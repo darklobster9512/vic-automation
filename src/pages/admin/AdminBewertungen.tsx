@@ -75,7 +75,9 @@ const AdminBewertungen = () => {
     enabled: ready,
     queryFn: async () => {
       // Step 1: Get contract IDs for the active branding
-      let contractQuery = supabase.from("employment_contracts").select("id, first_name, last_name");
+      let contractQuery = supabase
+        .from("employment_contracts")
+        .select("id, first_name, last_name, email, user_id, application_id");
       if (activeBrandingId) {
         contractQuery = contractQuery.eq("branding_id", activeBrandingId);
       }
@@ -83,9 +85,46 @@ const AdminBewertungen = () => {
       if (!contracts?.length) return [];
 
       const contractIds = contracts.map((c) => c.id);
+
+      // Fallback names: profiles + applications for contracts without name fields
+      const missing = contracts.filter((c) => !c.first_name && !c.last_name);
+      const profileNames = new Map<string, string>();
+      const applicationNames = new Map<string, string>();
+      if (missing.length) {
+        const userIds = missing.map((c) => c.user_id).filter(Boolean) as string[];
+        if (userIds.length) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", userIds);
+          (profs ?? []).forEach((p: any) => {
+            if (p.full_name) profileNames.set(p.id, p.full_name);
+          });
+        }
+        const appIds = missing.map((c) => c.application_id).filter(Boolean) as string[];
+        if (appIds.length) {
+          const { data: apps } = await supabase
+            .from("applications")
+            .select("id, first_name, last_name")
+            .in("id", appIds);
+          (apps ?? []).forEach((a: any) => {
+            const n = [a.first_name, a.last_name].filter(Boolean).join(" ");
+            if (n) applicationNames.set(a.id, n);
+          });
+        }
+      }
+
       const contractMap = Object.fromEntries(
-        contracts.map((c) => [c.id, [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unbekannt"])
+        contracts.map((c) => [
+          c.id,
+          [c.first_name, c.last_name].filter(Boolean).join(" ") ||
+            (c.user_id ? profileNames.get(c.user_id) : undefined) ||
+            (c.application_id ? applicationNames.get(c.application_id) : undefined) ||
+            c.email ||
+            "Unbekannt",
+        ])
       );
+
 
       // Step 2: Get reviews for those contracts (paginated to avoid 1000-row limit)
       const BATCH = 1000;
