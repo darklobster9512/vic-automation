@@ -333,7 +333,7 @@ export default function AdminMitarbeiter() {
       <UpcomingStartDates />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        <div className="relative mb-4">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Name, E-Mail, Telefon oder Branding suchen..."
@@ -342,6 +342,18 @@ export default function AdminMitarbeiter() {
             className="pl-9"
           />
         </div>
+
+        <div className="flex items-center gap-2 mb-4">
+          <Switch
+            id="show-empty-drafts"
+            checked={showEmptyDrafts}
+            onCheckedChange={(v) => { setShowEmptyDrafts(v); setPage(0); setSelectedIds(new Set()); }}
+          />
+          <Label htmlFor="show-empty-drafts" className="text-sm text-muted-foreground cursor-pointer">
+            Leere Vertragsentwürfe anzeigen
+          </Label>
+        </div>
+
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
