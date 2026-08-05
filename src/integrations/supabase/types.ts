@@ -1089,6 +1089,7 @@ export type Database = {
           reminder_count: number
           reminder_sent: boolean
           reminder_timestamps: Json
+          slot_index: number | null
           status: string
         }
         Insert: {
@@ -1104,6 +1105,7 @@ export type Database = {
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
+          slot_index?: number | null
           status?: string
         }
         Update: {
@@ -1119,6 +1121,7 @@ export type Database = {
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
+          slot_index?: number | null
           status?: string
         }
         Relationships: [

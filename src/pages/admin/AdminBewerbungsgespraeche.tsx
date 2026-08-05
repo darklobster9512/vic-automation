@@ -139,13 +139,16 @@ export default function AdminBewerbungsgespraeche() {
 
       // Compute slot index per (date,time) group across ALL bookings for this branding
       // so labels are stable independent of pagination.
-      const { data: allForBranding } = await supabase
+      // Manuell gesetzte slot_index gewinnen; die automatische Nummerierung
+      // (nach Buchungsreihenfolge) überspringt bereits manuell belegte Slots.
+      const { data: allForBranding } = await (supabase
         .from("interview_appointments")
-        .select("id, appointment_date, appointment_time, created_at, applications!inner(branding_id)")
+        .select("id, appointment_date, appointment_time, created_at, slot_index, applications!inner(branding_id)") as any)
         .eq("applications.branding_id", activeBrandingId!)
         .order("created_at", { ascending: true });
       const slotIndexMap: Record<string, number> = {};
       const slotTotalMap: Record<string, number> = {};
+      const takenMap: Record<string, number[]> = {};
       const groups: Record<string, any[]> = {};
       (allForBranding || []).forEach((row: any) => {
         const key = `${row.appointment_date}|${row.appointment_time}`;
@@ -153,11 +156,21 @@ export default function AdminBewerbungsgespraeche() {
         groups[key].push(row);
       });
       Object.entries(groups).forEach(([key, rows]) => {
-        rows.forEach((r, i) => {
-          slotIndexMap[r.id] = i + 1;
+        const manual = new Set<number>(
+          rows.filter((r: any) => r.slot_index != null).map((r: any) => r.slot_index as number)
+        );
+        rows.filter((r: any) => r.slot_index != null).forEach((r: any) => {
+          slotIndexMap[r.id] = r.slot_index;
         });
-        rows.forEach((r) => {
+        let next = 1;
+        rows.filter((r: any) => r.slot_index == null).forEach((r: any) => {
+          while (manual.has(next)) next++;
+          slotIndexMap[r.id] = next;
+          next++;
+        });
+        rows.forEach((r: any) => {
           slotTotalMap[r.id] = rows.length;
+          takenMap[r.id] = rows.filter((o: any) => o.id !== r.id).map((o: any) => slotIndexMap[o.id]);
         });
       });
 
@@ -166,6 +179,7 @@ export default function AdminBewerbungsgespraeche() {
         _trialDay: trialDayMap[item.application_id] || null,
         _slotIndex: slotIndexMap[item.id] || 1,
         _slotTotal: slotTotalMap[item.id] || 1,
+        _takenSlots: takenMap[item.id] || [],
       }));
 
       // Secondary sort by slot index so within the same (date,time) Slot 1, 2, 3 ascending
@@ -175,11 +189,44 @@ export default function AdminBewerbungsgespraeche() {
         return a._slotIndex - b._slotIndex;
       });
 
+
       return { items, total: count || 0 };
     },
   });
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+
+  // Anzahl der konfigurierten Slots pro Uhrzeit (gilt brandingweit, Slot-1-Zeile)
+  const { data: slotsPerTime } = useQuery({
+    queryKey: ["interview-slots-per-time", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("branding_schedule_settings")
+        .select("slot_index, interview_slots_per_time")
+        .eq("branding_id", activeBrandingId!) as any)
+        .eq("schedule_type", "interview")
+        .order("slot_index", { ascending: true });
+      if (error) throw error;
+      const primary = (data || [])[0];
+      return Math.max(1, primary?.interview_slots_per_time ?? 1);
+    },
+  });
+
+  const handleSlotChange = async (item: any, newSlot: number | null) => {
+    const { error } = await (supabase
+      .from("interview_appointments") as any)
+      .update({ slot_index: newSlot })
+      .eq("id", item.id);
+    if (error) {
+      toast.error("Slot konnte nicht geändert werden.");
+      return;
+    }
+    toast.success(newSlot ? `Auf Slot ${newSlot} gesetzt.` : "Slot auf automatisch gesetzt.");
+    queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
+  };
+
+
 
   const handleStatusUpdate = async (item: any, newStatus: string) => {
     const { error } = await supabase.rpc("update_interview_status", {
@@ -514,13 +561,50 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge>
-                          {item._slotTotal > 1 && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                              {item._slotIndex}. Slot
-                            </Badge>
-                          )}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="focus:outline-none">
+                                <Badge
+                                  variant={item.slot_index != null ? "default" : "secondary"}
+                                  className="text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80"
+                                >
+                                  {item._slotIndex}. Slot
+                                </Badge>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-52 p-2" align="start">
+                              <p className="text-xs font-medium mb-2">Slot ändern</p>
+                              <div className="space-y-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSlotChange(item, null)}
+                                  className={`w-full text-left text-sm rounded-md px-2 py-1.5 hover:bg-muted ${item.slot_index == null ? "bg-muted font-medium" : ""}`}
+                                >
+                                  Automatisch
+                                </button>
+                                {Array.from({ length: Math.max(slotsPerTime || 1, item._slotIndex) }, (_, i) => i + 1).map((s) => {
+                                  const taken = (item._takenSlots || []).includes(s);
+                                  return (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      disabled={taken}
+                                      onClick={() => handleSlotChange(item, s)}
+                                      className={`w-full text-left text-sm rounded-md px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted ${item.slot_index === s ? "bg-muted font-medium" : ""}`}
+                                    >
+                                      Slot {s}{taken ? " (belegt)" : ""}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-2">
+                                Standard ist die automatische Reihenfolge. Manuelle Auswahl gilt nur für diesen Termin.
+                              </p>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </TableCell>
+
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}
                       </TableCell>
