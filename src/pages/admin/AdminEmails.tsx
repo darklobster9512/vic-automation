@@ -193,6 +193,19 @@ const templates: TemplateDefinition[] = [
     buttonUrl: "https://example.com",
   },
   {
+    eventType: "panel_link",
+    label: "Panel-Link",
+    subject: (c) => `Ihr Zugang zum Mitarbeiterportal – ${c}`,
+    bodyTitle: "Ihr Portal-Zugang",
+    bodyLines: () => [
+      "Sehr geehrte/r Max Mustermann,",
+      "anbei erhalten Sie den Zugang zu unserem Portal.",
+      "Über den folgenden Link gelangen Sie direkt zur Anmeldung.",
+    ],
+    buttonText: "Zum Portal",
+    buttonUrl: "https://example.com",
+  },
+  {
     eventType: "konto_erstellt",
     label: "Konto erstellt",
     subject: () => "Willkommen – Ihr Konto wurde erstellt",
