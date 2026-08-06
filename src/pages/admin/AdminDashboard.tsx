@@ -175,7 +175,7 @@ export default function AdminDashboard() {
       </div>
 
       <UpcomingStartDates />
-      <UpcomingTrialDays />
+      <UpcomingFirstWorkdays />
       <WaitingIdents />
 
       {/* Detail Lists */}
