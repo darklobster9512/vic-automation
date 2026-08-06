@@ -391,7 +391,7 @@ export default function AdminEmails() {
   // For the "gespraech_erfolgreich" template, override the button URL with the
   // branding's actual base URL (custom email link if enabled, otherwise prefix.domain).
   const dynamicButtonUrl = useMemo(() => {
-    if (tpl.eventType !== "gespraech_erfolgreich" || !branding) return tpl.buttonUrl;
+    if (!["gespraech_erfolgreich", "panel_link"].includes(tpl.eventType) || !branding) return tpl.buttonUrl;
     const b = branding as any;
     if (b.custom_email_link_enabled && b.custom_email_link) {
       const link = String(b.custom_email_link).replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
