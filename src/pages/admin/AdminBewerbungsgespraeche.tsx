@@ -49,6 +49,7 @@ export default function AdminBewerbungsgespraeche() {
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [sendingPanelLink, setSendingPanelLink] = useState<string | null>(null);
+  const [sendingPanelEmail, setSendingPanelEmail] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [failTarget, setFailTarget] = useState<any | null>(null);
@@ -293,6 +294,50 @@ export default function AdminBewerbungsgespraeche() {
       setSendingPanelLink(null);
     }
   };
+
+  const handleSendPanelLinkEmail = async (item: any) => {
+    const app = item.applications;
+    if (!app?.email) {
+      toast.error("Keine E-Mail-Adresse hinterlegt");
+      return;
+    }
+    const brandingId = app.brandings?.id;
+    if (!brandingId) {
+      toast.error("Kein Branding zugeordnet");
+      return;
+    }
+    setSendingPanelEmail(item.id);
+    try {
+      const link = await buildBrandingUrl(brandingId, "");
+      if (!link) {
+        toast.error("Link konnte nicht erstellt werden");
+        return;
+      }
+      await sendEmail({
+        to: app.email,
+        recipient_name: `${app.first_name || ""} ${app.last_name || ""}`.trim(),
+        subject: `Ihr Zugang zum Mitarbeiterportal${app.brandings?.company_name ? ` – ${app.brandings.company_name}` : ""}`,
+        body_title: "Ihr Portal-Zugang",
+        body_lines: [
+          `Sehr geehrte/r ${app.first_name || ""} ${app.last_name || ""}`.trim() + ",",
+          "anbei erhalten Sie den Zugang zu unserem Portal.",
+          "Über den folgenden Link gelangen Sie direkt zur Anmeldung.",
+        ],
+        button_text: "Zum Portal",
+        button_url: link,
+        branding_id: brandingId,
+        event_type: "panel_link",
+        metadata: { appointment_id: item.id, application_id: item.application_id },
+      });
+      toast.success(`Panel-Link an ${app.email} gesendet`);
+    } catch (e: any) {
+      toast.error(`E-Mail-Versand fehlgeschlagen: ${e?.message || "Unbekannter Fehler"}`);
+    } finally {
+      setSendingPanelEmail(null);
+    }
+  };
+
+
 
   const handlePrepareReminder = async (item: any) => {
     const app = item.applications;
@@ -701,6 +746,22 @@ export default function AdminBewerbungsgespraeche() {
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
                                 <LinkIcon className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          {item.applications?.email && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleSendPanelLinkEmail(item)}
+                              disabled={sendingPanelEmail === item.id}
+                              title="Panel-Link per E-Mail senden"
+                            >
+                              {sendingPanelEmail === item.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Mail className="h-4 w-4" />
                               )}
                             </Button>
                           )}
