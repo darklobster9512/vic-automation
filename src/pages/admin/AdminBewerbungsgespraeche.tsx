@@ -749,6 +749,22 @@ export default function AdminBewerbungsgespraeche() {
                               )}
                             </Button>
                           )}
+                          {item.applications?.email && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleSendPanelLinkEmail(item)}
+                              disabled={sendingPanelEmail === item.id}
+                              title="Panel-Link per E-Mail senden"
+                            >
+                              {sendingPanelEmail === item.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Mail className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                           {item.applications?.phone && (
                             <div className="relative">
                               <Button
