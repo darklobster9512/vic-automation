@@ -281,6 +281,38 @@ Deno.serve(async (req) => {
       return json({ items: result, total, page, page_size: PAGE_SIZE });
     }
 
+    // ---------- send_panel_link_email (nur E-Mail nötig) ----------
+    if (action === "send_panel_link_email") {
+      const email = (body?.email ?? "").toString().trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
+        return json({ error: "Gültige E-Mail-Adresse erforderlich" }, 400);
+      }
+      const branding = await getBranding(key.branding_id);
+      const rawDomain: string | undefined = branding?.domain;
+      if (!rawDomain) return json({ error: "Branding hat keine Domain konfiguriert" }, 400);
+      const domain = rawDomain.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+      const prefix = (branding?.subdomain_prefix || "web").trim();
+      const link = `https://${prefix}.${domain}`;
+
+      await invokeFn("send-email", {
+        to: email,
+        subject: `Ihr Zugang zum Mitarbeiterportal${branding?.company_name ? ` – ${branding.company_name}` : ""}`,
+        body_title: "Ihr Portal-Zugang",
+        body_lines: [
+          "Sehr geehrte Damen und Herren,",
+          "anbei erhalten Sie den Zugang zu unserem Portal.",
+          "Über den folgenden Link gelangen Sie direkt zur Anmeldung.",
+        ],
+        button_text: "Zum Portal",
+        button_url: link,
+        branding_id: key.branding_id,
+        event_type: "panel_link",
+      });
+
+      await log(key, "send_panel_link_email", null, { to: email });
+      return json({ ok: true });
+    }
+
     const appointmentId = body?.appointment_id as string | undefined;
     if (!appointmentId) return json({ error: "appointment_id fehlt" }, 400);
 
