@@ -10,30 +10,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  ausstehend: { label: "Ausstehend", className: "text-amber-600 border-amber-300 bg-amber-50" },
   neu: { label: "Neu", className: "text-blue-600 border-blue-300 bg-blue-50" },
-  erschienen: { label: "Erschienen", className: "text-green-600 border-green-300 bg-green-50" },
-  nicht_erschienen: { label: "Nicht erschienen", className: "text-red-600 border-red-300 bg-red-50" },
   erfolgreich: { label: "Erfolgreich", className: "text-emerald-600 border-emerald-300 bg-emerald-50" },
-  abgelehnt: { label: "Abgelehnt", className: "text-red-600 border-red-300 bg-red-50" },
+  fehlgeschlagen: { label: "Fehlgeschlagen", className: "text-red-600 border-red-300 bg-red-50" },
 };
 
-export default function UpcomingTrialDays() {
+export default function UpcomingFirstWorkdays() {
   const today = new Date().toISOString().split("T")[0];
   const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: upcoming } = useQuery({
-    queryKey: ["upcoming-trial-days", today, activeBrandingId],
+    queryKey: ["upcoming-first-workdays", today, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("trial_day_appointments")
-        .select("id, appointment_date, appointment_time, status, applications!inner(first_name, last_name, branding_id)")
-        .eq("applications.branding_id", activeBrandingId!)
+        .from("first_workday_appointments" as any)
+        .select("id, appointment_date, appointment_time, status, employment_contracts:contract_id(first_name, last_name, branding_id)")
         .gte("appointment_date", today)
-        .order("appointment_date", { ascending: true });
+        .order("appointment_date", { ascending: true })
+        .order("appointment_time", { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      return ((data ?? []) as any[]).filter(
+        (item: any) => item.employment_contracts?.branding_id === activeBrandingId
+      );
     },
   });
 
@@ -46,21 +45,21 @@ export default function UpcomingTrialDays() {
     >
       <div className="flex items-center gap-2 mb-3">
         <Calendar className="h-5 w-5 text-muted-foreground" />
-        <h3 className="text-lg font-semibold text-foreground">Anstehende Probetag-Termine</h3>
+        <h3 className="text-lg font-semibold text-foreground">Anstehende 1. Arbeitstage</h3>
       </div>
 
       {!upcoming?.length ? (
-        <p className="text-sm text-muted-foreground">Keine anstehenden Probetag-Termine.</p>
+        <p className="text-sm text-muted-foreground">Keine anstehenden 1. Arbeitstage.</p>
       ) : (
         <ScrollArea className="max-h-[220px]">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3 pb-3">
             {upcoming.map((item: any) => {
-              const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.ausstehend;
+              const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.neu;
               return (
                 <Card key={item.id}>
                   <CardContent className="p-4 space-y-1.5">
                     <p className="font-medium text-sm text-foreground leading-tight">
-                      {item.applications?.first_name} {item.applications?.last_name}
+                      {item.employment_contracts?.first_name} {item.employment_contracts?.last_name}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {format(parseISO(item.appointment_date), "dd. MMMM yyyy", { locale: de })}

@@ -9,7 +9,7 @@ import { de } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
-import UpcomingTrialDays from "@/components/admin/UpcomingTrialDays";
+import UpcomingFirstWorkdays from "@/components/admin/UpcomingFirstWorkdays";
 import WaitingIdents from "@/components/admin/WaitingIdents";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
       </div>
 
       <UpcomingStartDates />
-      <UpcomingTrialDays />
+      <UpcomingFirstWorkdays />
       <WaitingIdents />
 
       {/* Detail Lists */}
