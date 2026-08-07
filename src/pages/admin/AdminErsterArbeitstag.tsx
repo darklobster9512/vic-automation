@@ -293,7 +293,18 @@ export default function AdminErsterArbeitstag() {
                         {new Date(r.item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                       </TableCell>
                       <TableCell><Badge variant="outline">{r.item.appointment_time?.slice(0, 5)} Uhr</Badge></TableCell>
-                      <TableCell className="font-medium">{r.firstName} {r.lastName}</TableCell>
+                      <TableCell className="font-medium">
+                        {r.item.employment_contracts?.id ? (
+                          <Link
+                            to={`/admin/mitarbeiter/${r.item.employment_contracts.id}`}
+                            className="text-foreground underline-offset-4 hover:text-primary hover:underline"
+                          >
+                            {r.firstName} {r.lastName}
+                          </Link>
+                        ) : (
+                          `${r.firstName} ${r.lastName}`
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {r.displayPhone ? (
                           <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.displayPhone); toast.success("Telefonnummer kopiert!"); }}>{r.displayPhone}</span>
