@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, Fragment } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw, Copy, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw, Copy, Link as LinkIcon, Loader2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
-import { format, addDays, subHours } from "date-fns";
+import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import BrandingNotes from "@/components/admin/BrandingNotes";
@@ -39,13 +39,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const PAGE_SIZE = 20;
+type ViewMode = "upcoming" | "past";
 
-type ViewMode = "default" | "past" | "future";
+const SLOT_COLORS = [
+  { bar: "bg-stat-blue", badge: "bg-stat-blue text-white border-transparent", soft: "bg-stat-blue/15 text-stat-blue border-stat-blue/30" },
+  { bar: "bg-stat-green", badge: "bg-stat-green text-white border-transparent", soft: "bg-stat-green/15 text-stat-green border-stat-green/30" },
+  { bar: "bg-stat-orange", badge: "bg-stat-orange text-white border-transparent", soft: "bg-stat-orange/15 text-stat-orange border-stat-orange/30" },
+  { bar: "bg-stat-violet", badge: "bg-stat-violet text-white border-transparent", soft: "bg-stat-violet/15 text-stat-violet border-stat-violet/30" },
+  { bar: "bg-stat-rose", badge: "bg-stat-rose text-white border-transparent", soft: "bg-stat-rose/15 text-stat-rose border-stat-rose/30" },
+];
+
+const slotColor = (index: number) => SLOT_COLORS[(Math.max(1, index) - 1) % SLOT_COLORS.length];
+
+const dayLabel = (iso: string) => {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const tomorrowStr = format(addDays(new Date(), 1), "yyyy-MM-dd");
+  if (iso === today) return "Heute";
+  if (iso === tomorrowStr) return "Morgen";
+  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 export default function AdminBewerbungsgespraeche() {
-  const [page, setPage] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const [viewMode, setViewMode] = useState<ViewMode>("upcoming");
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [sendingPanelLink, setSendingPanelLink] = useState<string | null>(null);
@@ -88,40 +108,48 @@ export default function AdminBewerbungsgespraeche() {
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
-  const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
-  const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["interview-appointments", page, viewMode, activeBrandingId],
+    queryKey: ["interview-appointments", viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      let query = supabase
-        .from("interview_appointments")
-        .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
-        .eq("applications.branding_id", activeBrandingId!);
+      const buildQuery = () => {
+        let q = supabase
+          .from("interview_appointments")
+          .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
+          .eq("applications.branding_id", activeBrandingId!);
 
-      if (viewMode === "past") {
-        query = query
-          .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
-          .order("appointment_date", { ascending: false })
-          .order("appointment_time", { ascending: false })
-          .order("created_at", { ascending: true });
-      } else if (viewMode === "future") {
-        query = query
-          .gt("appointment_date", tomorrow)
-          .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true })
-          .order("created_at", { ascending: true });
-      } else {
-        query = query
-          .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
-          .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true })
-          .order("created_at", { ascending: true });
+        if (viewMode === "past") {
+          q = q
+            .lt("appointment_date", today)
+            .order("appointment_date", { ascending: false })
+            .order("appointment_time", { ascending: false })
+            .order("created_at", { ascending: true });
+        } else {
+          q = q
+            .gte("appointment_date", today)
+            .order("appointment_date", { ascending: true })
+            .order("appointment_time", { ascending: true })
+            .order("created_at", { ascending: true });
+        }
+        return q;
+      };
+
+      // Alle Zeilen laden (Supabase-Limit von 1000 per Batch-Loop umgehen)
+      const BATCH = 1000;
+      let offset = 0;
+      let data: any[] = [];
+      let count = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data: batch, error, count: c } = await buildQuery().range(offset, offset + BATCH - 1);
+        if (error) throw error;
+        if (typeof c === "number") count = c;
+        data = data.concat(batch || []);
+        if (!batch || batch.length < BATCH) break;
+        offset += BATCH;
       }
 
-      const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (error) throw error;
 
       // Fetch trial day appointments for all application_ids on this page
       const appIds = (data || []).map((d: any) => d.application_id).filter(Boolean);
@@ -195,7 +223,7 @@ export default function AdminBewerbungsgespraeche() {
     },
   });
 
-  const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+  
 
   // Anzahl der konfigurierten Slots pro Uhrzeit (gilt brandingweit, Slot-1-Zeile)
   const { data: slotsPerTime } = useQuery({
@@ -423,8 +451,7 @@ export default function AdminBewerbungsgespraeche() {
   };
 
   const toggleView = (mode: ViewMode) => {
-    setViewMode((prev) => (prev === mode ? "default" : mode));
-    setPage(0);
+    setViewMode((prev) => (prev === mode ? "upcoming" : mode));
   };
 
   const handleResendProbetagEmail = async (item: any) => {
@@ -523,9 +550,8 @@ export default function AdminBewerbungsgespraeche() {
       >
         <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungsgespräche</h2>
         <p className="text-muted-foreground mt-1">
-          {viewMode === "default" && "Termine von heute und morgen."}
-          {viewMode === "past" && "Vergangene Termine."}
-          {viewMode === "future" && "Zukünftige Termine."}
+          {viewMode === "upcoming" && "Alle anstehenden Termine ab heute."}
+          {viewMode === "past" && "Vergangene Termine (bis gestern)."}
         </p>
       </motion.div>
 
@@ -539,14 +565,6 @@ export default function AdminBewerbungsgespraeche() {
         >
           <History className="h-4 w-4 mr-1" />
           Vergangene Termine
-        </Button>
-        <Button
-          variant={viewMode === "future" ? "default" : "outline"}
-          size="sm"
-          onClick={() => toggleView("future")}
-        >
-          <ArrowRight className="h-4 w-4 mr-1" />
-          Zukünftige Termine
         </Button>
       </div>
 
@@ -593,15 +611,32 @@ export default function AdminBewerbungsgespraeche() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((item: any) => (
+                  {filteredItems.map((item: any, i: number) => {
+                    const showDayHeader = i === 0 || filteredItems[i - 1].appointment_date !== item.appointment_date;
+                    const color = slotColor(item._slotIndex);
+                    return (
+                    <Fragment key={item.id}>
+                    {showDayHeader && (
+                      <TableRow key={`day-${item.appointment_date}`} className="hover:bg-transparent">
+                        <TableCell colSpan={10} className="bg-muted/40 py-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {dayLabel(item.appointment_date)}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
-                        {new Date(item.appointment_date).toLocaleDateString("de-DE", {
-                          weekday: "short",
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
+                        <div className="flex items-center gap-2">
+                          <span className={`h-6 w-1 rounded-full ${color.bar}`} />
+                          {new Date(item.appointment_date).toLocaleDateString("de-DE", {
+                            weekday: "short",
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -610,8 +645,8 @@ export default function AdminBewerbungsgespraeche() {
                             <PopoverTrigger asChild>
                               <button type="button" className="focus:outline-none">
                                 <Badge
-                                  variant={item.slot_index != null ? "default" : "secondary"}
-                                  className="text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80"
+                                  variant="outline"
+                                  className={`text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 ${item.slot_index != null ? color.badge : color.soft}`}
                                 >
                                   {item._slotIndex}. Slot
                                 </Badge>
@@ -831,38 +866,15 @@ export default function AdminBewerbungsgespraeche() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Seite {page + 1} von {totalPages} ({data.total} Termine)
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Zurück
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Weiter
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground mt-4">{filteredItems.length} Termine</p>
+
           </>
         );
         })()}
