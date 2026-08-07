@@ -876,7 +876,9 @@ export default function AdminBewerbungsgespraeche() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
