@@ -760,13 +760,39 @@ function IdentDetailContent({
 
             <div className="space-y-2">
               <Label className="text-sm font-medium">Info / Fragen und Antworten (optional)</Label>
+              <div className="flex items-center gap-2">
+                <Select value="" onValueChange={applyTemplate}>
+                  <SelectTrigger className="h-9 flex-1">
+                    <SelectValue placeholder="Vorlage wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(infoTemplates ?? []).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                    {!infoTemplates?.length && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Keine Vorlagen</div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" className="h-9" onClick={() => setTemplateManagerOpen(true)}>
+                  Vorlagen verwalten
+                </Button>
+              </div>
               <Textarea
                 value={infoNotes}
                 onChange={(e) => setInfoNotes(e.target.value)}
                 placeholder="Zusätzliche Infos für den Mitarbeiter eingeben..."
                 className="min-h-[100px]"
               />
+              <IdentInfoTemplateManager
+                open={templateManagerOpen}
+                onOpenChange={setTemplateManagerOpen}
+                brandingId={templateBrandingId}
+              />
             </div>
+
 
             <Separator />
 
