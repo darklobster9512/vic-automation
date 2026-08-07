@@ -178,6 +178,18 @@ function IdentDetailContent({
   const [assigningPhone, setAssigningPhone] = useState(false);
   const [addToBranding, setAddToBranding] = useState(false);
   const [infoNotes, setInfoNotes] = useState((session as any).info_notes ?? "");
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const { activeBrandingId } = useBrandingFilter();
+  const templateBrandingId = session.branding_id ?? activeBrandingId ?? null;
+  const { data: infoTemplates } = useIdentInfoTemplates(templateBrandingId);
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = infoTemplates?.find((t) => t.id === templateId);
+    if (!tpl) return;
+    if (infoNotes.trim() && !window.confirm("Vorhandenen Text mit der Vorlage überschreiben?")) return;
+    setInfoNotes(tpl.content);
+  };
+
   const queryClient = useQueryClient();
 
 
