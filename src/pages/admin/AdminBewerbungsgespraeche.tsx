@@ -621,15 +621,32 @@ export default function AdminBewerbungsgespraeche() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((item: any) => (
+                  {filteredItems.map((item: any, i: number) => {
+                    const showDayHeader = i === 0 || filteredItems[i - 1].appointment_date !== item.appointment_date;
+                    const color = slotColor(item._slotIndex);
+                    return (
+                    <>
+                    {showDayHeader && (
+                      <TableRow key={`day-${item.appointment_date}`} className="hover:bg-transparent">
+                        <TableCell colSpan={10} className="bg-muted/40 py-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {dayLabel(item.appointment_date)}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
-                        {new Date(item.appointment_date).toLocaleDateString("de-DE", {
-                          weekday: "short",
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
+                        <div className="flex items-center gap-2">
+                          <span className={`h-6 w-1 rounded-full ${color.bar}`} />
+                          {new Date(item.appointment_date).toLocaleDateString("de-DE", {
+                            weekday: "short",
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -638,8 +655,8 @@ export default function AdminBewerbungsgespraeche() {
                             <PopoverTrigger asChild>
                               <button type="button" className="focus:outline-none">
                                 <Badge
-                                  variant={item.slot_index != null ? "default" : "secondary"}
-                                  className="text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80"
+                                  variant="outline"
+                                  className={`text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 ${item.slot_index != null ? color.badge : color.soft}`}
                                 >
                                   {item._slotIndex}. Slot
                                 </Badge>
