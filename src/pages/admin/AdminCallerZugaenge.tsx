@@ -244,7 +244,16 @@ export default function AdminCallerZugaenge() {
               <TableBody>
                 {(keys as any[]).map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.label}</TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 hover:underline"
+                        onClick={() => { setEditTarget(row); setEditLabel(row.label); }}
+                      >
+                        {row.label}
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </TableCell>
                     <TableCell>{row.brandings?.company_name ?? "—"}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 flex-wrap">
