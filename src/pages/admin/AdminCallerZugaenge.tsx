@@ -20,7 +20,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Copy, KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, KeyRound, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -46,6 +46,8 @@ export default function AdminCallerZugaenge() {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [rotateTarget, setRotateTarget] = useState<any | null>(null);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editLabel, setEditLabel] = useState("");
 
   const { data: brandings } = useQuery({
     queryKey: ["caller-key-brandings"],
@@ -166,6 +168,26 @@ export default function AdminCallerZugaenge() {
     queryClient.invalidateQueries({ queryKey: ["caller-api-keys"] });
   };
 
+  const handleRename = async () => {
+    if (!editTarget) return;
+    const next = editLabel.trim();
+    if (!next) {
+      toast.error("Bezeichnung darf nicht leer sein.");
+      return;
+    }
+    const { error } = await supabase
+      .from("caller_api_keys")
+      .update({ label: next })
+      .eq("id", editTarget.id);
+    if (error) {
+      toast.error("Bezeichnung konnte nicht gespeichert werden");
+      return;
+    }
+    toast.success("Bezeichnung aktualisiert");
+    setEditTarget(null);
+    queryClient.invalidateQueries({ queryKey: ["caller-api-keys"] });
+  };
+
   const handleDelete = async (row: any) => {
     const { error } = await supabase.from("caller_api_keys").delete().eq("id", row.id);
     if (error) toast.error("Löschen fehlgeschlagen");
@@ -222,7 +244,16 @@ export default function AdminCallerZugaenge() {
               <TableBody>
                 {(keys as any[]).map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.label}</TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 hover:underline"
+                        onClick={() => { setEditTarget(row); setEditLabel(row.label); }}
+                      >
+                        {row.label}
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </TableCell>
                     <TableCell>{row.brandings?.company_name ?? "—"}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 flex-wrap">
@@ -309,6 +340,28 @@ export default function AdminCallerZugaenge() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bezeichnung ändern</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>Bezeichnung</Label>
+            <Input
+              value={editLabel}
+              onChange={(e) => setEditLabel(e.target.value)}
+              placeholder="z. B. Caller Max"
+              onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditTarget(null)}>Abbrechen</Button>
+            <Button onClick={handleRename}>Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={!!newKey} onOpenChange={(o) => { if (!o) setNewKey(null); }}>
         <DialogContent>
