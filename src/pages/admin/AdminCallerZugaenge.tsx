@@ -341,6 +341,28 @@ export default function AdminCallerZugaenge() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bezeichnung ändern</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>Bezeichnung</Label>
+            <Input
+              value={editLabel}
+              onChange={(e) => setEditLabel(e.target.value)}
+              placeholder="z. B. Caller Max"
+              onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditTarget(null)}>Abbrechen</Button>
+            <Button onClick={handleRename}>Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={!!newKey} onOpenChange={(o) => { if (!o) setNewKey(null); }}>
         <DialogContent>
           <DialogHeader>
