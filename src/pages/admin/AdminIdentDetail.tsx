@@ -20,6 +20,8 @@ import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCir
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import IdentInfoTemplateManager, { useIdentInfoTemplates } from "@/components/admin/IdentInfoTemplateManager";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -176,6 +178,18 @@ function IdentDetailContent({
   const [assigningPhone, setAssigningPhone] = useState(false);
   const [addToBranding, setAddToBranding] = useState(false);
   const [infoNotes, setInfoNotes] = useState((session as any).info_notes ?? "");
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const { activeBrandingId } = useBrandingFilter();
+  const templateBrandingId = session.branding_id ?? activeBrandingId ?? null;
+  const { data: infoTemplates } = useIdentInfoTemplates(templateBrandingId);
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = infoTemplates?.find((t) => t.id === templateId);
+    if (!tpl) return;
+    if (infoNotes.trim() && !window.confirm("Vorhandenen Text mit der Vorlage überschreiben?")) return;
+    setInfoNotes(tpl.content);
+  };
+
   const queryClient = useQueryClient();
 
 
@@ -746,13 +760,39 @@ function IdentDetailContent({
 
             <div className="space-y-2">
               <Label className="text-sm font-medium">Info / Fragen und Antworten (optional)</Label>
+              <div className="flex items-center gap-2">
+                <Select value="" onValueChange={applyTemplate}>
+                  <SelectTrigger className="h-9 flex-1">
+                    <SelectValue placeholder="Vorlage wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(infoTemplates ?? []).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                    {!infoTemplates?.length && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Keine Vorlagen</div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" className="h-9" onClick={() => setTemplateManagerOpen(true)}>
+                  Vorlagen verwalten
+                </Button>
+              </div>
               <Textarea
                 value={infoNotes}
                 onChange={(e) => setInfoNotes(e.target.value)}
                 placeholder="Zusätzliche Infos für den Mitarbeiter eingeben..."
                 className="min-h-[100px]"
               />
+              <IdentInfoTemplateManager
+                open={templateManagerOpen}
+                onOpenChange={setTemplateManagerOpen}
+                brandingId={templateBrandingId}
+              />
             </div>
+
 
             <Separator />
 
