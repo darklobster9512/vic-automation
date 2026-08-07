@@ -52,7 +52,7 @@ function generateTimeSlots(start: string, end: string, interval: number) {
 
 interface TrialDayBlockerProps {
   brandingId: string;
-  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null }) => void;
+  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; min_lead_time_hours?: number }) => void;
   isSavingSettings: boolean;
 }
 
@@ -155,6 +155,7 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
   const [ds, setDs] = useState<number[]>(trialSetting?.available_days || DEFAULT_DAYS);
   const [wst, setWst] = useState(trialSetting?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(trialSetting?.weekend_end_time?.slice(0, 5) || "");
+  const [leadTime, setLeadTime] = useState<number>(trialSetting?.min_lead_time_hours ?? 12);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
@@ -167,6 +168,7 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
       setDs(trialSetting.available_days || DEFAULT_DAYS);
       setWst(trialSetting.weekend_start_time?.slice(0, 5) || "");
       setWet(trialSetting.weekend_end_time?.slice(0, 5) || "");
+      setLeadTime(trialSetting.min_lead_time_hours ?? 12);
     }
   }, [trialSetting]);
 
@@ -254,11 +256,26 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
                 </div>
               </div>
             )}
+            <div className="space-y-2 rounded-lg border border-border p-4">
+              <Label className="text-sm font-medium">Vorlaufzeit (Stunden)</Label>
+              <p className="text-xs text-muted-foreground">
+                Wie viele Stunden im Voraus muss ein Termin mindestens gebucht werden? Gilt für Probetag und 1. Arbeitstag. Standard: 12.
+              </p>
+              <Input
+                type="number"
+                min={0}
+                max={168}
+                value={leadTime}
+                onChange={(e) => setLeadTime(Math.max(0, Math.min(168, Number(e.target.value) || 0)))}
+                className="w-32"
+              />
+            </div>
             <Button
               onClick={() => onSaveSettings({
                 start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
                 weekend_start_time: wst && wst !== "reset" ? wst : null,
                 weekend_end_time: wet && wet !== "reset" ? wet : null,
+                min_lead_time_hours: leadTime,
               })}
               disabled={isSavingSettings}
             >
