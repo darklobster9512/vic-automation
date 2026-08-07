@@ -1,31 +1,24 @@
-# Vertrags-PDFs für LIMEX Solutions neu erzeugen
+# Neuen Chat starten (/admin/livechat)
 
-## Ausgangslage (geprüft)
+## Ziel
 
-- LIMEX Solutions hat 8 genehmigte Verträge, alle über das Vorlagen-System (`contract_templates`).
-- In der Datenbank ist bei **keinem** LIMEX-Vertrag ein PDF hinterlegt (`contract_pdf_url` und `signed_contract_pdf_url` sind leer). Es gibt aktuell also keine gespeicherte PDF-Datei, die man ersetzen könnte.
-- Das PDF entsteht heute nur ad hoc: Der Mitarbeiter klickt im Panel auf „Herunterladen", dann wird die Vertragsansicht im Browser in ein PDF umgewandelt. Die Firmen-Unterschrift wird dabei live aus dem Branding geladen.
-- Konsequenz: Alle PDFs, die **ab jetzt** heruntergeladen werden, enthalten die neue Unterschrift. Die 8 bereits verschickten/heruntergeladenen Dateien liegen aber außerhalb des Systems (beim Mitarbeiter) und lassen sich nicht rückwirkend ändern.
+Neben dem Suchfeld „Mitarbeiter suchen…" ein **+ Button**, über den man einen Chat mit Mitarbeitern beginnen kann, die noch nie eine Nachricht geschrieben/erhalten haben.
 
-## Was gebaut wird
+## Verhalten
 
-Damit es künftig echte, archivierte PDFs gibt und du die 8 Verträge sofort mit Unterschrift neu erzeugen kannst:
-
-1. **PDF-Erzeugung im Admin-Bereich**
-   - Neue Funktion, die die Vertragsansicht (Vorlage + Mitarbeiterdaten + Mitarbeiter-Unterschrift + Firmen-Unterschrift aus dem Branding) unsichtbar rendert, in ein PDF umwandelt, in den Storage lädt und die Adresse am Vertrag speichert.
-   - Button „Vertrag als PDF erzeugen" in der Vertragsdetail-Ansicht unter `/admin/arbeitsvertraege`.
-
-2. **Sammel-Aktion**
-   - Button „PDFs für alle genehmigten Verträge erzeugen" auf `/admin/arbeitsvertraege`, der alle genehmigten Verträge des aktiven Brandings nacheinander abarbeitet, mit Fortschrittsanzeige und Ergebnis-Meldung.
-   - Damit werden die 8 LIMEX-Verträge in einem Durchgang mit der neuen Unterschrift erzeugt.
-
-3. **Download im Admin**
-   - Ist ein PDF vorhanden, erscheint in der Vertragsdetail-Ansicht ein Download-Link, damit du die Dateien direkt herausgeben kannst.
+1. **+ Button** rechts neben dem Suchfeld in der Konversationsliste.
+2. Klick öffnet einen Dialog „Neuen Chat starten":
+   - eigenes Suchfeld (Vor-/Nachname)
+   - Liste aller Mitarbeiter des aktiven Brandings, die **noch keine Konversation** haben (also nicht bereits in der linken Liste stehen)
+   - Einträge ohne Namen werden ausgeblendet
+3. Klick auf einen Mitarbeiter: Dialog schließt, die Person wird als aktive Konversation geöffnet (leerer Verlauf), oben in der Liste eingefügt und man kann direkt schreiben.
+4. Sobald die erste Nachricht gesendet ist, verhält sich der Eintrag wie jede andere Konversation.
 
 ## Technische Details
 
-- Wiederverwendung des bestehenden Render-Pfads aus `src/pages/mitarbeiter/MeineDaten.tsx` (`html2canvas` + `jsPDF`), ausgelagert in `src/lib/renderContractPdf.ts`, damit Panel und Admin dieselbe Ausgabe erzeugen.
-- Die Vertragsvorschau wird als gemeinsame Komponente (`ContractDocument`) extrahiert und im Admin off-screen gemountet; Datenquelle: `employment_contracts` + `contract_templates.content` + `brandings` (`signature_image_url`, `signer_name`, `signer_title`).
-- Upload nach `contract-documents` unter `contracts/<contract_id>.pdf` mit `upsert: true`; anschließend `contract_pdf_url` am Vertrag setzen.
-- Die Docmosis-Funktion `generate-contract` bleibt unverändert (nur für Brandings ohne Vorlagen).
-- Sammellauf sequentiell mit kurzer Pause, um Speicher-/Rate-Probleme zu vermeiden.
+- `src/components/chat/ConversationList.tsx`: neue optionale Prop `onNewChat`; Header wird zu Flex-Zeile mit Suchfeld + Icon-Button (`Plus`, `variant="outline"`, `size="icon"`, `rounded-xl`).
+- `src/pages/admin/AdminLivechat.tsx`:
+  - neuer State `newChatOpen` + Dialog-Komponente (shadcn `Dialog` + `Command`/einfache gefilterte Liste).
+  - Query lädt `employment_contracts` (`id, first_name, last_name`) für `activeBrandingId` mit der bestehenden `.range()`-Batch-Schleife (1000-Zeilen-Limit) und filtert clientseitig alle `contract_id`s heraus, die schon in `conversations` sind.
+  - Auswahl erzeugt ein `Conversation`-Objekt mit `last_message: ""`, `last_message_at: new Date().toISOString()`, `unread_count: 0`, hängt es an `conversations` und setzt `active`.
+- Kein Datenbank- oder Backend-Change nötig; leere Konversationen sind rein clientseitig, bis die erste Nachricht existiert.
