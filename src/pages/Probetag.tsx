@@ -129,6 +129,7 @@ export default function Probetag() {
   const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
   const weekendStart = scheduleSettings?.weekend_start_time?.slice(0, 5) || null;
   const weekendEnd = scheduleSettings?.weekend_end_time?.slice(0, 5) || null;
+  const leadTimeHours = (scheduleSettings as any)?.min_lead_time_hours ?? 12;
 
   const TIME_SLOTS = useMemo(() => {
     if (!selectedDate) return generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval);
@@ -156,7 +157,7 @@ export default function Probetag() {
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
     const now = new Date();
-    const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const cutoff = new Date(now.getTime() + leadTimeHours * 60 * 60 * 1000);
     return TIME_SLOTS.filter((time) => {
       const [h, m] = time.split(":").map(Number);
       const slotDate = new Date(selectedDate);
