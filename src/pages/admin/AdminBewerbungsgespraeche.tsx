@@ -625,7 +625,7 @@ export default function AdminBewerbungsgespraeche() {
                     const showDayHeader = i === 0 || filteredItems[i - 1].appointment_date !== item.appointment_date;
                     const color = slotColor(item._slotIndex);
                     return (
-                    <>
+                    <Fragment key={item.id}>
                     {showDayHeader && (
                       <TableRow key={`day-${item.appointment_date}`} className="hover:bg-transparent">
                         <TableCell colSpan={10} className="bg-muted/40 py-2">
