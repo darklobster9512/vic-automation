@@ -256,11 +256,26 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
                 </div>
               </div>
             )}
+            <div className="space-y-2 rounded-lg border border-border p-4">
+              <Label className="text-sm font-medium">Vorlaufzeit (Stunden)</Label>
+              <p className="text-xs text-muted-foreground">
+                Wie viele Stunden im Voraus muss ein Termin mindestens gebucht werden? Gilt für Probetag und 1. Arbeitstag. Standard: 12.
+              </p>
+              <Input
+                type="number"
+                min={0}
+                max={168}
+                value={leadTime}
+                onChange={(e) => setLeadTime(Math.max(0, Math.min(168, Number(e.target.value) || 0)))}
+                className="w-32"
+              />
+            </div>
             <Button
               onClick={() => onSaveSettings({
                 start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
                 weekend_start_time: wst && wst !== "reset" ? wst : null,
                 weekend_end_time: wet && wet !== "reset" ? wet : null,
+                min_lead_time_hours: leadTime,
               })}
               disabled={isSavingSettings}
             >
