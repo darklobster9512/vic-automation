@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, Fragment } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -223,7 +223,7 @@ export default function AdminBewerbungsgespraeche() {
     },
   });
 
-  const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+  
 
   // Anzahl der konfigurierten Slots pro Uhrzeit (gilt brandingweit, Slot-1-Zeile)
   const { data: slotsPerTime } = useQuery({
@@ -451,8 +451,7 @@ export default function AdminBewerbungsgespraeche() {
   };
 
   const toggleView = (mode: ViewMode) => {
-    setViewMode((prev) => (prev === mode ? "default" : mode));
-    setPage(0);
+    setViewMode((prev) => (prev === mode ? "upcoming" : mode));
   };
 
   const handleResendProbetagEmail = async (item: any) => {
@@ -551,9 +550,8 @@ export default function AdminBewerbungsgespraeche() {
       >
         <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungsgespräche</h2>
         <p className="text-muted-foreground mt-1">
-          {viewMode === "default" && "Termine von heute und morgen."}
-          {viewMode === "past" && "Vergangene Termine."}
-          {viewMode === "future" && "Zukünftige Termine."}
+          {viewMode === "upcoming" && "Alle anstehenden Termine ab heute."}
+          {viewMode === "past" && "Vergangene Termine (bis gestern)."}
         </p>
       </motion.div>
 
@@ -567,14 +565,6 @@ export default function AdminBewerbungsgespraeche() {
         >
           <History className="h-4 w-4 mr-1" />
           Vergangene Termine
-        </Button>
-        <Button
-          variant={viewMode === "future" ? "default" : "outline"}
-          size="sm"
-          onClick={() => toggleView("future")}
-        >
-          <ArrowRight className="h-4 w-4 mr-1" />
-          Zukünftige Termine
         </Button>
       </div>
 
