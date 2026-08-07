@@ -289,34 +289,21 @@ export default function Bewerbungsgespraech() {
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const dateStr = format(selectedDate!, "yyyy-MM-dd");
-      const timeStr = selectedTime! + ":00";
-
-      // If rebooking, delete old appointment first
-      if (existingAppointment?.id) {
-        const { error: delError } = await supabase
-          .from("interview_appointments")
-          .delete()
-          .eq("id", existingAppointment.id);
-        if (delError) throw delError;
+      if (!selectedDate || !selectedTime || !id) {
+        throw new Error("Bitte wählen Sie einen verfügbaren Termin aus.");
       }
 
-      const { data: appData } = await supabase
-        .from("applications")
-        .select("created_by")
-        .eq("id", id!)
-        .maybeSingle();
-      const { error: insertError } = await supabase
-        .from("interview_appointments")
-        .insert({ application_id: id!, appointment_date: dateStr, appointment_time: timeStr, created_by: appData?.created_by || null });
-      if (insertError) throw insertError;
-      const { error: rpcError } = await supabase.rpc("update_application_status", {
-        _application_id: id!, _status: "termin_gebucht",
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const timeStr = selectedTime + ":00";
+      const { error: bookingError } = await supabase.rpc("book_interview_public", {
+        _application_id: id,
+        _appointment_date: dateStr,
+        _appointment_time: timeStr,
       });
-      if (rpcError) throw rpcError;
+      if (bookingError) throw bookingError;
 
-      const formattedDate = format(selectedDate!, "dd.MM.yyyy");
-      const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
+      const formattedDate = format(selectedDate, "dd.MM.yyyy");
+      const formattedDateLong = format(selectedDate, "dd. MMMM yyyy", { locale: de });
       await sendTelegram(
         "gespraech_gebucht",
         {
@@ -393,7 +380,9 @@ export default function Bewerbungsgespraech() {
     onError: (error: any) => {
       console.error("Booking failed:", error);
       toast.error(error?.message || "Termin konnte nicht gespeichert werden");
+      setSelectedTime(null);
       setConfirmOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["booked-slots", brandingId] });
     },
   });
 
