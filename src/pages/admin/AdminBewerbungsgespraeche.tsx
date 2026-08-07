@@ -39,13 +39,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const PAGE_SIZE = 20;
+type ViewMode = "upcoming" | "past";
 
-type ViewMode = "default" | "past" | "future";
+const SLOT_COLORS = [
+  { bar: "bg-stat-blue", badge: "bg-stat-blue text-white border-transparent", soft: "bg-stat-blue/15 text-stat-blue border-stat-blue/30" },
+  { bar: "bg-stat-green", badge: "bg-stat-green text-white border-transparent", soft: "bg-stat-green/15 text-stat-green border-stat-green/30" },
+  { bar: "bg-stat-orange", badge: "bg-stat-orange text-white border-transparent", soft: "bg-stat-orange/15 text-stat-orange border-stat-orange/30" },
+  { bar: "bg-stat-violet", badge: "bg-stat-violet text-white border-transparent", soft: "bg-stat-violet/15 text-stat-violet border-stat-violet/30" },
+  { bar: "bg-stat-rose", badge: "bg-stat-rose text-white border-transparent", soft: "bg-stat-rose/15 text-stat-rose border-stat-rose/30" },
+];
+
+const slotColor = (index: number) => SLOT_COLORS[(Math.max(1, index) - 1) % SLOT_COLORS.length];
+
+const dayLabel = (iso: string) => {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const tomorrowStr = format(addDays(new Date(), 1), "yyyy-MM-dd");
+  if (iso === today) return "Heute";
+  if (iso === tomorrowStr) return "Morgen";
+  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 export default function AdminBewerbungsgespraeche() {
-  const [page, setPage] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const [viewMode, setViewMode] = useState<ViewMode>("upcoming");
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [sendingPanelLink, setSendingPanelLink] = useState<string | null>(null);
