@@ -155,6 +155,7 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
   const [ds, setDs] = useState<number[]>(trialSetting?.available_days || DEFAULT_DAYS);
   const [wst, setWst] = useState(trialSetting?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(trialSetting?.weekend_end_time?.slice(0, 5) || "");
+  const [leadTime, setLeadTime] = useState<number>(trialSetting?.min_lead_time_hours ?? 12);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
@@ -167,6 +168,7 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
       setDs(trialSetting.available_days || DEFAULT_DAYS);
       setWst(trialSetting.weekend_start_time?.slice(0, 5) || "");
       setWet(trialSetting.weekend_end_time?.slice(0, 5) || "");
+      setLeadTime(trialSetting.min_lead_time_hours ?? 12);
     }
   }, [trialSetting]);
 
