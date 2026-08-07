@@ -1,0 +1,31 @@
+# Neue Buchung landet auf blockiertem Slot 1 statt Slot 3
+
+## Ursache (in der Datenbank geprüft)
+
+Für Fr, 07.08.2026, 16:00 Uhr bei LIMEX Solutions gilt:
+
+```text
+Slot 1   16:00  blockiert (schedule_blocked_slots)
+Slot 2   endet um 16:00  -> bietet 16:00 gar nicht an
+Slot 3   16:00  frei
+Buchung  16:00  Igor D., manuell slot_index = 2
+Buchung  16:00  Demo Bewerbung (heute 10:54), slot_index = NULL
+```
+
+Die Buchungsseite schreibt beim Anlegen eines Termins **keine Slot-Nummer**. Das Feld bleibt leer, und die Slot-Nummer wird erst nachträglich rechnerisch vergeben: die Auflösung nimmt einfach die **kleinste noch nicht manuell belegte Nummer** — hier die 1. Dass Slot 1 zu dieser Uhrzeit blockiert ist und dass Slot 2 um 16:00 gar nicht mehr existiert, wird bei dieser Vergabe nirgends berücksichtigt. Deshalb erscheint der neue Termin auf Slot 1 statt auf Slot 3.
+
+## Was gebaut wird
+
+**1. Slot wird schon beim Buchen festgelegt**
+Die öffentliche Buchungsseite ermittelt beim Absenden die tatsächlich freie Spur für die gewählte Uhrzeit — also eine Spur, die diese Uhrzeit anbietet, nicht blockiert ist und nicht bereits belegt ist — und speichert diese Nummer fest am Termin. Gibt es keine freie Spur mehr, wird die Buchung mit einer klaren Meldung abgelehnt, statt irgendeine Nummer zu vergeben.
+
+**2. Automatische Nachvergabe wird spurbewusst**
+Für Termine ohne gespeicherte Nummer (alle Bestandstermine) überspringt die Auflösung künftig Spuren, die zu dieser Uhrzeit blockiert sind oder die Uhrzeit außerhalb ihrer Start-/Endzeit haben. So kann kein Termin mehr auf einer blockierten Spur angezeigt werden.
+
+Bestehende Termine werden nicht verschoben und keine Blockierungen entfernt.
+
+## Technische Details
+
+- `src/pages/Bewerbungsgespraech.tsx`: vor dem Insert/Update auf `interview_appointments` die freie Spur aus `laneTimesForDate`, `laneBlocked`/`globalBlocked` und den belegten Spuren (`bookedSlots`) bestimmen und als `slot_index` mitschreiben; ohne freie Spur Abbruch mit Toast und Refetch der Belegung.
+- Migration: `interview_slots_for_branding` und `interview_booked_slots_for_branding` erweitern — die automatische Nummerierung wählt aus `generate_series(1, interview_slots_per_time)` nur Spuren, für die (a) keine Zeile in `schedule_blocked_slots` mit passendem `branding_id`/`blocked_date`/`blocked_time` und `slot_index` (bzw. `slot_index IS NULL`) existiert und (b) die Uhrzeit in `[start_time, end_time)` der jeweiligen `branding_schedule_settings`-Zeile (`schedule_type = 'interview'`, Fallback Slot 1) liegt; manuell gesetzte `slot_index` bleiben unverändert Vorrang.
+- Keine Datenänderung an bestehenden Terminen in diesem Schritt.
