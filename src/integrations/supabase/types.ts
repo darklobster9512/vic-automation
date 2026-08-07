@@ -2006,6 +2006,17 @@ export type Database = {
         }
         Returns: string
       }
+      book_interview_public: {
+        Args: {
+          _application_id: string
+          _appointment_date: string
+          _appointment_time: string
+        }
+        Returns: {
+          appointment_id: string
+          slot_index: number
+        }[]
+      }
       booked_slots_for_branding: {
         Args: { _branding_id: string }
         Returns: {
@@ -2092,6 +2103,15 @@ export type Database = {
       }
       is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
+      resolved_interview_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_id: string
+          appointment_time: string
+          slot_index: number
+        }[]
+      }
       submit_employment_contract:
         | {
             Args: {
