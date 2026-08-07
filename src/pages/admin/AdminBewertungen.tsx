@@ -576,7 +576,7 @@ const AdminBewertungen = () => {
                   </TableCell>
                   <TableCell><StatusBadge status={g.assignment_status} /></TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(g.date), "dd.MM.yyyy")}
+                    {format(new Date(g.date), "dd.MM.yyyy HH:mm 'Uhr'")}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
