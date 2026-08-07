@@ -229,12 +229,22 @@ export default function Bewerbungsgespraech() {
     if (!selectedDate) return new Set<string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-    const counts = new Map<string, number>();
+    // Occupied lanes per time (slot-aware)
+    const occupied = new Map<string, Set<number>>();
+    const unknownCounts = new Map<string, number>();
     (bookedSlots || [])
       .filter((s: any) => s.appointment_date === dateStr)
       .forEach((s: any) => {
         const t = s.appointment_time?.slice(0, 5);
-        if (t) counts.set(t, (counts.get(t) || 0) + 1);
+        if (!t) return;
+        const slot = s.slot_index;
+        if (typeof slot === "number") {
+          const set = occupied.get(t) ?? new Set<number>();
+          set.add(slot);
+          occupied.set(t, set);
+        } else {
+          unknownCounts.set(t, (unknownCounts.get(t) || 0) + 1);
+        }
       });
 
     const blockedForDate = (blockedSlotsData || []).filter((s: any) => s.blocked_date === dateStr);
@@ -256,13 +266,25 @@ export default function Bewerbungsgespraech() {
         unavailable.add(time);
         return;
       }
-      const capacity = laneTimesForDate.filter(
-        (l) => l.times.includes(time) && !(laneBlocked.get(l.slotIndex)?.has(time))
-      ).length;
-      if ((counts.get(time) || 0) >= capacity || capacity === 0) unavailable.add(time);
+      // Lanes that actually offer this time and are not blocked
+      const availableLanes = laneTimesForDate
+        .filter((l) => l.times.includes(time) && !(laneBlocked.get(l.slotIndex)?.has(time)))
+        .map((l) => l.slotIndex);
+
+      if (availableLanes.length === 0) {
+        unavailable.add(time);
+        return;
+      }
+
+      const taken = occupied.get(time) ?? new Set<number>();
+      const freeLanes = availableLanes.filter((idx) => !taken.has(idx));
+      // Bookings without resolvable slot fall into the first free lanes
+      const remaining = freeLanes.length - (unknownCounts.get(time) || 0);
+      if (remaining <= 0) unavailable.add(time);
     });
     return unavailable;
   }, [selectedDate, bookedSlots, blockedSlotsData, TIME_SLOTS, laneTimesForDate]);
+
 
 
   const bookMutation = useMutation({
