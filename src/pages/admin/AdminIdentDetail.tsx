@@ -20,6 +20,8 @@ import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCir
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import IdentInfoTemplateManager, { useIdentInfoTemplates } from "@/components/admin/IdentInfoTemplateManager";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
