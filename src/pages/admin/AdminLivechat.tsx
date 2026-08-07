@@ -42,6 +42,11 @@ export default function AdminLivechat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [search, setSearch] = useState("");
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [newChatSearch, setNewChatSearch] = useState("");
+  const [newChatLoading, setNewChatLoading] = useState(false);
+  const [allContracts, setAllContracts] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
+
   const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null }>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
