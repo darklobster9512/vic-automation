@@ -108,40 +108,48 @@ export default function AdminBewerbungsgespraeche() {
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
-  const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
-  const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["interview-appointments", page, viewMode, activeBrandingId],
+    queryKey: ["interview-appointments", viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      let query = supabase
-        .from("interview_appointments")
-        .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
-        .eq("applications.branding_id", activeBrandingId!);
+      const buildQuery = () => {
+        let q = supabase
+          .from("interview_appointments")
+          .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
+          .eq("applications.branding_id", activeBrandingId!);
 
-      if (viewMode === "past") {
-        query = query
-          .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
-          .order("appointment_date", { ascending: false })
-          .order("appointment_time", { ascending: false })
-          .order("created_at", { ascending: true });
-      } else if (viewMode === "future") {
-        query = query
-          .gt("appointment_date", tomorrow)
-          .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true })
-          .order("created_at", { ascending: true });
-      } else {
-        query = query
-          .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
-          .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true })
-          .order("created_at", { ascending: true });
+        if (viewMode === "past") {
+          q = q
+            .lt("appointment_date", today)
+            .order("appointment_date", { ascending: false })
+            .order("appointment_time", { ascending: false })
+            .order("created_at", { ascending: true });
+        } else {
+          q = q
+            .gte("appointment_date", today)
+            .order("appointment_date", { ascending: true })
+            .order("appointment_time", { ascending: true })
+            .order("created_at", { ascending: true });
+        }
+        return q;
+      };
+
+      // Alle Zeilen laden (Supabase-Limit von 1000 per Batch-Loop umgehen)
+      const BATCH = 1000;
+      let offset = 0;
+      let data: any[] = [];
+      let count = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data: batch, error, count: c } = await buildQuery().range(offset, offset + BATCH - 1);
+        if (error) throw error;
+        if (typeof c === "number") count = c;
+        data = data.concat(batch || []);
+        if (!batch || batch.length < BATCH) break;
+        offset += BATCH;
       }
 
-      const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (error) throw error;
 
       // Fetch trial day appointments for all application_ids on this page
       const appIds = (data || []).map((d: any) => d.application_id).filter(Boolean);
