@@ -52,7 +52,7 @@ function generateTimeSlots(start: string, end: string, interval: number) {
 
 interface TrialDayBlockerProps {
   brandingId: string;
-  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null }) => void;
+  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; min_lead_time_hours?: number }) => void;
   isSavingSettings: boolean;
 }
 
