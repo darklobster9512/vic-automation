@@ -168,7 +168,7 @@ export default function ErsterArbeitstag() {
       slotDate.setHours(h, m, 0, 0);
       return slotDate > cutoff;
     });
-  }, [selectedDate, TIME_SLOTS]);
+  }, [selectedDate, TIME_SLOTS, leadTimeHours]);
 
   const bookedTimesForDate = useMemo(() => {
     if (!selectedDate) return new Set<string>();
