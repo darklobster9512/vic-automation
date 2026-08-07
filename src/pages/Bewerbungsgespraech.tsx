@@ -97,7 +97,7 @@ export default function Bewerbungsgespraech() {
         _branding_id: brandingId!,
       });
       if (error) throw error;
-      return (data || []) as Array<{ appointment_date: string; appointment_time: string }>;
+      return (data || []) as Array<{ appointment_date: string; appointment_time: string; slot_index: number | null }>;
     },
   });
 
