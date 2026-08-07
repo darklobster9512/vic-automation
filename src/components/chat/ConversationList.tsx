@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
@@ -22,9 +23,10 @@ interface ConversationListProps {
   search: string;
   onSearchChange: (val: string) => void;
   onlineContractIds?: Set<string>;
+  onNewChat?: () => void;
 }
 
-export function ConversationList({ activeId, onSelect, conversations, search, onSearchChange, onlineContractIds }: ConversationListProps) {
+export function ConversationList({ activeId, onSelect, conversations, search, onSearchChange, onlineContractIds, onNewChat }: ConversationListProps) {
   const filtered = conversations.filter((c) => {
     const name = `${c.first_name ?? ""} ${c.last_name ?? ""}`.toLowerCase();
     return name.includes(search.toLowerCase());
@@ -33,16 +35,31 @@ export function ConversationList({ activeId, onSelect, conversations, search, on
   return (
     <div className="flex flex-col h-full border-r border-border bg-card">
       <div className="p-4 border-b border-border">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Mitarbeiter suchen..."
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 rounded-xl"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Mitarbeiter suchen..."
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-9 rounded-xl"
+            />
+          </div>
+          {onNewChat && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl shrink-0"
+              onClick={onNewChat}
+              title="Neuen Chat starten"
+              aria-label="Neuen Chat starten"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
+
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Keine Konversationen</p>
