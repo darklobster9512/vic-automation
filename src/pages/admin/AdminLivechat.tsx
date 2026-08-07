@@ -408,6 +408,52 @@ export default function AdminLivechat() {
     }
   };
 
+  // Load all contracts of the active branding for the "new chat" dialog
+  const openNewChat = async () => {
+    setNewChatOpen(true);
+    setNewChatSearch("");
+    if (allContracts.length > 0 || !ready) return;
+    setNewChatLoading(true);
+    const pageSize = 1000;
+    const rows: any[] = [];
+    let from = 0;
+    while (true) {
+      let q = supabase
+        .from("employment_contracts")
+        .select("id, first_name, last_name")
+        .range(from, from + pageSize - 1);
+      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+      const { data, error } = await q;
+      if (error || !data?.length) break;
+      rows.push(...data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    setAllContracts(rows);
+    setNewChatLoading(false);
+  };
+
+  const existingIds = new Set(conversations.map((c) => c.contract_id));
+  const newChatCandidates = allContracts
+    .filter((c) => !existingIds.has(c.id))
+    .filter((c) => (c.first_name || c.last_name))
+    .filter((c) => `${c.first_name ?? ""} ${c.last_name ?? ""}`.toLowerCase().includes(newChatSearch.toLowerCase()))
+    .sort((a, b) => `${a.first_name ?? ""}${a.last_name ?? ""}`.localeCompare(`${b.first_name ?? ""}${b.last_name ?? ""}`));
+
+  const startNewChat = (c: { id: string; first_name: string | null; last_name: string | null }) => {
+    const conv: Conversation = {
+      contract_id: c.id,
+      first_name: c.first_name,
+      last_name: c.last_name,
+      last_message: "",
+      last_message_at: new Date().toISOString(),
+      unread_count: 0,
+    };
+    setConversations((prev) => (prev.some((p) => p.contract_id === c.id) ? prev : [conv, ...prev]));
+    setActive(conv);
+    setNewChatOpen(false);
+  };
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex rounded-2xl overflow-hidden border border-border bg-background shadow-sm">
       {/* Conversation list */}
@@ -419,8 +465,42 @@ export default function AdminLivechat() {
           search={search}
           onSearchChange={setSearch}
           onlineContractIds={onlineContractIds}
+          onNewChat={openNewChat}
         />
       </div>
+
+      {/* New chat dialog */}
+      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Neuen Chat starten</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Mitarbeiter suchen..."
+            value={newChatSearch}
+            onChange={(e) => setNewChatSearch(e.target.value)}
+            className="rounded-xl"
+          />
+          <div className="max-h-80 overflow-y-auto -mx-2">
+            {newChatLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Laden...</p>
+            ) : newChatCandidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Keine Mitarbeiter ohne Chat gefunden</p>
+            ) : (
+              newChatCandidates.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => startNewChat(c)}
+                  className="w-full text-left px-4 py-2.5 rounded-lg hover:bg-muted/50 transition-colors text-sm text-foreground"
+                >
+                  {c.first_name} {c.last_name}
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
