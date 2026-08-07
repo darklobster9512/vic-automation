@@ -20,7 +20,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Copy, KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, KeyRound, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -46,6 +46,8 @@ export default function AdminCallerZugaenge() {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [rotateTarget, setRotateTarget] = useState<any | null>(null);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editLabel, setEditLabel] = useState("");
 
   const { data: brandings } = useQuery({
     queryKey: ["caller-key-brandings"],
@@ -163,6 +165,26 @@ export default function AdminCallerZugaenge() {
     }
     setNewKey(plain);
     setRotateTarget(null);
+    queryClient.invalidateQueries({ queryKey: ["caller-api-keys"] });
+  };
+
+  const handleRename = async () => {
+    if (!editTarget) return;
+    const next = editLabel.trim();
+    if (!next) {
+      toast.error("Bezeichnung darf nicht leer sein.");
+      return;
+    }
+    const { error } = await supabase
+      .from("caller_api_keys")
+      .update({ label: next })
+      .eq("id", editTarget.id);
+    if (error) {
+      toast.error("Bezeichnung konnte nicht gespeichert werden");
+      return;
+    }
+    toast.success("Bezeichnung aktualisiert");
+    setEditTarget(null);
     queryClient.invalidateQueries({ queryKey: ["caller-api-keys"] });
   };
 
