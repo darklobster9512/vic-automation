@@ -2079,6 +2079,7 @@ export type Database = {
         Returns: {
           appointment_date: string
           appointment_time: string
+          slot_index: number
         }[]
       }
       interview_slots_for_branding: {
