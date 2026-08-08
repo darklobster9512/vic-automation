@@ -215,8 +215,7 @@ export default function AdminErsterArbeitstag() {
   };
 
   const toggleView = (mode: ViewMode) => {
-    setViewMode((prev) => (prev === mode ? "default" : mode));
-    setPage(0);
+    setViewMode((prev) => (prev === mode ? "upcoming" : mode));
   };
 
   const statusBadge = (status: string) => {
