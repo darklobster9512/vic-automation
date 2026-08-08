@@ -1685,6 +1685,47 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_inbox_seen: {
+        Row: {
+          branding_id: string | null
+          created_at: string
+          id: string
+          message_hash: string
+          phone_number: string | null
+          provider: string
+          received_at: string | null
+          source_key: string
+        }
+        Insert: {
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          message_hash: string
+          phone_number?: string | null
+          provider: string
+          received_at?: string | null
+          source_key: string
+        }
+        Update: {
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          message_hash?: string
+          phone_number?: string | null
+          provider?: string
+          received_at?: string | null
+          source_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_inbox_seen_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_logs: {
         Row: {
           branding_id: string | null
