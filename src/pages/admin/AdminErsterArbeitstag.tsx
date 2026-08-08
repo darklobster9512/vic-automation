@@ -252,9 +252,8 @@ export default function AdminErsterArbeitstag() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-foreground">1. Arbeitstag-Termine</h2>
         <p className="text-muted-foreground mt-1">
-          {viewMode === "default" && "Termine von heute und morgen."}
-          {viewMode === "past" && "Vergangene Termine."}
-          {viewMode === "future" && "Zukünftige Termine."}
+          {viewMode === "upcoming" && "Alle anstehenden Termine ab heute."}
+          {viewMode === "past" && "Vergangene Termine (bis gestern)."}
         </p>
       </motion.div>
 
