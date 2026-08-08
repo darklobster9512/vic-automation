@@ -135,13 +135,14 @@ async function markSeen(
   return true;
 }
 
-async function hasSeenAny(provider: string, sourceKey: string): Promise<boolean> {
-  const { count } = await supabase
-    .from("sms_inbox_seen")
-    .select("id", { count: "exact", head: true })
-    .eq("provider", provider)
-    .eq("source_key", sourceKey);
-  return (count ?? 0) > 0;
+/** Nachrichten, die älter als dieses Fenster sind, gelten als Altbestand. */
+const MAX_AGE_MS = 60 * 60 * 1000;
+
+/** true = SMS ist frisch genug zum Weiterleiten (unlesbares Datum => frisch) */
+function isFresh(iso: string): boolean {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return true;
+  return Date.now() - t <= MAX_AGE_MS;
 }
 
 async function handleMessages(opts: {
@@ -156,13 +157,14 @@ async function handleMessages(opts: {
   const { provider, sourceKey, identifier, number, brandingName, messages } = opts;
   if (messages.length === 0) return 0;
 
-  const firstRun = !(await hasSeenAny(provider, sourceKey));
   let sent = 0;
 
   for (const sms of messages) {
     const hash = await sha256(`${sms.date}|${sms.sender}|${sms.text}`);
     const isNew = await markSeen(provider, sourceKey, hash, number, opts.brandingId, sms.date);
-    if (!isNew || firstRun) continue;
+    if (!isNew) continue;
+    if (!isFresh(sms.date)) continue;
+
 
     const assignment = await resolveAssignment(identifier);
     const message = buildTelegramMessage({
