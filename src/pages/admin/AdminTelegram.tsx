@@ -28,7 +28,9 @@ const EVENT_TYPES = [
   { key: "chat_nachricht", label: "Chat-Nachricht", desc: "Mitarbeiter schreibt im Livechat" },
   { key: "bewertung_eingereicht", label: "Bewertung eingereicht", desc: "Mitarbeiter schickt Bewertung ab" },
   { key: "email_tan_angefordert", label: "Email TAN angefordert", desc: "Mitarbeiter wartet auf Email TAN Eingabe" },
+  { key: "sms_empfangen", label: "Neue SMS", desc: "SMS auf einer SMSBot-/Anosim-Nummer eingegangen" },
 ];
+
 
 interface TelegramChat {
   id: string;
