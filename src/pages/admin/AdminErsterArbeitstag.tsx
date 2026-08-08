@@ -191,11 +191,11 @@ export default function AdminErsterArbeitstag() {
         }
       }
 
-      return { items: rawItems, total: count || 0, profilesMap, applicationsMap, templatesMap, emailTypeMap };
+      return { items: rawItems, total: rawItems.length, profilesMap, applicationsMap, templatesMap, emailTypeMap };
     },
   });
 
-  const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+
   const profilesMap = data?.profilesMap ?? new Map();
   const applicationsMap = data?.applicationsMap ?? new Map();
   const templatesMap = data?.templatesMap ?? new Map();
