@@ -121,7 +121,7 @@ export default function AdminBdStatus() {
       const contractIds = Array.from(new Set(assignments.map((a) => a.contract_id)));
       const contracts = await fetchAllIn<any>(
         "employment_contracts",
-        "id, first_name, last_name, is_suspended, branding_id",
+        "id, first_name, last_name, is_suspended, branding_id, desired_start_date, employment_type, template_id",
         "id",
         contractIds
       );
@@ -136,6 +136,18 @@ export default function AdminBdStatus() {
 
       const relevantContractIds = Array.from(new Set(relevant.map((a) => a.contract_id)));
 
+      const templateIds = Array.from(
+        new Set(
+          Array.from(contractMap.values())
+            .map((c: any) => c.template_id)
+            .filter(Boolean)
+        )
+      ) as string[];
+      const templates = templateIds.length
+        ? await fetchAllIn<any>("contract_templates", "id, title, employment_type", "id", templateIds)
+        : [];
+      const templateMap = new Map(templates.map((t: any) => [t.id, t]));
+
       const attachments = await fetchAllIn<any>(
         "order_attachments",
         "order_id, contract_id, status",
@@ -148,6 +160,39 @@ export default function AdminBdStatus() {
         "contract_id",
         relevantContractIds
       );
+
+      // Alle Zuweisungen der Mitarbeiter (für Platzhalter-Zählung zwischen BD-Aufträgen)
+      const allAssignments = await fetchAllIn<any>(
+        "order_assignments",
+        "id, order_id, contract_id, assigned_at",
+        "contract_id",
+        relevantContractIds
+      );
+      const allOrderIds = Array.from(new Set(allAssignments.map((a) => a.order_id)));
+      const allOrders = allOrderIds.length
+        ? await fetchAllIn<any>("orders", "id, order_type, is_placeholder", "id", allOrderIds)
+        : [];
+      const placeholderOrderIds = new Set(
+        allOrders
+          .filter((o: any) => o.is_placeholder || o.order_type === "platzhalter")
+          .map((o: any) => o.id)
+      );
+
+      const placeholderTimesByContract = new Map<string, string[]>();
+      for (const a of allAssignments) {
+        if (!placeholderOrderIds.has(a.order_id)) continue;
+        if (!placeholderTimesByContract.has(a.contract_id)) placeholderTimesByContract.set(a.contract_id, []);
+        placeholderTimesByContract.get(a.contract_id)!.push(a.assigned_at);
+      }
+      for (const list of placeholderTimesByContract.values()) list.sort();
+
+      // Nächste BD/Exchanger-Zuweisung je Mitarbeiter bestimmen
+      const bdTimesByContract = new Map<string, string[]>();
+      for (const a of relevant) {
+        if (!bdTimesByContract.has(a.contract_id)) bdTimesByContract.set(a.contract_id, []);
+        bdTimesByContract.get(a.contract_id)!.push(a.assigned_at);
+      }
+      for (const list of bdTimesByContract.values()) list.sort();
 
       const attMap = new Map<string, string[]>();
       for (const a of attachments) {
@@ -176,11 +221,23 @@ export default function AdminBdStatus() {
           requiredCount,
           identStatuses,
         });
+
+        const bdTimes = bdTimesByContract.get(a.contract_id) ?? [];
+        const nextBd = bdTimes.find((t) => t > a.assigned_at) ?? null;
+        const placeholderTimes = placeholderTimesByContract.get(a.contract_id) ?? [];
+        const placeholderAfter = placeholderTimes.filter(
+          (t) => t > a.assigned_at && (!nextBd || t < nextBd)
+        ).length;
+
+        const template: any = contract?.template_id ? templateMap.get(contract.template_id) : null;
+
         return {
           assignment_id: a.id,
           contract_id: a.contract_id,
           order_id: a.order_id,
           employee_name: `${contract?.first_name ?? ""} ${contract?.last_name ?? ""}`.trim() || "Ohne Namen",
+          contract_start: contract?.desired_start_date ?? null,
+          contract_label: template?.title ?? contract?.employment_type ?? null,
           order_title: order?.title ?? "–",
           order_type: order?.order_type ?? "",
           assigned_at: a.assigned_at,
@@ -188,6 +245,7 @@ export default function AdminBdStatus() {
           approved_count: attachmentStatuses.filter((s) => s === "genehmigt").length,
           submitted_count: attachmentStatuses.filter((s) => s === "eingereicht").length,
           required_count: requiredCount,
+          placeholder_after: placeholderAfter,
           status,
         };
       });
