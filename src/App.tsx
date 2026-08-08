@@ -87,6 +87,7 @@ const AuthenticatedRoutes = () => (
         <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
         <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
         <Route path="auftraege" element={<AdminAuftraege />} />
+        <Route path="auftragsverteilung" element={<AdminAuftragsverteilung />} />
         <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
         <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
         <Route path="anhaenge" element={<AdminAnhaenge />} />
