@@ -383,9 +383,23 @@ export default function AdminBdStatus() {
                   >
                     {g.name}
                   </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {g.items.length} {g.items.length === 1 ? "Auftrag" : "Aufträge"}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      {g.items.length} {g.items.length === 1 ? "Auftrag" : "Aufträge"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      Start:{" "}
+                      {g.items[0]?.contract_start
+                        ? format(new Date(g.items[0].contract_start as string), "dd.MM.yyyy")
+                        : "kein Startdatum"}
+                    </span>
+                    {g.items[0]?.contract_label && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {g.items[0].contract_label}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -410,6 +424,11 @@ export default function AdminBdStatus() {
                           </>
                         )}
                         {r.review_unlocked && <> · Bewertung freigeschaltet</>}
+                      </p>
+                      <p className="text-xs mt-0.5 text-foreground/70">
+                        {r.placeholder_after > 0
+                          ? `Danach ${r.placeholder_after} ${r.placeholder_after === 1 ? "Platzhalterauftrag" : "Platzhalteraufträge"} zugewiesen`
+                          : "Noch keine Platzhalteraufträge danach"}
                       </p>
                     </div>
                     <Badge variant="outline" className={STATUS_META[r.status].className}>
