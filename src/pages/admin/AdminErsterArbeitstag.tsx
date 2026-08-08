@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -21,12 +21,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
-import { format, addDays, subHours } from "date-fns";
+import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
-const PAGE_SIZE = 20;
-type ViewMode = "default" | "past" | "future";
+type ViewMode = "upcoming" | "past";
+
+const dayLabel = (iso: string) => {
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const tomorrowStr = format(addDays(new Date(), 1), "yyyy-MM-dd");
+  if (iso === todayStr) return "Heute";
+  if (iso === tomorrowStr) return "Morgen";
+  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 interface ResolvedItem {
   item: any;
@@ -63,8 +75,7 @@ function resolveItemData(
 }
 
 export default function AdminErsterArbeitstag() {
-  const [page, setPage] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const [viewMode, setViewMode] = useState<ViewMode>("upcoming");
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
@@ -75,34 +86,42 @@ export default function AdminErsterArbeitstag() {
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
-  const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
-  const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["first-workday-appointments-admin", page, viewMode, activeBrandingId],
+    queryKey: ["first-workday-appointments-admin", viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      // Main query without profiles embed
-      let query = supabase
-        .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))", { count: "exact" });
+      const buildQuery = () => {
+        let query = supabase
+          .from("first_workday_appointments" as any)
+          .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))");
 
-      if (viewMode === "past") {
-        query = query
-          .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
-          .order("appointment_date", { ascending: false })
-          .order("appointment_time", { ascending: false });
-      } else if (viewMode === "future") {
-        query = query.gt("appointment_date", tomorrow).order("appointment_date", { ascending: true }).order("appointment_time", { ascending: true });
-      } else {
-        query = query
-          .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
-          .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true });
+        if (viewMode === "past") {
+          query = query
+            .lt("appointment_date", today)
+            .order("appointment_date", { ascending: false })
+            .order("appointment_time", { ascending: false });
+        } else {
+          query = query
+            .gte("appointment_date", today)
+            .order("appointment_date", { ascending: true })
+            .order("appointment_time", { ascending: true });
+        }
+        return query;
+      };
+
+      // Alle Zeilen laden (Supabase-Limit von 1000 per Batch-Loop umgehen)
+      const BATCH = 1000;
+      let offset = 0;
+      let items: any[] = [];
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data: batch, error: mainErr } = await buildQuery().range(offset, offset + BATCH - 1);
+        if (mainErr) throw mainErr;
+        items = items.concat((batch as any[]) || []);
+        if (!batch || (batch as any[]).length < BATCH) break;
+        offset += BATCH;
       }
-
-      const { data: items, error: mainErr, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (mainErr) throw mainErr;
 
       // Filter by branding — left join means we filter client-side
       const rawItems = ((items || []) as any[]).filter((item: any) => {
@@ -172,11 +191,11 @@ export default function AdminErsterArbeitstag() {
         }
       }
 
-      return { items: rawItems, total: count || 0, profilesMap, applicationsMap, templatesMap, emailTypeMap };
+      return { items: rawItems, total: rawItems.length, profilesMap, applicationsMap, templatesMap, emailTypeMap };
     },
   });
 
-  const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+
   const profilesMap = data?.profilesMap ?? new Map();
   const applicationsMap = data?.applicationsMap ?? new Map();
   const templatesMap = data?.templatesMap ?? new Map();
@@ -196,8 +215,7 @@ export default function AdminErsterArbeitstag() {
   };
 
   const toggleView = (mode: ViewMode) => {
-    setViewMode((prev) => (prev === mode ? "default" : mode));
-    setPage(0);
+    setViewMode((prev) => (prev === mode ? "upcoming" : mode));
   };
 
   const statusBadge = (status: string) => {
@@ -233,9 +251,8 @@ export default function AdminErsterArbeitstag() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-foreground">1. Arbeitstag-Termine</h2>
         <p className="text-muted-foreground mt-1">
-          {viewMode === "default" && "Termine von heute und morgen."}
-          {viewMode === "past" && "Vergangene Termine."}
-          {viewMode === "future" && "Zukünftige Termine."}
+          {viewMode === "upcoming" && "Alle anstehenden Termine ab heute."}
+          {viewMode === "past" && "Vergangene Termine (bis gestern)."}
         </p>
       </motion.div>
 
@@ -244,9 +261,6 @@ export default function AdminErsterArbeitstag() {
       <div className="flex gap-2 mb-4">
         <Button variant={viewMode === "past" ? "default" : "outline"} size="sm" onClick={() => toggleView("past")}>
           <History className="h-4 w-4 mr-1" /> Vergangene Termine
-        </Button>
-        <Button variant={viewMode === "future" ? "default" : "outline"} size="sm" onClick={() => toggleView("future")}>
-          <ArrowRight className="h-4 w-4 mr-1" /> Zukünftige Termine
         </Button>
       </div>
 
@@ -287,8 +301,21 @@ export default function AdminErsterArbeitstag() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((r) => (
-                    <TableRow key={r.item.id}>
+                  {filteredItems.map((r, i) => {
+                    const showDayHeader = i === 0 || filteredItems[i - 1].item.appointment_date !== r.item.appointment_date;
+                    return (
+                    <Fragment key={r.item.id}>
+                    {showDayHeader && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={9} className="bg-muted/40 py-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {dayLabel(r.item.appointment_date)}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <TableRow>
                       <TableCell className="font-medium">
                         {new Date(r.item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                       </TableCell>
@@ -333,23 +360,13 @@ export default function AdminErsterArbeitstag() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">Seite {page + 1} von {totalPages} ({data!.total} Termine)</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                    <ChevronLeft className="h-4 w-4 mr-1" /> Zurück
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
-                    Weiter <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground mt-4">{filteredItems.length} Termine</p>
           </>
         )}
       </motion.div>
