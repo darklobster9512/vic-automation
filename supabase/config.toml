@@ -8,3 +8,7 @@ verify_jwt = false
 
 [functions.caller-api]
 verify_jwt = false
+
+[functions.sms-inbox-watch]
+verify_jwt = false
+
