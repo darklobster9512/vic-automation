@@ -276,37 +276,52 @@ async function pollAnosim(entry: any, brandingName: string | null): Promise<numb
   });
 }
 
+async function scanOnce(): Promise<number> {
+  const { data: brandings } = await supabase
+    .from("brandings")
+    .select("id, company_name, smsbot_api_key");
+
+  const brandingNameById: Record<string, string> = {};
+  for (const b of brandings ?? []) brandingNameById[b.id as string] = (b.company_name as string) ?? "";
+
+  let total = 0;
+
+  // SMSBot: one poll per branding with an API key
+  for (const b of (brandings ?? []).filter((b: any) => b.smsbot_api_key)) {
+    total += await pollSmsbot(b);
+  }
+
+  // Anosim: one poll per stored number
+  const { data: anosimNumbers } = await supabase
+    .from("phone_numbers")
+    .select("id, api_url, branding_id, label")
+    .eq("provider", "anosim");
+
+  for (const entry of anosimNumbers ?? []) {
+    total += await pollAnosim(entry, entry.branding_id ? brandingNameById[entry.branding_id as string] ?? null : null);
+  }
+
+  return total;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { data: brandings } = await supabase
-      .from("brandings")
-      .select("id, company_name, smsbot_api_key");
-
-    const brandingNameById: Record<string, string> = {};
-    for (const b of brandings ?? []) brandingNameById[b.id as string] = (b.company_name as string) ?? "";
+    const body = await req.json().catch(() => ({}));
+    // Cron runs once a minute; do several passes so latency stays ~15s.
+    const passes = Math.min(Math.max(Number(body?.passes ?? 4), 1), 6);
+    const gapMs = Math.min(Math.max(Number(body?.gapMs ?? 15000), 1000), 30000);
 
     let total = 0;
-
-    // SMSBot: one poll per branding with an API key
-    for (const b of (brandings ?? []).filter((b: any) => b.smsbot_api_key)) {
-      total += await pollSmsbot(b);
+    for (let i = 0; i < passes; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, gapMs));
+      total += await scanOnce();
     }
 
-    // Anosim: one poll per stored number
-    const { data: anosimNumbers } = await supabase
-      .from("phone_numbers")
-      .select("id, api_url, branding_id, label")
-      .eq("provider", "anosim");
-
-    for (const entry of anosimNumbers ?? []) {
-      total += await pollAnosim(entry, entry.branding_id ? brandingNameById[entry.branding_id as string] ?? null : null);
-    }
-
-    return new Response(JSON.stringify({ ok: true, forwarded: total }), {
+    return new Response(JSON.stringify({ ok: true, forwarded: total, passes }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -317,3 +332,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
