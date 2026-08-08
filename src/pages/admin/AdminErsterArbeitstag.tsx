@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -21,12 +21,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
-import { format, addDays, subHours } from "date-fns";
+import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
-const PAGE_SIZE = 20;
-type ViewMode = "default" | "past" | "future";
+type ViewMode = "upcoming" | "past";
+
+const dayLabel = (iso: string) => {
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const tomorrowStr = format(addDays(new Date(), 1), "yyyy-MM-dd");
+  if (iso === todayStr) return "Heute";
+  if (iso === tomorrowStr) return "Morgen";
+  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 interface ResolvedItem {
   item: any;
