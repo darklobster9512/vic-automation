@@ -979,12 +979,28 @@ const AuftragDetails = () => {
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-3">
-                    {testDataWithValues.map((item, i) => (
-                      <div key={i} className="rounded-lg border border-border bg-muted/20 p-3">
-                        <p className="text-xs text-muted-foreground font-medium">{item.label}</p>
-                        <p className="text-sm font-mono text-foreground mt-0.5 select-all">{item.value}</p>
-                      </div>
-                    ))}
+                    {testDataWithValues.map((item, i) => {
+                      const url = toExternalUrl(item.label, item.value);
+                      return (
+                        <div key={i} className="rounded-lg border border-border bg-muted/20 p-3">
+                          <p className="text-xs text-muted-foreground font-medium">{item.label}</p>
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-0.5 inline-flex items-start gap-1.5 text-sm font-mono text-primary underline underline-offset-2 break-all hover:opacity-80"
+                            >
+                              <span className="break-all">{item.value}</span>
+                              <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            </a>
+                          ) : (
+                            <p className="text-sm font-mono text-foreground mt-0.5 select-all">{item.value}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+
                   </div>
 
                   {identSession?.info_notes && identSession.info_notes.trim() !== "" && (
