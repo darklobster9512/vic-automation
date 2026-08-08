@@ -2,7 +2,17 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
 import { sendTelegram } from "@/lib/sendTelegram";
-import { ArrowLeft, Target, HelpCircle, Download, Star, Upload, FileText, CheckCircle, XCircle, ListChecks, Video, AlertTriangle, Clock, MessageSquare, Smartphone, Loader2, Info, MessageCircle, RefreshCw, Mail } from "lucide-react";
+import { ArrowLeft, Target, HelpCircle, Download, Star, Upload, FileText, CheckCircle, XCircle, ListChecks, Video, AlertTriangle, Clock, MessageSquare, Smartphone, Loader2, Info, MessageCircle, RefreshCw, Mail, ExternalLink } from "lucide-react";
+
+/** Returns an openable URL if the value looks like a link, otherwise null. */
+const toExternalUrl = (label: string, value: string): string | null => {
+  const v = (value || "").trim();
+  if (!v || /\s/.test(v)) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  const looksLikeDomain = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$|\?)/i.test(v);
+  if (looksLikeDomain && (/link|url/i.test(label) || looksLikeDomain)) return `https://${v}`;
+  return null;
+};
 import appStoreBadge from "@/assets/app-store.svg";
 import googlePlayBadge from "@/assets/google-play-de-de.svg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
