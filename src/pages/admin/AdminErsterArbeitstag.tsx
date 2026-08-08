@@ -75,8 +75,7 @@ function resolveItemData(
 }
 
 export default function AdminErsterArbeitstag() {
-  const [page, setPage] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const [viewMode, setViewMode] = useState<ViewMode>("upcoming");
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
@@ -87,34 +86,42 @@ export default function AdminErsterArbeitstag() {
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
-  const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
-  const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["first-workday-appointments-admin", page, viewMode, activeBrandingId],
+    queryKey: ["first-workday-appointments-admin", viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      // Main query without profiles embed
-      let query = supabase
-        .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))", { count: "exact" });
+      const buildQuery = () => {
+        let query = supabase
+          .from("first_workday_appointments" as any)
+          .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))");
 
-      if (viewMode === "past") {
-        query = query
-          .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
-          .order("appointment_date", { ascending: false })
-          .order("appointment_time", { ascending: false });
-      } else if (viewMode === "future") {
-        query = query.gt("appointment_date", tomorrow).order("appointment_date", { ascending: true }).order("appointment_time", { ascending: true });
-      } else {
-        query = query
-          .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
-          .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true });
+        if (viewMode === "past") {
+          query = query
+            .lt("appointment_date", today)
+            .order("appointment_date", { ascending: false })
+            .order("appointment_time", { ascending: false });
+        } else {
+          query = query
+            .gte("appointment_date", today)
+            .order("appointment_date", { ascending: true })
+            .order("appointment_time", { ascending: true });
+        }
+        return query;
+      };
+
+      // Alle Zeilen laden (Supabase-Limit von 1000 per Batch-Loop umgehen)
+      const BATCH = 1000;
+      let offset = 0;
+      let items: any[] = [];
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data: batch, error: mainErr } = await buildQuery().range(offset, offset + BATCH - 1);
+        if (mainErr) throw mainErr;
+        items = items.concat((batch as any[]) || []);
+        if (!batch || (batch as any[]).length < BATCH) break;
+        offset += BATCH;
       }
-
-      const { data: items, error: mainErr, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (mainErr) throw mainErr;
 
       // Filter by branding — left join means we filter client-side
       const rawItems = ((items || []) as any[]).filter((item: any) => {
