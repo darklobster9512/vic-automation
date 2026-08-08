@@ -18,6 +18,7 @@ import AdminMitarbeiter from "./pages/admin/AdminMitarbeiter";
 import AdminMitarbeiterDetail from "./pages/admin/AdminMitarbeiterDetail";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
 import AdminAuftragsverteilung from "./pages/admin/AdminAuftragsverteilung";
+import AdminBdStatus from "./pages/admin/AdminBdStatus";
 import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminAnhaengeDetail from "./pages/admin/AdminAnhaengeDetail";
@@ -88,6 +89,7 @@ const AuthenticatedRoutes = () => (
         <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
         <Route path="auftraege" element={<AdminAuftraege />} />
         <Route path="auftragsverteilung" element={<AdminAuftragsverteilung />} />
+        <Route path="bd-status" element={<AdminBdStatus />} />
         <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
         <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
         <Route path="anhaenge" element={<AdminAnhaenge />} />
