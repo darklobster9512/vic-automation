@@ -612,6 +612,41 @@ export type Database = {
           },
         ]
       }
+      distribution_targets: {
+        Row: {
+          branding_id: string
+          created_at: string
+          hours: number
+          id: string
+          orders_per_day: number
+          updated_at: string
+        }
+        Insert: {
+          branding_id: string
+          created_at?: string
+          hours: number
+          id?: string
+          orders_per_day?: number
+          updated_at?: string
+        }
+        Update: {
+          branding_id?: string
+          created_at?: string
+          hours?: number
+          id?: string
+          orders_per_day?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribution_targets_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       edge_cache: {
         Row: {
           expires_at: string
