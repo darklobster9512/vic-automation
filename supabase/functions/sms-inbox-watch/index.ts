@@ -249,15 +249,24 @@ async function pollSmsbot(branding: any): Promise<number> {
   return sent;
 }
 
+/** Anosim-Shares, die abgelaufen sind (400) – innerhalb dieses Laufs nicht erneut abfragen. */
+const expiredAnosim = new Set<string>();
+
 async function pollAnosim(entry: any, brandingName: string | null): Promise<number> {
   const rawUrl = entry.api_url as string | null;
   if (!rawUrl) return 0;
+  if (expiredAnosim.has(entry.id)) return 0;
   const url = rawUrl.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
   let data: any;
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.warn(`Anosim ${res.status} for ${entry.id}`);
+      if (res.status === 400 || res.status === 404) {
+        // Share-Token abgelaufen – kein Fehler, nur nicht mehr abfragen
+        expiredAnosim.add(entry.id);
+      } else {
+        console.warn(`Anosim ${res.status} for ${entry.id}`);
+      }
       return 0;
     }
     data = await res.json();
@@ -265,6 +274,7 @@ async function pollAnosim(entry: any, brandingName: string | null): Promise<numb
     console.warn("Anosim fetch failed:", String(e));
     return 0;
   }
+
 
   const messages = Array.isArray(data?.sms) ? data.sms.map(normSms) : [];
   return await handleMessages({
