@@ -365,7 +365,9 @@ export default function AdminErsterArbeitstag() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
