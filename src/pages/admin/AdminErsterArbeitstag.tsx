@@ -306,8 +306,21 @@ export default function AdminErsterArbeitstag() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((r) => (
-                    <TableRow key={r.item.id}>
+                  {filteredItems.map((r, i) => {
+                    const showDayHeader = i === 0 || filteredItems[i - 1].item.appointment_date !== r.item.appointment_date;
+                    return (
+                    <Fragment key={r.item.id}>
+                    {showDayHeader && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={9} className="bg-muted/40 py-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {dayLabel(r.item.appointment_date)}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <TableRow>
                       <TableCell className="font-medium">
                         {new Date(r.item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                       </TableCell>
