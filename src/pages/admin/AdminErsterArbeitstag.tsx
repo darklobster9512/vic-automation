@@ -264,9 +264,6 @@ export default function AdminErsterArbeitstag() {
         <Button variant={viewMode === "past" ? "default" : "outline"} size="sm" onClick={() => toggleView("past")}>
           <History className="h-4 w-4 mr-1" /> Vergangene Termine
         </Button>
-        <Button variant={viewMode === "future" ? "default" : "outline"} size="sm" onClick={() => toggleView("future")}>
-          <ArrowRight className="h-4 w-4 mr-1" /> Zukünftige Termine
-        </Button>
       </div>
 
       <div className="relative mb-4">
