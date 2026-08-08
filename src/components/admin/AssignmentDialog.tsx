@@ -200,11 +200,11 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         if (insErr) throw insErr;
       }
 
-      // Send emails for newly assigned employees
+      // Benachrichtigungen: genau EINE E-Mail + EINE SMS pro Mitarbeiter
       if (mode === "order" && newlyAdded.length > 0) {
         const { data: order } = await supabase
           .from("orders")
-          .select("title, order_number, reward")
+          .select("id, title, order_number, reward")
           .eq("id", sourceId)
           .single();
 
@@ -213,31 +213,16 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           .select("id, email, first_name, last_name, phone, user_id, branding_id")
           .in("id", newlyAdded);
 
-        // Resolve branding: profiles.branding_id first, then contract.branding_id
-        const brandingMap = await resolveContractBrandingBatch(contracts ?? []);
-
-        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftrag_zugewiesen").single();
-
         for (const c of contracts ?? []) {
-          const effectiveBrandingId = brandingMap[c.id] ?? null;
-
-          // E-Mail-Versand für "auftrag_zugewiesen" deaktiviert — nur SMS
-          if (c.phone) {
-            const name = `${c.first_name || ""} ${c.last_name || ""}`.trim();
-            const smsText = (tpl as any)?.message
-              ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
-              : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
-            let smsSender: string | undefined;
-            if (effectiveBrandingId) {
-              const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", effectiveBrandingId).single();
-              smsSender = (branding as any)?.sms_sender_name || undefined;
-            }
-            await sendSms({ to: c.phone, text: smsText, event_type: "auftrag_zugewiesen", recipient_name: name, from: smsSender, branding_id: effectiveBrandingId });
+          if (!order) continue;
+          try {
+            await notifyOrdersAssigned(c as any, [order as any]);
+          } catch (err) {
+            console.error("Benachrichtigung fehlgeschlagen:", err);
           }
         }
       }
 
-      // Contract mode: multiple orders assigned to ONE employee → 1 Sammel-SMS (or 1 einzel SMS)
       if (mode === "contract" && newlyAdded.length > 0) {
         const { data: contract } = await supabase
           .from("employment_contracts")
@@ -245,39 +230,17 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           .eq("id", sourceId)
           .single();
 
-        if (contract?.phone) {
-          const brandingMap = await resolveContractBrandingBatch([contract]);
-          const effectiveBrandingId = brandingMap[contract.id] ?? null;
-          const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("id, title, order_number")
+          .in("id", newlyAdded);
 
-          let smsText: string;
-          let eventType: string;
-
-          if (newlyAdded.length === 1) {
-            const { data: order } = await supabase
-              .from("orders")
-              .select("title")
-              .eq("id", newlyAdded[0])
-              .single();
-            const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftrag_zugewiesen").single();
-            eventType = "auftrag_zugewiesen";
-            smsText = (tpl as any)?.message
-              ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
-              : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
-          } else {
-            const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftraege_zugewiesen_sammel").single();
-            eventType = "auftraege_zugewiesen_sammel";
-            smsText = (tpl as any)?.message
-              ? (tpl as any).message.replace("{name}", name).replace("{anzahl}", String(newlyAdded.length))
-              : `Hallo ${name}, es sind ${newlyAdded.length} neue Auftraege fuer Sie verfuegbar. Jetzt im Mitarbeiterportal ansehen.`;
+        if (contract && orders?.length) {
+          try {
+            await notifyOrdersAssigned(contract as any, orders as any);
+          } catch (err) {
+            console.error("Benachrichtigung fehlgeschlagen:", err);
           }
-
-          let smsSender: string | undefined;
-          if (effectiveBrandingId) {
-            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", effectiveBrandingId).single();
-            smsSender = (branding as any)?.sms_sender_name || undefined;
-          }
-          await sendSms({ to: contract.phone, text: smsText, event_type: eventType, recipient_name: name, from: smsSender, branding_id: effectiveBrandingId });
         }
       }
     },
