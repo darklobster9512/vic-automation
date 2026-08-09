@@ -400,6 +400,7 @@ export default function AdminBewerbungsgespraeche() {
         .replace(/\{name\}/g, name)
         .replace(/\{telefon\}/g, brandingPhone);
 
+      setMailboxNote("");
       setReminderPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });
     } catch (err) {
       console.error("Reminder prepare error:", err);
