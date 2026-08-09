@@ -833,7 +833,7 @@ export default function AdminBewerbungsgespraeche() {
                                 className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                                 onClick={() => handlePrepareReminder(item)}
                                 disabled={sendingReminder === item.id}
-                                title="Erinnerungs-SMS & E-Mail senden"
+                                title="Mailbox"
                               >
                                 <MessageSquare className="h-4 w-4" />
                               </Button>
