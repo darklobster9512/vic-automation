@@ -37,19 +37,16 @@ Zusätzlich liefert `list_interviews` die Mailbox-Notizen mit aus (Status `mailb
 
 ## So bindest du es im anderen System ein
 
-Im externen Caller-Panel einen Button "Mailbox" hinzufügen, der zwei Aufrufe macht (gleicher Endpoint wie bisher, Header `x-caller-key`):
+Im externen Caller-Panel einen Button "Mailbox" hinzufügen, der genau einen Aufruf macht (gleicher Endpoint wie bisher, Header `x-caller-key`):
 
 ```text
 POST https://<projekt>.supabase.co/functions/v1/caller-api
 Header: x-caller-key: <dein Key>, Content-Type: application/json
 
-1) Vorschau laden
-{ "action": "set_mailbox", "appointment_id": "<id>", "preview": true }
-→ { "message": "..." }   // im Dialog anzeigen, editierbar
-
-2) Bestätigen
-{ "action": "set_mailbox", "appointment_id": "<id>", "text": "<finaler SMS-Text>", "note": "<optional>" }
+{ "action": "set_mailbox", "appointment_id": "<id>", "note": "<optional>" }
 → { "ok": true }
 ```
+
+Der SMS-Text kommt automatisch aus der Vorlage — es muss nichts vorher geladen oder angezeigt werden.
 
 Danach die Liste neu laden — der Termin kommt mit `status: "mailbox"` und den Notizen zurück.
