@@ -1,25 +1,53 @@
-# Universeller iFrame-Viewer
+# Mailbox-Status bei Bewerbungsgesprächen
 
-Eine kleine Seite, mit der du jede beliebige URL in einem iFrame anzeigen kannst.
+## Ziel
+Der bisherige Button "Erinnerungs-SMS & E-Mail senden" wird zu "Mailbox". Beim Klick wird weiterhin die Erinnerung versendet, zusätzlich wird der Gesprächsstatus auf "Mailbox" gesetzt und eine optionale Notiz gespeichert. Dieselbe Aktion soll das externe Caller-System per Edge Function auslösen können.
 
-## Was gebaut wird
+## Änderungen im Admin-Panel (`/admin/bewerbungsgespraeche`)
 
-Neue Route `/iframe` mit:
-- Eingabefeld für die URL (z.B. `google.com`) + Button "Laden"
-- Die URL wird automatisch um `https://` ergänzt, falls kein Protokoll angegeben ist
-- Vollflächiger iFrame darunter, der die Seite anzeigt
-- Optional per Query-Parameter direkt aufrufbar: `/iframe?url=https://example.com` (lädt sofort, ohne Eingabe)
-- Button "In neuem Tab öffnen" als Fallback
+1. Button-Tooltip/Label des SMS-Icons wird "Mailbox".
+2. Der bestehende Vorschau-Dialog ("Erinnerung senden") bekommt:
+   - Titel "Mailbox"
+   - ein zusätzliches Notizfeld (optional)
+   - Hinweis, dass der Status auf "Mailbox" gesetzt wird
+3. Beim Bestätigen passiert wie bisher der SMS-Versand plus Zähler/Zeitstempel, und zusätzlich:
+   - Status des Termins wird über die bestehende Statusfunktion auf `mailbox` gesetzt
+   - falls eine Notiz eingegeben wurde, wird sie wie bei "Erfolgreich"/"Fehlgeschlagen" in den Branding-Notizen gespeichert (Format `Vorname Nachname — Mailbox: <Text>`)
+4. Status-Badge: neuer gelber/amber Badge "Mailbox", genau wie die anderen anklickbar, zeigt beim Klick die hinterlegten Mailbox-Notizen im Popover.
+5. Notiz-Filterlogik wird um das Label "Mailbox" erweitert.
+6. Der "Als erfolgreich markieren"-Button bleibt sichtbar, solange der Status nicht "erfolgreich" ist — Mailbox-Termine können also weiterhin normal abgeschlossen werden.
 
-Zusätzlich eine wiederverwendbare Komponente `src/components/EmbedFrame.tsx`, die du überall im Projekt mit `<EmbedFrame url="https://..." />` einbinden kannst (so wie aktuell in `KarriereRedirect.tsx` hart verdrahtet).
+Kein Datenbank-Schema-Umbau nötig: `status` ist ein freies Textfeld, die vorhandene Statusfunktion akzeptiert den neuen Wert.
 
-## Wichtiger Hinweis
+## Änderungen in der Edge Function (externes Caller-System)
 
-Viele große Seiten (u.a. **google.com**, Facebook, Instagram, viele Banken) blockieren das Einbetten per `X-Frame-Options` / `Content-Security-Policy`. Der iFrame bleibt dann leer — das lässt sich клиент-seitig nicht umgehen. Deshalb zeigt die Seite nach einigen Sekunden ohne Ladeereignis einen Hinweis an: "Diese Seite erlaubt kein Einbetten" plus den Link zum Öffnen in einem neuen Tab.
+In `caller-api` wird die bestehende Action `send_reminder` um ein Verhalten erweitert bzw. eine neue Action `set_mailbox` ergänzt:
 
-## Technische Details
+- Vorschau: `{ action: "set_mailbox", appointment_id, preview: true }` → liefert den vorbefüllten SMS-Text (wie bisher bei `send_reminder`).
+- Ausführen: `{ action: "set_mailbox", appointment_id, text, note? }` →
+  1. SMS versenden
+  2. `reminder_count` / `reminder_timestamps` hochzählen
+  3. Status auf `mailbox` setzen
+  4. Notiz (falls vorhanden) in `branding_notes` schreiben
+  5. Eintrag ins `caller_activity_log`
 
-- `src/components/EmbedFrame.tsx`: iFrame mit `sandbox="allow-scripts allow-same-origin allow-forms allow-popups"`, `referrerPolicy="no-referrer"`, `onLoad`-Timeout-Erkennung
-- `src/pages/IframeViewer.tsx`: Input (shadcn `Input` + `Button`), `useSearchParams` für `?url=`
-- Route in `src/App.tsx` registriert (öffentlich, ohne Auth-Guard)
-- Styling über bestehende Design-Tokens, keine hardcodierten Farben
+Zusätzlich liefert `list_interviews` die Mailbox-Notizen mit aus (Status `mailbox` wird in der Notiz-Auswertung mitberücksichtigt), damit das externe Panel Status und Notiz anzeigen kann.
+
+## So bindest du es im anderen System ein
+
+Im externen Caller-Panel einen Button "Mailbox" hinzufügen, der zwei Aufrufe macht (gleicher Endpoint wie bisher, Header `x-caller-key`):
+
+```text
+POST https://<projekt>.supabase.co/functions/v1/caller-api
+Header: x-caller-key: <dein Key>, Content-Type: application/json
+
+1) Vorschau laden
+{ "action": "set_mailbox", "appointment_id": "<id>", "preview": true }
+→ { "message": "..." }   // im Dialog anzeigen, editierbar
+
+2) Bestätigen
+{ "action": "set_mailbox", "appointment_id": "<id>", "text": "<finaler SMS-Text>", "note": "<optional>" }
+→ { "ok": true }
+```
+
+Danach die Liste neu laden — der Termin kommt mit `status: "mailbox"` und den Notizen zurück.
