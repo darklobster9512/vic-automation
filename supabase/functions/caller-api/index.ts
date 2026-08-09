@@ -248,9 +248,10 @@ Deno.serve(async (req) => {
             const rest = n.content.slice(`${fullName} — `.length);
             const isSuccess = rest.startsWith("Erfolgreich:");
             const isFail = rest.startsWith("Fehlgeschlagen:");
-            if (!isSuccess && !isFail) return null;
+            const isMailbox = rest.startsWith("Mailbox:");
+            if (!isSuccess && !isFail && !isMailbox) return null;
             return {
-              status: isSuccess ? "erfolgreich" : "fehlgeschlagen",
+              status: isSuccess ? "erfolgreich" : isMailbox ? "mailbox" : "fehlgeschlagen",
               text: rest.slice(rest.indexOf(":") + 1).trim(),
               author: n.author_email,
               created_at: n.created_at,
