@@ -880,10 +880,10 @@ export default function AdminBewerbungsgespraeche() {
         })()}
       </motion.div>
 
-      <Dialog open={!!reminderPreview} onOpenChange={(open) => !open && setReminderPreview(null)}>
+      <Dialog open={!!reminderPreview} onOpenChange={(open) => { if (!open) { setReminderPreview(null); setMailboxNote(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Erinnerung senden</DialogTitle>
+            <DialogTitle>Mailbox</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-sm">
@@ -897,16 +897,23 @@ export default function AdminBewerbungsgespraeche() {
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
               {reminderPreview?.message}
             </div>
-            <p className="text-xs text-muted-foreground">SMS + E-Mail werden gesendet.</p>
+            <Textarea
+              placeholder="Notiz (optional)…"
+              value={mailboxNote}
+              onChange={(e) => setMailboxNote(e.target.value)}
+              className="min-h-[80px]"
+            />
+            <p className="text-xs text-muted-foreground">Die Erinnerung wird gesendet und der Status auf „Mailbox“ gesetzt.</p>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => { setReminderPreview(null); setMailboxNote(""); }}>Abbrechen</Button>
             <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
               Senden
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       <Dialog open={!!failTarget} onOpenChange={(open) => { if (!open) setFailTarget(null); }}>
         <DialogContent>
