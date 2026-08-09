@@ -21,15 +21,17 @@ Kein Datenbank-Schema-Umbau nötig: `status` ist ein freies Textfeld, die vorhan
 
 ## Änderungen in der Edge Function (externes Caller-System)
 
-In `caller-api` wird die bestehende Action `send_reminder` um ein Verhalten erweitert bzw. eine neue Action `set_mailbox` ergänzt:
+In `caller-api` kommt eine neue Action `set_mailbox` dazu — ohne Vorschau-Schritt, ein einziger Aufruf:
 
-- Vorschau: `{ action: "set_mailbox", appointment_id, preview: true }` → liefert den vorbefüllten SMS-Text (wie bisher bei `send_reminder`).
-- Ausführen: `{ action: "set_mailbox", appointment_id, text, note? }` →
-  1. SMS versenden
-  2. `reminder_count` / `reminder_timestamps` hochzählen
-  3. Status auf `mailbox` setzen
-  4. Notiz (falls vorhanden) in `branding_notes` schreiben
-  5. Eintrag ins `caller_activity_log`
+- `{ action: "set_mailbox", appointment_id, note? }` →
+  1. SMS-Text serverseitig aus der Vorlage `gespraech_erinnerung` bauen (Platzhalter `{name}`/`{telefon}` ersetzt)
+  2. SMS versenden
+  3. `reminder_count` / `reminder_timestamps` hochzählen
+  4. Status auf `mailbox` setzen
+  5. Notiz (falls vorhanden) in `branding_notes` schreiben
+  6. Eintrag ins `caller_activity_log`
+
+Optional kann `text` mitgeschickt werden, um die Vorlage zu überschreiben; ohne `text` wird immer der korrekte Vorlagentext verwendet.
 
 Zusätzlich liefert `list_interviews` die Mailbox-Notizen mit aus (Status `mailbox` wird in der Notiz-Auswertung mitberücksichtigt), damit das externe Panel Status und Notiz anzeigen kann.
 
