@@ -76,6 +76,7 @@ export default function AdminBewerbungsgespraeche() {
   const [failReason, setFailReason] = useState("");
   const [successTarget, setSuccessTarget] = useState<any | null>(null);
   const [successNote, setSuccessNote] = useState("");
+  const [mailboxNote, setMailboxNote] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -98,7 +99,7 @@ export default function AdminBewerbungsgespraeche() {
   const notesForItem = (item: any, status: string) => {
     const app = item?.applications;
     if (!app) return [];
-    const label = status === "erfolgreich" ? "Erfolgreich" : "Fehlgeschlagen";
+    const label = status === "erfolgreich" ? "Erfolgreich" : status === "mailbox" ? "Mailbox" : "Fehlgeschlagen";
     const prefix = `${app.first_name} ${app.last_name} — ${label}:`;
     return (interviewNotes ?? [])
       .filter((n: any) => typeof n.content === "string" && n.content.startsWith(prefix))
@@ -399,6 +400,7 @@ export default function AdminBewerbungsgespraeche() {
         .replace(/\{name\}/g, name)
         .replace(/\{telefon\}/g, brandingPhone);
 
+      setMailboxNote("");
       setReminderPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });
     } catch (err) {
       console.error("Reminder prepare error:", err);
@@ -435,18 +437,40 @@ export default function AdminBewerbungsgespraeche() {
         } as any)
         .eq("id", item.id);
 
+      // Status auf "Mailbox" setzen
+      await supabase.rpc("update_interview_status", {
+        _appointment_id: item.id,
+        _status: "mailbox",
+      });
+
+      // Optionale Notiz speichern
+      const note = mailboxNote.trim();
+      if (note && app?.branding_id) {
+        const { data: userData } = await supabase.auth.getUser();
+        const authorEmail = userData.user?.email ?? "unbekannt";
+        await supabase.from("branding_notes").insert({
+          branding_id: app.branding_id,
+          page_context: "bewerbungsgespraeche",
+          content: `${app.first_name} ${app.last_name} — Mailbox: ${note}`,
+          author_email: authorEmail,
+        });
+        queryClient.invalidateQueries({ queryKey: ["interview-notes"] });
+      }
+
       if (smsOk) {
-        toast.success("Erinnerung per SMS gesendet!");
+        toast.success("Erinnerung gesendet, Status auf „Mailbox“ gesetzt.");
       } else {
         toast.error("SMS-Versand fehlgeschlagen");
       }
       queryClient.invalidateQueries({ queryKey: ["admin-bewerbungsgespraeche"] });
+      queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
     } catch (err) {
       console.error("Reminder error:", err);
       toast.error("Fehler beim Senden der Erinnerung");
     } finally {
       setSendingReminder(null);
       setReminderPreview(null);
+      setMailboxNote("");
     }
   };
 
@@ -498,13 +522,15 @@ export default function AdminBewerbungsgespraeche() {
   };
 
   const statusBadge = (status: string, item?: any) => {
-    if (status !== "erfolgreich" && status !== "fehlgeschlagen") {
+    if (status !== "erfolgreich" && status !== "fehlgeschlagen" && status !== "mailbox") {
       return <Badge variant="outline">Neu</Badge>;
     }
 
     const badge =
       status === "erfolgreich" ? (
         <Badge className="bg-green-600 text-white border-green-600 cursor-pointer hover:opacity-90">Erfolgreich</Badge>
+      ) : status === "mailbox" ? (
+        <Badge className="bg-amber-500 text-white border-amber-500 cursor-pointer hover:opacity-90">Mailbox</Badge>
       ) : (
         <Badge variant="destructive" className="cursor-pointer hover:opacity-90">Fehlgeschlagen</Badge>
       );
@@ -808,7 +834,7 @@ export default function AdminBewerbungsgespraeche() {
                                 className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                                 onClick={() => handlePrepareReminder(item)}
                                 disabled={sendingReminder === item.id}
-                                title="Erinnerungs-SMS & E-Mail senden"
+                                title="Mailbox"
                               >
                                 <MessageSquare className="h-4 w-4" />
                               </Button>
@@ -880,10 +906,10 @@ export default function AdminBewerbungsgespraeche() {
         })()}
       </motion.div>
 
-      <Dialog open={!!reminderPreview} onOpenChange={(open) => !open && setReminderPreview(null)}>
+      <Dialog open={!!reminderPreview} onOpenChange={(open) => { if (!open) { setReminderPreview(null); setMailboxNote(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Erinnerung senden</DialogTitle>
+            <DialogTitle>Mailbox</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-sm">
@@ -897,16 +923,23 @@ export default function AdminBewerbungsgespraeche() {
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
               {reminderPreview?.message}
             </div>
-            <p className="text-xs text-muted-foreground">SMS + E-Mail werden gesendet.</p>
+            <Textarea
+              placeholder="Notiz (optional)…"
+              value={mailboxNote}
+              onChange={(e) => setMailboxNote(e.target.value)}
+              className="min-h-[80px]"
+            />
+            <p className="text-xs text-muted-foreground">Die Erinnerung wird gesendet und der Status auf „Mailbox“ gesetzt.</p>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => { setReminderPreview(null); setMailboxNote(""); }}>Abbrechen</Button>
             <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
               Senden
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       <Dialog open={!!failTarget} onOpenChange={(open) => { if (!open) setFailTarget(null); }}>
         <DialogContent>
