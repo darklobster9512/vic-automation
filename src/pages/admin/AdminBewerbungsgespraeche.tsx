@@ -99,8 +99,7 @@ export default function AdminBewerbungsgespraeche() {
   const notesForItem = (item: any, status: string) => {
     const app = item?.applications;
     if (!app) return [];
-    const label = status === "erfolgreich" ? "Erfolgreich" : "Fehlgeschlagen";
-    const prefix = `${app.first_name} ${app.last_name} — ${label}:`;
+    const label = status === "erfolgreich" ? "Erfolgreich" : status === "mailbox" ? "Mailbox" : "Fehlgeschlagen";
     return (interviewNotes ?? [])
       .filter((n: any) => typeof n.content === "string" && n.content.startsWith(prefix))
       .map((n: any) => ({ ...n, text: n.content.slice(prefix.length).trim() }));
