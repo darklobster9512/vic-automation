@@ -436,18 +436,40 @@ export default function AdminBewerbungsgespraeche() {
         } as any)
         .eq("id", item.id);
 
+      // Status auf "Mailbox" setzen
+      await supabase.rpc("update_interview_status", {
+        _appointment_id: item.id,
+        _status: "mailbox",
+      });
+
+      // Optionale Notiz speichern
+      const note = mailboxNote.trim();
+      if (note && app?.branding_id) {
+        const { data: userData } = await supabase.auth.getUser();
+        const authorEmail = userData.user?.email ?? "unbekannt";
+        await supabase.from("branding_notes").insert({
+          branding_id: app.branding_id,
+          page_context: "bewerbungsgespraeche",
+          content: `${app.first_name} ${app.last_name} — Mailbox: ${note}`,
+          author_email: authorEmail,
+        });
+        queryClient.invalidateQueries({ queryKey: ["interview-notes"] });
+      }
+
       if (smsOk) {
-        toast.success("Erinnerung per SMS gesendet!");
+        toast.success("Erinnerung gesendet, Status auf „Mailbox“ gesetzt.");
       } else {
         toast.error("SMS-Versand fehlgeschlagen");
       }
       queryClient.invalidateQueries({ queryKey: ["admin-bewerbungsgespraeche"] });
+      queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
     } catch (err) {
       console.error("Reminder error:", err);
       toast.error("Fehler beim Senden der Erinnerung");
     } finally {
       setSendingReminder(null);
       setReminderPreview(null);
+      setMailboxNote("");
     }
   };
 
