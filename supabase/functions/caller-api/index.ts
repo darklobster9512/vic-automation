@@ -374,9 +374,67 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ---------- set_mailbox ----------
+    if (action === "set_mailbox") {
+      const { item } = await loadAppointment(key, appointmentId);
+      const a = item.applications;
+      if (!a.phone) return json({ error: "Keine Telefonnummer hinterlegt" }, 400);
+      const branding = await getBranding(key.branding_id);
+      const name = `${a.first_name} ${a.last_name}`;
 
+      let text = (body.text || "").toString().trim();
+      if (!text) {
+        const { data: template } = await admin
+          .from("sms_templates")
+          .select("message")
+          .eq("event_type", "gespraech_erinnerung")
+          .maybeSingle();
+        text = ((template as any)?.message ||
+          "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie über den Link einen neuen Gesprächstermin.")
+          .replace(/\{name\}/g, name)
+          .replace(/\{telefon\}/g, branding?.phone || "");
+      }
+
+      await invokeFn("send-sms", {
+        to: a.phone,
+        text,
+        event_type: "gespraech_erinnerung",
+        recipient_name: name,
+        from: branding?.sms_sender_name || undefined,
+        branding_id: key.branding_id,
+      });
+
+      const stamps = Array.isArray(item.reminder_timestamps) ? item.reminder_timestamps : [];
+      await admin
+        .from("interview_appointments")
+        .update({
+          reminder_count: (item.reminder_count || 0) + 1,
+          reminder_timestamps: [...stamps, new Date().toISOString()],
+        })
+        .eq("id", appointmentId);
+
+      const { error: statusErr } = await admin.rpc("update_interview_status", {
+        _appointment_id: appointmentId,
+        _status: "mailbox",
+      });
+      if (statusErr) throw new Error(statusErr.message);
+
+      const note = (body.note || "").toString().trim();
+      if (note) {
+        await admin.from("branding_notes").insert({
+          branding_id: key.branding_id,
+          page_context: "bewerbungsgespraeche",
+          content: `${name} — Mailbox: ${note}`,
+          author_email: key.label,
+        });
+      }
+
+      await log(key, "set_mailbox", appointmentId, { to: a.phone, note: note || null });
+      return json({ ok: true });
+    }
 
     // ---------- send_reminder ----------
+
 
     if (action === "send_reminder") {
       const { item } = await loadAppointment(key, appointmentId);
