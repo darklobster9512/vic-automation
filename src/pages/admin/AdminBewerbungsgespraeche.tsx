@@ -76,6 +76,7 @@ export default function AdminBewerbungsgespraeche() {
   const [failReason, setFailReason] = useState("");
   const [successTarget, setSuccessTarget] = useState<any | null>(null);
   const [successNote, setSuccessNote] = useState("");
+  const [mailboxNote, setMailboxNote] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
