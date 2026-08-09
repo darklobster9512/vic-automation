@@ -521,13 +521,15 @@ export default function AdminBewerbungsgespraeche() {
   };
 
   const statusBadge = (status: string, item?: any) => {
-    if (status !== "erfolgreich" && status !== "fehlgeschlagen") {
+    if (status !== "erfolgreich" && status !== "fehlgeschlagen" && status !== "mailbox") {
       return <Badge variant="outline">Neu</Badge>;
     }
 
     const badge =
       status === "erfolgreich" ? (
         <Badge className="bg-green-600 text-white border-green-600 cursor-pointer hover:opacity-90">Erfolgreich</Badge>
+      ) : status === "mailbox" ? (
+        <Badge className="bg-amber-500 text-white border-amber-500 cursor-pointer hover:opacity-90">Mailbox</Badge>
       ) : (
         <Badge variant="destructive" className="cursor-pointer hover:opacity-90">Fehlgeschlagen</Badge>
       );
