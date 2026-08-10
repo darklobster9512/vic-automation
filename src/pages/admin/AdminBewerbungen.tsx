@@ -1317,7 +1317,7 @@ export default function AdminBewerbungen() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((a: any) => {
+                {filteredApplications.map((a: any) => {
                   const status = a.status || "neu";
                   const cfg = statusConfig[status] || statusConfig.neu;
                   const isNeu = status === "neu";
