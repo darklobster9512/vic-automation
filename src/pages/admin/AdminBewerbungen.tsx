@@ -169,7 +169,12 @@ export default function AdminBewerbungen() {
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
+  const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean; success: number; errors: number; nextIn: number | null }>({ total: 0, current: 0, inProgress: false, success: 0, errors: 0, nextIn: null });
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [delayMin, setDelayMin] = useState("60");
+  const [delayMax, setDelayMax] = useState("100");
+  const cancelBulkRef = useRef(false);
+  useEffect(() => () => { cancelBulkRef.current = true; }, []);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
