@@ -1251,20 +1251,25 @@ export default function AdminBewerbungen() {
         </DialogContent>
       </Dialog>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : !applications?.length ? (
-          <div className="text-center py-16 border border-dashed border-border rounded-lg">
-            <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">Noch keine Bewerbungen vorhanden.</p>
-            <Button variant="outline" onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Erste Bewerbung hinzufügen
-            </Button>
-          </div>
-        ) : (
-          <div className="premium-card overflow-hidden">
+       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+         {isLoading ? (
+           <div className="text-center py-12 text-muted-foreground">Laden...</div>
+         ) : !applications?.length ? (
+           <div className="text-center py-16 border border-dashed border-border rounded-lg">
+             <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+             <p className="text-muted-foreground mb-4">Noch keine Bewerbungen vorhanden.</p>
+             <Button variant="outline" onClick={() => setOpen(true)}>
+               <Plus className="h-4 w-4 mr-2" />
+               Erste Bewerbung hinzufügen
+             </Button>
+           </div>
+         ) : !filteredApplications.length ? (
+           <div className="text-center py-16 border border-dashed border-border rounded-lg">
+             <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+             <p className="text-muted-foreground">Keine Bewerbungen mit diesem Status vorhanden.</p>
+           </div>
+         ) : (
+           <div className="premium-card overflow-hidden">
             {/* Bulk accept bar */}
             {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
