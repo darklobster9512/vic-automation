@@ -188,6 +188,7 @@ export default function Bewerbungsgespraech() {
   const TIME_SLOTS = useMemo(() => {
     if (!selectedDate) {
       const l = lanes[0];
+      if (!l) return [] as string[];
       return generateTimeSlots(l.start, l.end, scheduleInterval);
     }
     const set = new Set<string>();
