@@ -318,20 +318,32 @@ export default function AdminZeitplan() {
           {slotCount > 1 && (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
-                {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setActiveSlot(n)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
-                      effectiveSlot === n
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border hover:bg-muted text-foreground"
-                    )}
-                  >
-                    Slot {n}
-                  </button>
-                ))}
+                {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => {
+                  const row = (interviewSettings || []).find((s: any) => s.slot_index === n);
+                  const isDisabled = !!(row as any)?.disabled;
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setActiveSlot(n)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-2",
+                        effectiveSlot === n
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card border-border hover:bg-muted text-foreground"
+                      )}
+                    >
+                      Slot {n}
+                      {isDisabled && (
+                        <span className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded",
+                          effectiveSlot === n ? "bg-primary-foreground/20" : "bg-destructive/10 text-destructive"
+                        )}>
+                          Gesperrt
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
               <p className="text-xs text-muted-foreground">
                 „Slots pro Uhrzeit" und „Vorlaufzeit" gelten brandingweit und werden unter Slot 1 eingestellt.
