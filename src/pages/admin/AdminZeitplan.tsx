@@ -513,7 +513,19 @@ function BrandingScheduleForm({
 
   return (
     <div className="space-y-4">
+      {showDisabledToggle && (
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+          <div>
+            <Label className="text-sm font-medium">Neue Buchungen deaktiviert</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Wenn aktiv, kann auf diesem Slot kein neuer Termin mehr gebucht werden. Bereits gebuchte Termine bleiben bestehen.
+            </p>
+          </div>
+          <Switch checked={slotDisabled} onCheckedChange={setSlotDisabled} />
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
         <div className="space-y-2">
           <Label>Startzeit</Label>
           <Select value={st} onValueChange={setSt}>
