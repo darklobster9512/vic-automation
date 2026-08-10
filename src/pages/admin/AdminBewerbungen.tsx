@@ -1299,12 +1299,14 @@ export default function AdminBewerbungen() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
-                    <Checkbox
-                      checked={allNeuSelected && neuApplications.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Alle neuen auswählen"
-                      disabled={bulkProcessing.inProgress}
-                    />
+                    {statusTab === "neu" && (
+                      <Checkbox
+                        checked={allNeuSelected && neuApplications.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Alle neuen auswählen"
+                        disabled={bulkProcessing.inProgress}
+                      />
+                    )}
                   </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>E-Mail</TableHead>
