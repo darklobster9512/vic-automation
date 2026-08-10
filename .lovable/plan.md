@@ -1,24 +1,25 @@
-# Langsamkeit bei /admin/bewerbungen beheben
+# SMS-Watcher: Fehlerflut in der Datenbank stoppen
 
-Es liegt nicht am VPS und nicht an der Supabase-Datenbank. Die Seite rendert alle Bewerbungen des aktiven Tabs gleichzeitig — aktuell sind das 1066 Einträge im Tab „Neu“, 1279 in „Bewerbungsgespräch“ und 635 in „Termin gebucht“. Jede Tabellenzeile enthält Checkbox, Badges, Tooltips und Aktions-Buttons.
+## Was passiert
 
-Der Sekunden-Countdown der Queue schreibt jede Sekunde in den Seiten-State. Dadurch wird bei jedem Tick die komplette Tabelle mit über tausend Zeilen neu gerendert — deshalb dauert „eine Sekunde“ mehrere Sekunden, und deshalb wirkt die ganze Seite träge.
+Die Log-Auswertung zeigt rund 22.000 Fehler vom Typ `duplicate key value violates unique constraint "sms_inbox_seen_unique"` innerhalb von etwa 10 Minuten — also mehrere tausend pro Minute.
 
-## Umsetzung
+Ursache: Der SMS-Watcher (`sms-inbox-watch`) versucht bei **jedem** Durchlauf für **jede** bereits bekannte SMS erneut einen Datensatz in `sms_inbox_seen` einzufügen, und nutzt den dabei entstehenden Unique-Fehler als "kenne ich schon"-Signal. Bei 4 Durchläufen pro Minute und über 1.000 gespeicherten Nachrichten erzeugt das genau diese Fehlerflut. Funktional ist nichts kaputt, aber die Datenbank-Logs laufen voll und jeder fehlgeschlagene Insert kostet unnötig Last.
 
-1. Countdown und Fortschrittsleiste aus dem Seiten-State herauslösen: eine eigene kleine Komponente unten am Bildschirmrand, die ihren Tick-State selbst hält. Die Tabelle wird dadurch beim Herunterzählen nicht mehr neu gerendert.
-2. Den Countdown an eine absolute Ziel-Uhrzeit binden statt an aufsummierte 1-Sekunden-Timer, damit eine eingestellte Pause von 60 Sekunden exakt 60 reale Sekunden dauert (kein Drift).
-3. Die Tabelle nicht mehr komplett auf einmal rendern: eine Anzeige-Begrenzung pro Tab mit Nachladen beim Scrollen bzw. „Mehr anzeigen“. Das beschleunigt Tabwechsel, Suche, Auswahl und Checkbox-Klicks spürbar.
-4. Die Tabellenzeile als memoisierte Komponente auslagern, damit einzelne Auswahländerungen nicht alle Zeilen neu rendern.
-5. „Alle auswählen“ und die Queue arbeiten weiterhin auf allen passenden Bewerbungen, nicht nur auf den sichtbaren.
+## Lösung
 
-## Validierung
-
-- Mit kurzer Testpause prüfen, dass der Countdown im Sekundentakt der echten Uhr läuft.
-- Prüfen, dass Tabwechsel, Scrollen und Checkbox-Klicks ohne merkliche Verzögerung reagieren.
-- Prüfen, dass Zähler, Fehleranzeige, Abbrechen und Einzel-Akzeptieren unverändert funktionieren.
+1. **Nicht mehr blind einfügen.** Pro Nummer/Quelle werden die bereits gespeicherten Nachrichten-Hashes einmalig gelesen und im Speicher verglichen. Nur wirklich neue Nachrichten werden geschrieben — keine absichtlich fehlschlagenden Inserts mehr.
+2. **Neue Einträge konfliktfrei schreiben:** Insert mit "bei Konflikt ignorieren", damit auch bei parallelen Läufen kein Fehler im Log landet.
+3. **Nur relevante Daten laden:** Beim Hash-Abgleich wird pro Quelle nur ein begrenztes, aktuelles Fenster gelesen, damit der Abgleich schnell bleibt.
+4. **Altbestand aufräumen (optional):** Einträge in `sms_inbox_seen`, die älter als 30 Tage sind, können regelmäßig gelöscht werden, damit die Tabelle nicht unbegrenzt wächst.
 
 ## Technische Details
 
-- Änderungen nur in `src/pages/admin/AdminBewerbungen.tsx` (plus ggf. eine neue Komponentendatei für Fortschrittsleiste und Tabellenzeile).
-- Keine Datenbankänderung, keine Änderung an der Akzeptierungs-Logik oder an E-Mail/SMS-Versand.
+- Datei: `supabase/functions/sms-inbox-watch/index.ts`
+- `markSeen()` wird ersetzt durch: `loadSeenHashes(provider, sourceKey)` (ein `select message_hash` pro Quelle und Durchlauf) plus einen gesammelten Insert der neuen Zeilen mit `upsert(..., { onConflict: "…", ignoreDuplicates: true })`.
+- Die Frische-Prüfung (`isFresh`, 60-Minuten-Fenster) und die Telegram-Weiterleitung bleiben unverändert.
+- Keine Schema-Änderung nötig; der Unique-Index bleibt als Sicherheitsnetz bestehen.
+
+## Ergebnis
+
+Die Datenbank-Logs sind wieder sauber, die Last des Watchers sinkt deutlich, und die Telegram-Weiterleitung funktioniert unverändert weiter.
