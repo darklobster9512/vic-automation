@@ -16,6 +16,8 @@ const KUNDE_BLOCKED_PATHS = [
   "/admin/kunden",
   "/admin/caller",
   "/admin/caller-zugaenge",
+  "/admin/auftragsverteilung",
+  "/admin/bd-status",
 ];
 
 export default function AdminLayout() {

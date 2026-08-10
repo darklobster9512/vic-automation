@@ -35,6 +35,8 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/kunden",
   "/admin/caller",
   "/admin/caller-zugaenge",
+  "/admin/auftragsverteilung",
+  "/admin/bd-status",
 ];
 
 const navGroups = [
