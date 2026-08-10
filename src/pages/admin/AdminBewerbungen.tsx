@@ -1318,28 +1318,16 @@ export default function AdminBewerbungen() {
          ) : (
            <div className="premium-card overflow-hidden">
             {/* Bulk accept bar */}
-            {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
+            {selectedIds.size > 0 && !bulkProcessing.inProgress && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
-                {bulkProcessing.inProgress ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm font-medium">
-                      {bulkProcessing.current} / {bulkProcessing.total} verarbeitet...
-                    </span>
-                    <Progress value={(bulkProcessing.current / bulkProcessing.total) * 100} className="flex-1 h-2" />
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
-                    <Button size="sm" onClick={handleBulkAccept} disabled={acceptMutation.isPending}>
-                      <CheckCheck className="h-4 w-4 mr-1" />
-                      Ausgewählte akzeptieren
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                      Auswahl aufheben
-                    </Button>
-                  </>
-                )}
+                <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
+                <Button size="sm" onClick={openBulkDialog} disabled={acceptMutation.isPending}>
+                  <CheckCheck className="h-4 w-4 mr-1" />
+                  Ausgewählte akzeptieren
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                  Auswahl aufheben
+                </Button>
               </div>
             )}
             <Table>
