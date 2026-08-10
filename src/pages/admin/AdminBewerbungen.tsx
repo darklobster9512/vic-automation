@@ -666,34 +666,76 @@ export default function AdminBewerbungen() {
     }
   }, [allNeuSelected, neuApplications]);
 
+  const openBulkDialog = () => {
+    if (selectedIds.size === 0) return;
+    setBulkDialogOpen(true);
+  };
+
   const handleBulkAccept = async () => {
+    const min = parseInt(delayMin, 10);
+    const max = parseInt(delayMax, 10);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0) {
+      toast.error("Bitte gültige Sekundenwerte (≥ 0) eingeben");
+      return;
+    }
+    if (min > max) {
+      toast.error("„Von“ darf nicht größer als „Bis“ sein");
+      return;
+    }
+
     const ids = Array.from(selectedIds);
     const apps = ids.map((id) => applications?.find((a: any) => a.id === id)).filter(Boolean);
     if (!apps.length) return;
 
-    setBulkProcessing({ total: apps.length, current: 0, inProgress: true });
+    setBulkDialogOpen(false);
+    cancelBulkRef.current = false;
+    setBulkProcessing({ total: apps.length, current: 0, inProgress: true, success: 0, errors: 0, nextIn: null });
+
     let successCount = 0;
     let errorCount = 0;
 
-    for (const app of apps) {
+    for (let i = 0; i < apps.length; i++) {
+      if (cancelBulkRef.current) break;
+
+      if (i > 0) {
+        const wait = Math.floor(Math.random() * (max - min + 1)) + min;
+        for (let s = wait; s > 0; s--) {
+          if (cancelBulkRef.current) break;
+          setBulkProcessing((prev) => ({ ...prev, nextIn: s }));
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        setBulkProcessing((prev) => ({ ...prev, nextIn: null }));
+        if (cancelBulkRef.current) break;
+      }
+
       try {
-        await acceptMutation.mutateAsync(app);
+        await acceptMutation.mutateAsync(apps[i]);
         successCount++;
       } catch {
         errorCount++;
       }
-      setBulkProcessing((prev) => ({ ...prev, current: prev.current + 1 }));
+      setBulkProcessing((prev) => ({
+        ...prev,
+        current: prev.current + 1,
+        success: successCount,
+        errors: errorCount,
+      }));
     }
 
-    setBulkProcessing({ total: 0, current: 0, inProgress: false });
+    const wasCancelled = cancelBulkRef.current;
+    cancelBulkRef.current = false;
+    setBulkProcessing({ total: 0, current: 0, inProgress: false, success: 0, errors: 0, nextIn: null });
     setSelectedIds(new Set());
 
-    if (errorCount === 0) {
+    if (wasCancelled) {
+      toast.info(`Abgebrochen – ${successCount} akzeptiert, ${errorCount} fehlgeschlagen`);
+    } else if (errorCount === 0) {
       toast.success(`${successCount} Bewerbungen erfolgreich akzeptiert`);
     } else {
       toast.warning(`${successCount} akzeptiert, ${errorCount} fehlgeschlagen`);
     }
   };
+
 
   const massImportAnalysis = useMemo(() => {
     if (!isMassImport) return { parsed: [], duplicates: [], uniqueToImport: [], parseErrors: [] as string[] };
