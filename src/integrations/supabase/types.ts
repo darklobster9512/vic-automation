@@ -150,6 +150,7 @@ export type Database = {
           branding_id: string
           created_at: string
           created_by: string | null
+          disabled: boolean
           end_time: string
           id: string
           interview_slots_per_time: number
@@ -169,6 +170,7 @@ export type Database = {
           branding_id: string
           created_at?: string
           created_by?: string | null
+          disabled?: boolean
           end_time?: string
           id?: string
           interview_slots_per_time?: number
@@ -188,6 +190,7 @@ export type Database = {
           branding_id?: string
           created_at?: string
           created_by?: string | null
+          disabled?: boolean
           end_time?: string
           id?: string
           interview_slots_per_time?: number
