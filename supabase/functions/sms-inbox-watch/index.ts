@@ -308,7 +308,19 @@ async function pollAnosim(entry: any, brandingName: string | null): Promise<numb
   });
 }
 
+/** Räumt Einträge älter als 30 Tage auf (max. einmal pro Instanz-Stunde). */
+let lastCleanup = 0;
+async function cleanupOldSeen(): Promise<void> {
+  if (Date.now() - lastCleanup < 60 * 60 * 1000) return;
+  lastCleanup = Date.now();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase.from("sms_inbox_seen").delete().lt("created_at", cutoff);
+  if (error) console.warn("cleanupOldSeen failed:", error.message);
+}
+
 async function scanOnce(): Promise<number> {
+  await cleanupOldSeen();
+
   const { data: brandings } = await supabase
     .from("brandings")
     .select("id, company_name, smsbot_api_key");
