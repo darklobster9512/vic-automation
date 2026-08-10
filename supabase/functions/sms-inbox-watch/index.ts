@@ -162,15 +162,29 @@ async function handleMessages(opts: {
   const { provider, sourceKey, identifier, number, brandingName, messages } = opts;
   if (messages.length === 0) return 0;
 
-  let sent = 0;
+  const seen = await loadSeenHashes(provider, sourceKey);
+  const newRows: Record<string, unknown>[] = [];
+  const toForward: Array<{ sms: Sms }> = [];
 
   for (const sms of messages) {
     const hash = await sha256(`${sms.date}|${sms.sender}|${sms.text}`);
-    const isNew = await markSeen(provider, sourceKey, hash, number, opts.brandingId, sms.date);
-    if (!isNew) continue;
-    if (!isFresh(sms.date)) continue;
+    if (seen.has(hash)) continue;
+    seen.add(hash);
+    newRows.push({
+      provider,
+      source_key: sourceKey,
+      message_hash: hash,
+      phone_number: number,
+      branding_id: opts.brandingId,
+      received_at: sms.date,
+    });
+    if (isFresh(sms.date)) toForward.push({ sms });
+  }
 
+  await insertSeen(newRows);
 
+  let sent = 0;
+  for (const { sms } of toForward) {
     const assignment = await resolveAssignment(identifier);
     const message = buildTelegramMessage({
       icon: "📩",
@@ -192,6 +206,7 @@ async function handleMessages(opts: {
   }
   return sent;
 }
+
 
 async function pollSmsbot(branding: any): Promise<number> {
   const apiKey = branding.smsbot_api_key as string | null;
