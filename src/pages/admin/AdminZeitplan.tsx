@@ -361,12 +361,13 @@ export default function AdminZeitplan() {
             <CardContent>
               <BrandingScheduleForm
                 key={`interview-${effectiveSlot}-${slotSetting?.id || "new"}`}
-                existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined } as any) ?? undefined}
+                existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined, disabled: false } as any) ?? undefined}
                 onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview", slot_index: effectiveSlot })}
                 isSaving={saveSettingsMutation.isPending}
                 showSlotsPerTime={effectiveSlot === 1}
                 slotsPerTimeValue={slotCount}
                 leadTimeValue={primarySetting?.min_lead_time_hours ?? 12}
+                showDisabledToggle
               />
             </CardContent>
           </Card>
