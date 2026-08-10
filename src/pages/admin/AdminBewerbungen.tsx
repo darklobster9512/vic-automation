@@ -642,7 +642,15 @@ export default function AdminBewerbungen() {
     });
   }, []);
 
-  const neuApplications = applications?.filter((a: any) => (a.status || "neu") === "neu") || [];
+  const statusApplications = useMemo(() => {
+    return {
+      neu: applications?.filter((a: any) => (a.status || "neu") === "neu") || [],
+      bewerbungsgespraech: applications?.filter((a: any) => a.status === "bewerbungsgespraech") || [],
+      termin_gebucht: applications?.filter((a: any) => a.status === "termin_gebucht") || [],
+    };
+  }, [applications]);
+  const filteredApplications = statusApplications[statusTab];
+  const neuApplications = statusApplications.neu;
   const allNeuSelected = neuApplications.length > 0 && neuApplications.every((a: any) => selectedIds.has(a.id));
 
   const toggleSelectAll = useCallback(() => {
