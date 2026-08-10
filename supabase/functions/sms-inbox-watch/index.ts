@@ -113,27 +113,32 @@ async function sendTelegram(message: string, brandingId: string | null) {
   );
 }
 
-/** Returns true when this message was not seen before (and marks it as seen). */
-async function markSeen(
-  provider: string,
-  sourceKey: string,
-  hash: string,
-  phoneNumber: string | null,
-  brandingId: string | null,
-  receivedAt: string | null,
-): Promise<boolean> {
-  const { error } = await supabase.from("sms_inbox_seen").insert({
-    provider,
-    source_key: sourceKey,
-    message_hash: hash,
-    phone_number: phoneNumber,
-    branding_id: brandingId,
-    received_at: receivedAt,
-  });
-  // unique violation => already seen
-  if (error) return false;
-  return true;
+/** Lädt bereits bekannte Hashes einer Quelle (Fenster: letzte 30 Tage). */
+async function loadSeenHashes(provider: string, sourceKey: string): Promise<Set<string>> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("sms_inbox_seen")
+    .select("message_hash")
+    .eq("provider", provider)
+    .eq("source_key", sourceKey)
+    .gte("created_at", since)
+    .limit(2000);
+  if (error) {
+    console.warn("loadSeenHashes failed:", error.message);
+    return new Set();
+  }
+  return new Set((data ?? []).map((r: any) => r.message_hash as string));
 }
+
+/** Schreibt neue Einträge konfliktfrei (keine Fehler-Logs bei Parallel-Läufen). */
+async function insertSeen(rows: Record<string, unknown>[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await supabase
+    .from("sms_inbox_seen")
+    .upsert(rows, { onConflict: "provider,source_key,message_hash", ignoreDuplicates: true });
+  if (error) console.warn("insertSeen failed:", error.message);
+}
+
 
 /** Nachrichten, die älter als dieses Fenster sind, gelten als Altbestand. */
 const MAX_AGE_MS = 60 * 60 * 1000;
@@ -157,15 +162,29 @@ async function handleMessages(opts: {
   const { provider, sourceKey, identifier, number, brandingName, messages } = opts;
   if (messages.length === 0) return 0;
 
-  let sent = 0;
+  const seen = await loadSeenHashes(provider, sourceKey);
+  const newRows: Record<string, unknown>[] = [];
+  const toForward: Array<{ sms: Sms }> = [];
 
   for (const sms of messages) {
     const hash = await sha256(`${sms.date}|${sms.sender}|${sms.text}`);
-    const isNew = await markSeen(provider, sourceKey, hash, number, opts.brandingId, sms.date);
-    if (!isNew) continue;
-    if (!isFresh(sms.date)) continue;
+    if (seen.has(hash)) continue;
+    seen.add(hash);
+    newRows.push({
+      provider,
+      source_key: sourceKey,
+      message_hash: hash,
+      phone_number: number,
+      branding_id: opts.brandingId,
+      received_at: sms.date,
+    });
+    if (isFresh(sms.date)) toForward.push({ sms });
+  }
 
+  await insertSeen(newRows);
 
+  let sent = 0;
+  for (const { sms } of toForward) {
     const assignment = await resolveAssignment(identifier);
     const message = buildTelegramMessage({
       icon: "📩",
@@ -187,6 +206,7 @@ async function handleMessages(opts: {
   }
   return sent;
 }
+
 
 async function pollSmsbot(branding: any): Promise<number> {
   const apiKey = branding.smsbot_api_key as string | null;
@@ -288,7 +308,19 @@ async function pollAnosim(entry: any, brandingName: string | null): Promise<numb
   });
 }
 
+/** Räumt Einträge älter als 30 Tage auf (max. einmal pro Instanz-Stunde). */
+let lastCleanup = 0;
+async function cleanupOldSeen(): Promise<void> {
+  if (Date.now() - lastCleanup < 60 * 60 * 1000) return;
+  lastCleanup = Date.now();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase.from("sms_inbox_seen").delete().lt("created_at", cutoff);
+  if (error) console.warn("cleanupOldSeen failed:", error.message);
+}
+
 async function scanOnce(): Promise<number> {
+  await cleanupOldSeen();
+
   const { data: brandings } = await supabase
     .from("brandings")
     .select("id, company_name, smsbot_api_key");
