@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -169,7 +169,12 @@ export default function AdminBewerbungen() {
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
+  const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean; success: number; errors: number; nextIn: number | null }>({ total: 0, current: 0, inProgress: false, success: 0, errors: 0, nextIn: null });
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [delayMin, setDelayMin] = useState("60");
+  const [delayMax, setDelayMax] = useState("100");
+  const cancelBulkRef = useRef(false);
+  useEffect(() => () => { cancelBulkRef.current = true; }, []);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -661,34 +666,76 @@ export default function AdminBewerbungen() {
     }
   }, [allNeuSelected, neuApplications]);
 
+  const openBulkDialog = () => {
+    if (selectedIds.size === 0) return;
+    setBulkDialogOpen(true);
+  };
+
   const handleBulkAccept = async () => {
+    const min = parseInt(delayMin, 10);
+    const max = parseInt(delayMax, 10);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0) {
+      toast.error("Bitte gültige Sekundenwerte (≥ 0) eingeben");
+      return;
+    }
+    if (min > max) {
+      toast.error("„Von“ darf nicht größer als „Bis“ sein");
+      return;
+    }
+
     const ids = Array.from(selectedIds);
     const apps = ids.map((id) => applications?.find((a: any) => a.id === id)).filter(Boolean);
     if (!apps.length) return;
 
-    setBulkProcessing({ total: apps.length, current: 0, inProgress: true });
+    setBulkDialogOpen(false);
+    cancelBulkRef.current = false;
+    setBulkProcessing({ total: apps.length, current: 0, inProgress: true, success: 0, errors: 0, nextIn: null });
+
     let successCount = 0;
     let errorCount = 0;
 
-    for (const app of apps) {
+    for (let i = 0; i < apps.length; i++) {
+      if (cancelBulkRef.current) break;
+
+      if (i > 0) {
+        const wait = Math.floor(Math.random() * (max - min + 1)) + min;
+        for (let s = wait; s > 0; s--) {
+          if (cancelBulkRef.current) break;
+          setBulkProcessing((prev) => ({ ...prev, nextIn: s }));
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        setBulkProcessing((prev) => ({ ...prev, nextIn: null }));
+        if (cancelBulkRef.current) break;
+      }
+
       try {
-        await acceptMutation.mutateAsync(app);
+        await acceptMutation.mutateAsync(apps[i]);
         successCount++;
       } catch {
         errorCount++;
       }
-      setBulkProcessing((prev) => ({ ...prev, current: prev.current + 1 }));
+      setBulkProcessing((prev) => ({
+        ...prev,
+        current: prev.current + 1,
+        success: successCount,
+        errors: errorCount,
+      }));
     }
 
-    setBulkProcessing({ total: 0, current: 0, inProgress: false });
+    const wasCancelled = cancelBulkRef.current;
+    cancelBulkRef.current = false;
+    setBulkProcessing({ total: 0, current: 0, inProgress: false, success: 0, errors: 0, nextIn: null });
     setSelectedIds(new Set());
 
-    if (errorCount === 0) {
+    if (wasCancelled) {
+      toast.info(`Abgebrochen – ${successCount} akzeptiert, ${errorCount} fehlgeschlagen`);
+    } else if (errorCount === 0) {
       toast.success(`${successCount} Bewerbungen erfolgreich akzeptiert`);
     } else {
       toast.warning(`${successCount} akzeptiert, ${errorCount} fehlgeschlagen`);
     }
   };
+
 
   const massImportAnalysis = useMemo(() => {
     if (!isMassImport) return { parsed: [], duplicates: [], uniqueToImport: [], parseErrors: [] as string[] };
@@ -1271,28 +1318,16 @@ export default function AdminBewerbungen() {
          ) : (
            <div className="premium-card overflow-hidden">
             {/* Bulk accept bar */}
-            {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
+            {selectedIds.size > 0 && !bulkProcessing.inProgress && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
-                {bulkProcessing.inProgress ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm font-medium">
-                      {bulkProcessing.current} / {bulkProcessing.total} verarbeitet...
-                    </span>
-                    <Progress value={(bulkProcessing.current / bulkProcessing.total) * 100} className="flex-1 h-2" />
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
-                    <Button size="sm" onClick={handleBulkAccept} disabled={acceptMutation.isPending}>
-                      <CheckCheck className="h-4 w-4 mr-1" />
-                      Ausgewählte akzeptieren
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                      Auswahl aufheben
-                    </Button>
-                  </>
-                )}
+                <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
+                <Button size="sm" onClick={openBulkDialog} disabled={acceptMutation.isPending}>
+                  <CheckCheck className="h-4 w-4 mr-1" />
+                  Ausgewählte akzeptieren
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                  Auswahl aufheben
+                </Button>
               </div>
             )}
             <Table>
@@ -1381,7 +1416,72 @@ export default function AdminBewerbungen() {
           </div>
         )}
       </motion.div>
+
+      {/* Queue-Einstellungen */}
+      <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ausgewählte akzeptieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {selectedIds.size} Bewerbungen werden nacheinander akzeptiert. Zwischen den Bewerbungen wird eine zufällige Pause eingelegt.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="delay-min">Pause von (Sekunden)</Label>
+                <Input id="delay-min" type="number" min={0} value={delayMin} onChange={(e) => setDelayMin(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="delay-max">bis (Sekunden)</Label>
+                <Input id="delay-max" type="number" min={0} value={delayMax} onChange={(e) => setDelayMax(e.target.value)} />
+              </div>
+            </div>
+            {(() => {
+              const min = parseInt(delayMin, 10);
+              const max = parseInt(delayMax, 10);
+              if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0 || min > max || selectedIds.size < 2) return null;
+              const avg = ((min + max) / 2) * (selectedIds.size - 1);
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Geschätzte Gesamtdauer: ca. {Math.round(avg / 60)} Minuten
+                </p>
+              );
+            })()}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setBulkDialogOpen(false)}>Abbrechen</Button>
+              <Button onClick={handleBulkAccept}>
+                <CheckCheck className="h-4 w-4 mr-1" />
+                Queue starten
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fortschrittsleiste */}
+      {bulkProcessing.inProgress && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur px-4 py-3 shadow-lg">
+          <div className="mx-auto flex max-w-4xl items-center gap-4">
+            <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+            <span className="text-sm font-medium whitespace-nowrap">
+              {bulkProcessing.current} / {bulkProcessing.total} akzeptiert
+            </span>
+            <Progress value={(bulkProcessing.current / bulkProcessing.total) * 100} className="flex-1 h-2" />
+            {bulkProcessing.nextIn !== null && (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">nächste in {bulkProcessing.nextIn}s</span>
+            )}
+            {bulkProcessing.errors > 0 && (
+              <span className="text-xs text-destructive whitespace-nowrap">{bulkProcessing.errors} Fehler</span>
+            )}
+            <Button size="sm" variant="outline" onClick={() => { cancelBulkRef.current = true; }}>
+              Abbrechen
+            </Button>
+          </div>
+        </div>
+      )}
     </>
+
     </TooltipProvider>
   );
 }
