@@ -1416,7 +1416,72 @@ export default function AdminBewerbungen() {
           </div>
         )}
       </motion.div>
+
+      {/* Queue-Einstellungen */}
+      <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ausgewählte akzeptieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {selectedIds.size} Bewerbungen werden nacheinander akzeptiert. Zwischen den Bewerbungen wird eine zufällige Pause eingelegt.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="delay-min">Pause von (Sekunden)</Label>
+                <Input id="delay-min" type="number" min={0} value={delayMin} onChange={(e) => setDelayMin(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="delay-max">bis (Sekunden)</Label>
+                <Input id="delay-max" type="number" min={0} value={delayMax} onChange={(e) => setDelayMax(e.target.value)} />
+              </div>
+            </div>
+            {(() => {
+              const min = parseInt(delayMin, 10);
+              const max = parseInt(delayMax, 10);
+              if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0 || min > max || selectedIds.size < 2) return null;
+              const avg = ((min + max) / 2) * (selectedIds.size - 1);
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Geschätzte Gesamtdauer: ca. {Math.round(avg / 60)} Minuten
+                </p>
+              );
+            })()}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setBulkDialogOpen(false)}>Abbrechen</Button>
+              <Button onClick={handleBulkAccept}>
+                <CheckCheck className="h-4 w-4 mr-1" />
+                Queue starten
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fortschrittsleiste */}
+      {bulkProcessing.inProgress && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur px-4 py-3 shadow-lg">
+          <div className="mx-auto flex max-w-4xl items-center gap-4">
+            <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+            <span className="text-sm font-medium whitespace-nowrap">
+              {bulkProcessing.current} / {bulkProcessing.total} akzeptiert
+            </span>
+            <Progress value={(bulkProcessing.current / bulkProcessing.total) * 100} className="flex-1 h-2" />
+            {bulkProcessing.nextIn !== null && (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">nächste in {bulkProcessing.nextIn}s</span>
+            )}
+            {bulkProcessing.errors > 0 && (
+              <span className="text-xs text-destructive whitespace-nowrap">{bulkProcessing.errors} Fehler</span>
+            )}
+            <Button size="sm" variant="outline" onClick={() => { cancelBulkRef.current = true; }}>
+              Abbrechen
+            </Button>
+          </div>
+        </div>
+      )}
     </>
+
     </TooltipProvider>
   );
 }
