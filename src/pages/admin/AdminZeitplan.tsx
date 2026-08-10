@@ -115,7 +115,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null; disabled?: boolean }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -125,6 +125,9 @@ export default function AdminZeitplan() {
         schedule_type: params.schedule_type,
         slot_index: params.slot_index ?? 1,
       };
+      if (params.disabled !== undefined) {
+        upsertData.disabled = params.disabled;
+      }
       if (params.weekend_start_time !== undefined) {
         upsertData.weekend_start_time = params.weekend_start_time ? params.weekend_start_time + ":00" : null;
       }
@@ -315,20 +318,32 @@ export default function AdminZeitplan() {
           {slotCount > 1 && (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
-                {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setActiveSlot(n)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
-                      effectiveSlot === n
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border hover:bg-muted text-foreground"
-                    )}
-                  >
-                    Slot {n}
-                  </button>
-                ))}
+                {Array.from({ length: slotCount }, (_, i) => i + 1).map((n) => {
+                  const row = (interviewSettings || []).find((s: any) => s.slot_index === n);
+                  const isDisabled = !!(row as any)?.disabled;
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setActiveSlot(n)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-2",
+                        effectiveSlot === n
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card border-border hover:bg-muted text-foreground"
+                      )}
+                    >
+                      Slot {n}
+                      {isDisabled && (
+                        <span className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded",
+                          effectiveSlot === n ? "bg-primary-foreground/20" : "bg-destructive/10 text-destructive"
+                        )}>
+                          Gesperrt
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
               <p className="text-xs text-muted-foreground">
                 „Slots pro Uhrzeit" und „Vorlaufzeit" gelten brandingweit und werden unter Slot 1 eingestellt.
@@ -346,12 +361,13 @@ export default function AdminZeitplan() {
             <CardContent>
               <BrandingScheduleForm
                 key={`interview-${effectiveSlot}-${slotSetting?.id || "new"}`}
-                existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined } as any) ?? undefined}
+                existing={slotSetting ?? (effectiveSlot === 1 ? primarySetting ?? undefined : { ...(primarySetting || {}), id: undefined, disabled: false } as any) ?? undefined}
                 onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview", slot_index: effectiveSlot })}
                 isSaving={saveSettingsMutation.isPending}
                 showSlotsPerTime={effectiveSlot === 1}
                 slotsPerTimeValue={slotCount}
                 leadTimeValue={primarySetting?.min_lead_time_hours ?? 12}
+                showDisabledToggle
               />
             </CardContent>
           </Card>
@@ -469,13 +485,15 @@ function BrandingScheduleForm({
   showSlotsPerTime = false,
   slotsPerTimeValue,
   leadTimeValue,
+  showDisabledToggle = false,
 }: {
-  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number };
-  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number }) => void;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; disabled?: boolean };
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; disabled?: boolean }) => void;
   isSaving: boolean;
   showSlotsPerTime?: boolean;
   slotsPerTimeValue?: number;
   leadTimeValue?: number;
+  showDisabledToggle?: boolean;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
   const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || DEFAULT_END);
@@ -485,6 +503,7 @@ function BrandingScheduleForm({
   const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
   const [slotsPerTime, setSlotsPerTime] = useState<number>(slotsPerTimeValue ?? existing?.interview_slots_per_time ?? 1);
   const [leadTime, setLeadTime] = useState<number>(leadTimeValue ?? existing?.min_lead_time_hours ?? 12);
+  const [slotDisabled, setSlotDisabled] = useState<boolean>(!!existing?.disabled);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
@@ -494,7 +513,19 @@ function BrandingScheduleForm({
 
   return (
     <div className="space-y-4">
+      {showDisabledToggle && (
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+          <div>
+            <Label className="text-sm font-medium">Neue Buchungen deaktiviert</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Wenn aktiv, kann auf diesem Slot kein neuer Termin mehr gebucht werden. Bereits gebuchte Termine bleiben bestehen.
+            </p>
+          </div>
+          <Switch checked={slotDisabled} onCheckedChange={setSlotDisabled} />
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
         <div className="space-y-2">
           <Label>Startzeit</Label>
           <Select value={st} onValueChange={setSt}>
@@ -602,6 +633,7 @@ function BrandingScheduleForm({
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
         ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime, min_lead_time_hours: leadTime } : {}),
+        ...(showDisabledToggle ? { disabled: slotDisabled } : {}),
       })} disabled={isSaving}>
 
         {isSaving ? "Speichern..." : "Einstellungen speichern"}

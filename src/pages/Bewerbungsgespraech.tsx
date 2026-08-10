@@ -135,10 +135,12 @@ export default function Bewerbungsgespraech() {
       lunchEnabled: boolean;
       lunchStart: string | null;
       lunchEnd: string | null;
+      disabled: boolean;
     }> = [];
     for (let i = 1; i <= slotsPerTime; i++) {
       const row = list.find((s: any) => s.slot_index === i) ?? primarySetting;
       if (!row) continue;
+      if ((row as any).disabled) continue;
       result.push({
         slotIndex: i,
         start: row.start_time?.slice(0, 5) ?? "08:00",
@@ -149,10 +151,11 @@ export default function Bewerbungsgespraech() {
         lunchEnabled: !!row.lunch_break_enabled,
         lunchStart: row.lunch_break_start?.slice(0, 5) || null,
         lunchEnd: row.lunch_break_end?.slice(0, 5) || null,
+        disabled: false,
       });
     }
     if (!result.length) {
-      result.push({ slotIndex: 1, start: "08:00", end: "18:00", days: [1, 2, 3, 4, 5, 6], weekendStart: null, weekendEnd: null, lunchEnabled: false, lunchStart: null, lunchEnd: null });
+      return [] as typeof result;
     }
     return result;
   }, [scheduleSettingsList, slotsPerTime, primarySetting]);
@@ -185,6 +188,7 @@ export default function Bewerbungsgespraech() {
   const TIME_SLOTS = useMemo(() => {
     if (!selectedDate) {
       const l = lanes[0];
+      if (!l) return [] as string[];
       return generateTimeSlots(l.start, l.end, scheduleInterval);
     }
     const set = new Set<string>();
