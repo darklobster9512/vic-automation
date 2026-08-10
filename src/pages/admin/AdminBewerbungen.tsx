@@ -990,9 +990,39 @@ export default function AdminBewerbungen() {
             </div>
           </div>
         );
-      })()}
+       })()}
 
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+       <Tabs
+         value={statusTab}
+         onValueChange={(value) => {
+           setStatusTab(value as "neu" | "bewerbungsgespraech" | "termin_gebucht");
+           setSelectedIds(new Set());
+         }}
+         className="mb-4"
+       >
+         <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:w-fit">
+           <TabsTrigger value="neu" className="gap-2">
+             Neu
+             <Badge variant="secondary" className="min-w-6 justify-center px-1.5 py-0 text-xs">
+               {statusApplications.neu.length}
+             </Badge>
+           </TabsTrigger>
+           <TabsTrigger value="bewerbungsgespraech" className="gap-2">
+             Bewerbungsgespräch
+             <Badge variant="secondary" className="min-w-6 justify-center px-1.5 py-0 text-xs">
+               {statusApplications.bewerbungsgespraech.length}
+             </Badge>
+           </TabsTrigger>
+           <TabsTrigger value="termin_gebucht" className="gap-2">
+             Termin gebucht
+             <Badge variant="secondary" className="min-w-6 justify-center px-1.5 py-0 text-xs">
+               {statusApplications.termin_gebucht.length}
+             </Badge>
+           </TabsTrigger>
+         </TabsList>
+       </Tabs>
+
+       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
