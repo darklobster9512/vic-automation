@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -157,6 +158,7 @@ function parseMassImportLine(line: string): ParsedApplicant | string {
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [statsRange, setStatsRange] = useState<"24h" | "7d" | "all">("all");
+  const [statusTab, setStatusTab] = useState<"neu" | "bewerbungsgespraech" | "termin_gebucht">("neu");
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -640,7 +642,15 @@ export default function AdminBewerbungen() {
     });
   }, []);
 
-  const neuApplications = applications?.filter((a: any) => (a.status || "neu") === "neu") || [];
+  const statusApplications = useMemo(() => {
+    return {
+      neu: applications?.filter((a: any) => (a.status || "neu") === "neu") || [],
+      bewerbungsgespraech: applications?.filter((a: any) => a.status === "bewerbungsgespraech") || [],
+      termin_gebucht: applications?.filter((a: any) => a.status === "termin_gebucht") || [],
+    };
+  }, [applications]);
+  const filteredApplications = statusApplications[statusTab];
+  const neuApplications = statusApplications.neu;
   const allNeuSelected = neuApplications.length > 0 && neuApplications.every((a: any) => selectedIds.has(a.id));
 
   const toggleSelectAll = useCallback(() => {
@@ -980,9 +990,39 @@ export default function AdminBewerbungen() {
             </div>
           </div>
         );
-      })()}
+       })()}
 
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+       <Tabs
+         value={statusTab}
+         onValueChange={(value) => {
+           setStatusTab(value as "neu" | "bewerbungsgespraech" | "termin_gebucht");
+           setSelectedIds(new Set());
+         }}
+         className="mb-4"
+       >
+         <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:w-fit">
+           <TabsTrigger value="neu" className="gap-2">
+             Neu
+             <Badge variant="secondary" className="min-w-6 justify-center px-1.5 py-0 text-xs">
+               {statusApplications.neu.length}
+             </Badge>
+           </TabsTrigger>
+           <TabsTrigger value="bewerbungsgespraech" className="gap-2">
+             Bewerbungsgespräch
+             <Badge variant="secondary" className="min-w-6 justify-center px-1.5 py-0 text-xs">
+               {statusApplications.bewerbungsgespraech.length}
+             </Badge>
+           </TabsTrigger>
+           <TabsTrigger value="termin_gebucht" className="gap-2">
+             Termin gebucht
+             <Badge variant="secondary" className="min-w-6 justify-center px-1.5 py-0 text-xs">
+               {statusApplications.termin_gebucht.length}
+             </Badge>
+           </TabsTrigger>
+         </TabsList>
+       </Tabs>
+
+       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
@@ -1211,20 +1251,25 @@ export default function AdminBewerbungen() {
         </DialogContent>
       </Dialog>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : !applications?.length ? (
-          <div className="text-center py-16 border border-dashed border-border rounded-lg">
-            <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">Noch keine Bewerbungen vorhanden.</p>
-            <Button variant="outline" onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Erste Bewerbung hinzufügen
-            </Button>
-          </div>
-        ) : (
-          <div className="premium-card overflow-hidden">
+       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+         {isLoading ? (
+           <div className="text-center py-12 text-muted-foreground">Laden...</div>
+         ) : !applications?.length ? (
+           <div className="text-center py-16 border border-dashed border-border rounded-lg">
+             <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+             <p className="text-muted-foreground mb-4">Noch keine Bewerbungen vorhanden.</p>
+             <Button variant="outline" onClick={() => setOpen(true)}>
+               <Plus className="h-4 w-4 mr-2" />
+               Erste Bewerbung hinzufügen
+             </Button>
+           </div>
+         ) : !filteredApplications.length ? (
+           <div className="text-center py-16 border border-dashed border-border rounded-lg">
+             <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+             <p className="text-muted-foreground">Keine Bewerbungen mit diesem Status vorhanden.</p>
+           </div>
+         ) : (
+           <div className="premium-card overflow-hidden">
             {/* Bulk accept bar */}
             {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
@@ -1254,12 +1299,14 @@ export default function AdminBewerbungen() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
-                    <Checkbox
-                      checked={allNeuSelected && neuApplications.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Alle neuen auswählen"
-                      disabled={bulkProcessing.inProgress}
-                    />
+                    {statusTab === "neu" && (
+                      <Checkbox
+                        checked={allNeuSelected && neuApplications.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Alle neuen auswählen"
+                        disabled={bulkProcessing.inProgress}
+                      />
+                    )}
                   </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>E-Mail</TableHead>
@@ -1272,7 +1319,7 @@ export default function AdminBewerbungen() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((a: any) => {
+                {filteredApplications.map((a: any) => {
                   const status = a.status || "neu";
                   const cfg = statusConfig[status] || statusConfig.neu;
                   const isNeu = status === "neu";
