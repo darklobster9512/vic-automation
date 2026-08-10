@@ -113,27 +113,32 @@ async function sendTelegram(message: string, brandingId: string | null) {
   );
 }
 
-/** Returns true when this message was not seen before (and marks it as seen). */
-async function markSeen(
-  provider: string,
-  sourceKey: string,
-  hash: string,
-  phoneNumber: string | null,
-  brandingId: string | null,
-  receivedAt: string | null,
-): Promise<boolean> {
-  const { error } = await supabase.from("sms_inbox_seen").insert({
-    provider,
-    source_key: sourceKey,
-    message_hash: hash,
-    phone_number: phoneNumber,
-    branding_id: brandingId,
-    received_at: receivedAt,
-  });
-  // unique violation => already seen
-  if (error) return false;
-  return true;
+/** Lädt bereits bekannte Hashes einer Quelle (Fenster: letzte 30 Tage). */
+async function loadSeenHashes(provider: string, sourceKey: string): Promise<Set<string>> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("sms_inbox_seen")
+    .select("message_hash")
+    .eq("provider", provider)
+    .eq("source_key", sourceKey)
+    .gte("created_at", since)
+    .limit(2000);
+  if (error) {
+    console.warn("loadSeenHashes failed:", error.message);
+    return new Set();
+  }
+  return new Set((data ?? []).map((r: any) => r.message_hash as string));
 }
+
+/** Schreibt neue Einträge konfliktfrei (keine Fehler-Logs bei Parallel-Läufen). */
+async function insertSeen(rows: Record<string, unknown>[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await supabase
+    .from("sms_inbox_seen")
+    .upsert(rows, { onConflict: "provider,source_key,message_hash", ignoreDuplicates: true });
+  if (error) console.warn("insertSeen failed:", error.message);
+}
+
 
 /** Nachrichten, die älter als dieses Fenster sind, gelten als Altbestand. */
 const MAX_AGE_MS = 60 * 60 * 1000;
