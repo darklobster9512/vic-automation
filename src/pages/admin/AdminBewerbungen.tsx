@@ -158,6 +158,7 @@ function parseMassImportLine(line: string): ParsedApplicant | string {
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [statsRange, setStatsRange] = useState<"24h" | "7d" | "all">("all");
+  const [statusTab, setStatusTab] = useState<"neu" | "bewerbungsgespraech" | "termin_gebucht">("neu");
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
