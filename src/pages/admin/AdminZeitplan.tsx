@@ -621,6 +621,7 @@ function BrandingScheduleForm({
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
         ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime, min_lead_time_hours: leadTime } : {}),
+        ...(showDisabledToggle ? { disabled: slotDisabled } : {}),
       })} disabled={isSaving}>
 
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
