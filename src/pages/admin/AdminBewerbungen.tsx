@@ -16,6 +16,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -1393,7 +1402,7 @@ export default function AdminBewerbungen() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredApplications.map((a: any) => {
+                {pagedApplications.map((a: any) => {
                   const status = a.status || "neu";
                   const cfg = statusConfig[status] || statusConfig.neu;
                   const isNeu = status === "neu";
@@ -1452,6 +1461,55 @@ export default function AdminBewerbungen() {
                 })}
               </TableBody>
             </Table>
+
+            <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm text-muted-foreground">
+                {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filteredApplications.length)} von {filteredApplications.length}
+              </span>
+              {totalPages > 1 && (
+                <Pagination className="mx-0 w-auto justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }}
+                      />
+                    </PaginationItem>
+                    {pageNumbers[0] > 1 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+                    {pageNumbers.map((n) => (
+                      <PaginationItem key={n}>
+                        <PaginationLink
+                          href="#"
+                          isActive={n === currentPage}
+                          onClick={(e) => { e.preventDefault(); setPage(n); }}
+                        >
+                          {n}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        aria-disabled={currentPage === totalPages}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
           </div>
         )}
       </motion.div>
