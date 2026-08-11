@@ -1063,13 +1063,14 @@ export default function AdminBewerbungen() {
         );
        })()}
 
+       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
        <Tabs
          value={statusTab}
          onValueChange={(value) => {
            setStatusTab(value as "neu" | "bewerbungsgespraech" | "termin_gebucht");
            setSelectedIds(new Set());
+           setPage(1);
          }}
-         className="mb-4"
        >
          <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:w-fit">
            <TabsTrigger value="neu" className="gap-2">
@@ -1092,6 +1093,20 @@ export default function AdminBewerbungen() {
            </TabsTrigger>
          </TabsList>
        </Tabs>
+
+       <Select
+         value={sortOrder}
+         onValueChange={(v) => { setSortOrder(v as "newest" | "oldest"); setPage(1); }}
+       >
+         <SelectTrigger className="w-full sm:w-52">
+           <SelectValue />
+         </SelectTrigger>
+         <SelectContent>
+           <SelectItem value="newest">Neueste zuerst</SelectItem>
+           <SelectItem value="oldest">Älteste zuerst</SelectItem>
+         </SelectContent>
+       </Select>
+       </div>
 
        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
