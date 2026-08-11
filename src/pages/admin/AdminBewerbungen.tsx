@@ -84,6 +84,8 @@ type ApplicationForm = {
 
 const DEFAULT_BRANDING_ID = "47ef07da-e9ef-4433-9633-549d25e743ce";
 
+const PAGE_SIZE = 50;
+
 const initialForm: ApplicationForm = {
   first_name: "",
   last_name: "",
@@ -159,6 +161,8 @@ export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [statsRange, setStatsRange] = useState<"24h" | "7d" | "all">("all");
   const [statusTab, setStatusTab] = useState<"neu" | "bewerbungsgespraech" | "termin_gebucht">("neu");
+  const [page, setPage] = useState(1);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -648,14 +652,34 @@ export default function AdminBewerbungen() {
   }, []);
 
   const statusApplications = useMemo(() => {
+    const sorted = [...(applications || [])].sort((a: any, b: any) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return sortOrder === "newest" ? tb - ta : ta - tb;
+    });
     return {
-      neu: applications?.filter((a: any) => (a.status || "neu") === "neu") || [],
-      bewerbungsgespraech: applications?.filter((a: any) => a.status === "bewerbungsgespraech") || [],
-      termin_gebucht: applications?.filter((a: any) => a.status === "termin_gebucht") || [],
+      neu: sorted.filter((a: any) => (a.status || "neu") === "neu"),
+      bewerbungsgespraech: sorted.filter((a: any) => a.status === "bewerbungsgespraech"),
+      termin_gebucht: sorted.filter((a: any) => a.status === "termin_gebucht"),
     };
-  }, [applications]);
+  }, [applications, sortOrder]);
   const filteredApplications = statusApplications[statusTab];
   const neuApplications = statusApplications.neu;
+
+  const totalPages = Math.max(1, Math.ceil(filteredApplications.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pagedApplications = useMemo(
+    () => filteredApplications.slice(pageStart, pageStart + PAGE_SIZE),
+    [filteredApplications, pageStart]
+  );
+  const pageNumbers = useMemo(() => {
+    const nums: number[] = [];
+    const from = Math.max(1, currentPage - 2);
+    const to = Math.min(totalPages, from + 4);
+    for (let i = Math.max(1, to - 4); i <= to; i++) nums.push(i);
+    return nums;
+  }, [currentPage, totalPages]);
   const allNeuSelected = neuApplications.length > 0 && neuApplications.every((a: any) => selectedIds.has(a.id));
 
   const toggleSelectAll = useCallback(() => {
