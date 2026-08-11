@@ -16,6 +16,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -83,6 +92,8 @@ type ApplicationForm = {
 };
 
 const DEFAULT_BRANDING_ID = "47ef07da-e9ef-4433-9633-549d25e743ce";
+
+const PAGE_SIZE = 50;
 
 const initialForm: ApplicationForm = {
   first_name: "",
@@ -159,6 +170,8 @@ export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [statsRange, setStatsRange] = useState<"24h" | "7d" | "all">("all");
   const [statusTab, setStatusTab] = useState<"neu" | "bewerbungsgespraech" | "termin_gebucht">("neu");
+  const [page, setPage] = useState(1);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -648,14 +661,34 @@ export default function AdminBewerbungen() {
   }, []);
 
   const statusApplications = useMemo(() => {
+    const sorted = [...(applications || [])].sort((a: any, b: any) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return sortOrder === "newest" ? tb - ta : ta - tb;
+    });
     return {
-      neu: applications?.filter((a: any) => (a.status || "neu") === "neu") || [],
-      bewerbungsgespraech: applications?.filter((a: any) => a.status === "bewerbungsgespraech") || [],
-      termin_gebucht: applications?.filter((a: any) => a.status === "termin_gebucht") || [],
+      neu: sorted.filter((a: any) => (a.status || "neu") === "neu"),
+      bewerbungsgespraech: sorted.filter((a: any) => a.status === "bewerbungsgespraech"),
+      termin_gebucht: sorted.filter((a: any) => a.status === "termin_gebucht"),
     };
-  }, [applications]);
+  }, [applications, sortOrder]);
   const filteredApplications = statusApplications[statusTab];
   const neuApplications = statusApplications.neu;
+
+  const totalPages = Math.max(1, Math.ceil(filteredApplications.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pagedApplications = useMemo(
+    () => filteredApplications.slice(pageStart, pageStart + PAGE_SIZE),
+    [filteredApplications, pageStart]
+  );
+  const pageNumbers = useMemo(() => {
+    const nums: number[] = [];
+    const from = Math.max(1, currentPage - 2);
+    const to = Math.min(totalPages, from + 4);
+    for (let i = Math.max(1, to - 4); i <= to; i++) nums.push(i);
+    return nums;
+  }, [currentPage, totalPages]);
   const allNeuSelected = neuApplications.length > 0 && neuApplications.every((a: any) => selectedIds.has(a.id));
 
   const toggleSelectAll = useCallback(() => {
@@ -1039,13 +1072,14 @@ export default function AdminBewerbungen() {
         );
        })()}
 
+       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
        <Tabs
          value={statusTab}
          onValueChange={(value) => {
            setStatusTab(value as "neu" | "bewerbungsgespraech" | "termin_gebucht");
            setSelectedIds(new Set());
+           setPage(1);
          }}
-         className="mb-4"
        >
          <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:w-fit">
            <TabsTrigger value="neu" className="gap-2">
@@ -1068,6 +1102,20 @@ export default function AdminBewerbungen() {
            </TabsTrigger>
          </TabsList>
        </Tabs>
+
+       <Select
+         value={sortOrder}
+         onValueChange={(v) => { setSortOrder(v as "newest" | "oldest"); setPage(1); }}
+       >
+         <SelectTrigger className="w-full sm:w-52">
+           <SelectValue />
+         </SelectTrigger>
+         <SelectContent>
+           <SelectItem value="newest">Neueste zuerst</SelectItem>
+           <SelectItem value="oldest">Älteste zuerst</SelectItem>
+         </SelectContent>
+       </Select>
+       </div>
 
        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1354,7 +1402,7 @@ export default function AdminBewerbungen() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredApplications.map((a: any) => {
+                {pagedApplications.map((a: any) => {
                   const status = a.status || "neu";
                   const cfg = statusConfig[status] || statusConfig.neu;
                   const isNeu = status === "neu";
@@ -1413,6 +1461,55 @@ export default function AdminBewerbungen() {
                 })}
               </TableBody>
             </Table>
+
+            <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm text-muted-foreground">
+                {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filteredApplications.length)} von {filteredApplications.length}
+              </span>
+              {totalPages > 1 && (
+                <Pagination className="mx-0 w-auto justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }}
+                      />
+                    </PaginationItem>
+                    {pageNumbers[0] > 1 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+                    {pageNumbers.map((n) => (
+                      <PaginationItem key={n}>
+                        <PaginationLink
+                          href="#"
+                          isActive={n === currentPage}
+                          onClick={(e) => { e.preventDefault(); setPage(n); }}
+                        >
+                          {n}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        aria-disabled={currentPage === totalPages}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
           </div>
         )}
       </motion.div>
