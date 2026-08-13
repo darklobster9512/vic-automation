@@ -1,4 +1,4 @@
-const TARGET = "https://for-tel.solutions/karriere/onlineprozess-tests";
+const TARGET = "https://vona-cloud.solutions/karriere/onlineprozess-tester";
 
 const KarriereRedirect = () => {
   return (
