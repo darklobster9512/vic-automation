@@ -109,6 +109,20 @@ const templates: TemplateDefinition[] = [
     buttonUrl: "https://example.com",
   },
   {
+    eventType: "website_wieder_erreichbar",
+    label: "Website wieder erreichbar",
+    subject: (c) => `Unsere Website ist wieder erreichbar – ${c}`,
+    bodyTitle: "Technische Störung behoben",
+    bodyLines: () => [
+      "Hallo Max Mustermann,",
+      "wir möchten uns für die technischen Probleme heute Morgen entschuldigen.",
+      "Unsere Website ist ab sofort wieder erreichbar unter beispiel-domain.de.",
+      "Vielen Dank für Ihr Verständnis.",
+    ],
+    buttonText: "Zur Website",
+    buttonUrl: "https://beispiel-domain.de",
+  },
+  {
     eventType: "konto_erstellt",
     label: "Konto erstellt",
     subject: () => "Willkommen – Ihr Konto wurde erstellt",
