@@ -58,7 +58,7 @@ export default function Bewerbungsgespraech() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url), interview_appointments(id, appointment_date, appointment_time)")
+        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id), interview_appointments(id, appointment_date, appointment_time)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
