@@ -10,15 +10,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Palette, Trash2, Copy, Pencil } from "lucide-react";
+import { Plus, Palette, Trash2, Copy, Pencil, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { useState } from "react";
+import DomainAnnouncementDialog from "@/components/admin/DomainAnnouncementDialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function AdminBrandings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+  const [announceBrandingId, setAnnounceBrandingId] = useState<string | null>(null);
 
   const { data: brandings, isLoading } = useQuery({
     queryKey: ["brandings", activeBrandingId],
@@ -145,6 +149,18 @@ export default function AdminBrandings() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setAnnounceBrandingId(b.id)}
+                            >
+                              <Megaphone className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Störungs-Info senden</TooltipContent>
+                        </Tooltip>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -168,6 +184,12 @@ export default function AdminBrandings() {
           </div>
         )}
       </motion.div>
+
+      <DomainAnnouncementDialog
+        brandingId={announceBrandingId}
+        open={!!announceBrandingId}
+        onOpenChange={(v) => !v && setAnnounceBrandingId(null)}
+      />
     </>
   );
 }
