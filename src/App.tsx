@@ -143,6 +143,7 @@ const App = () => (
         <Routes>
           {/* Öffentliche Routen — OHNE AuthProvider */}
           <Route path="/bewerbungsgespraech/buchen" element={<BewerbungsgespraechPublic />} />
+          <Route path="/buchen" element={<BewerbungsgespraechPublic />} />
           <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
           <Route path="/probetag/:id" element={<Probetag />} />
           <Route path="/erster-arbeitstag/:id" element={<ErsterArbeitstag />} />
