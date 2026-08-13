@@ -557,8 +557,11 @@ export default function Bewerbungsgespraech() {
   }
 
   // --- Booking page (also used for rebooking) ---
+  const pixelId = (application?.brandings as any)?.meta_pixel_id;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
+    <>
+      {pixelId && <MetaPixel pixelId={pixelId} />}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
