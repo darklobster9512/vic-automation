@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import MetaPixel from "@/components/MetaPixel";
 import { useNavigate } from "react-router-dom";
 import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import { motion } from "framer-motion";
@@ -19,6 +20,7 @@ interface BrandingData {
   recruiter_name: string | null;
   recruiter_title: string | null;
   recruiter_image_url: string | null;
+  meta_pixel_id: string | null;
 }
 
 export default function BewerbungsgespraechPublic() {
@@ -38,7 +40,7 @@ export default function BewerbungsgespraechPublic() {
       const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
       const norm = (s: string) =>
         s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase().trim();
-      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url";
+      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id";
 
       const { data } = await supabase
         .from("brandings")
@@ -136,10 +138,12 @@ export default function BewerbungsgespraechPublic() {
   const hslStr = brandColor !== "#3B82F6" ? hexToHSL(brandColor) : null;
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center"
-      style={hslStr ? { "--primary": hslStr } as React.CSSProperties : undefined}
-    >
+    <>
+      {branding?.meta_pixel_id && <MetaPixel pixelId={branding.meta_pixel_id} />}
+      <div
+        className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center"
+        style={hslStr ? { "--primary": hslStr } as React.CSSProperties : undefined}
+      >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -251,5 +255,6 @@ export default function BewerbungsgespraechPublic() {
         )}
       </motion.div>
     </div>
+    </>
   );
 }

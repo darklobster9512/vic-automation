@@ -24,6 +24,7 @@ import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ContactCard } from "@/components/ContactCard";
+import MetaPixel, { trackMetaLead } from "@/components/MetaPixel";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const [sh, sm] = start.split(":").map(Number);
@@ -57,7 +58,7 @@ export default function Bewerbungsgespraech() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url), interview_appointments(id, appointment_date, appointment_time)")
+        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id), interview_appointments(id, appointment_date, appointment_time)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -378,6 +379,7 @@ export default function Bewerbungsgespraech() {
       setBooked(true);
       setConfirmOpen(false);
       setIsRebooking(false);
+      trackMetaLead();
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
@@ -555,8 +557,11 @@ export default function Bewerbungsgespraech() {
   }
 
   // --- Booking page (also used for rebooking) ---
+  const pixelId = (application?.brandings as any)?.meta_pixel_id;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
+    <>
+      {pixelId && <MetaPixel pixelId={pixelId} />}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -845,5 +850,6 @@ export default function Bewerbungsgespraech() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
