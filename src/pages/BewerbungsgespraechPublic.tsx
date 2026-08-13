@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import MetaPixel from "@/components/MetaPixel";
 import { useNavigate } from "react-router-dom";
 import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import { motion } from "framer-motion";
