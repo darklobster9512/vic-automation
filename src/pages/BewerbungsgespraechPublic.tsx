@@ -40,7 +40,7 @@ export default function BewerbungsgespraechPublic() {
       const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
       const norm = (s: string) =>
         s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase().trim();
-      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url";
+      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id";
 
       const { data } = await supabase
         .from("brandings")
