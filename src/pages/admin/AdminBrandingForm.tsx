@@ -23,6 +23,7 @@ const brandingSchema = z.object({
   managing_director: z.string().max(200).optional(),
   vat_id: z.string().max(50).optional(),
   domain: z.string().max(200).optional(),
+  additional_domains: z.array(z.string().max(200)),
   subdomain_prefix: z.string().max(50).optional(),
   custom_email_link_enabled: z.boolean(),
   custom_email_link: z.string().max(200).optional(),
