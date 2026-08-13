@@ -124,6 +124,24 @@ export default function AdminBrandingForm() {
   const [pmImageFile, setPmImageFile] = useState<File | null>(null);
   const [recruiterImageFile, setRecruiterImageFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [newDomain, setNewDomain] = useState("");
+
+  const normalizeDomain = (s: string) =>
+    s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase().trim();
+
+  const addDomain = () => {
+    const val = normalizeDomain(newDomain);
+    if (!val) return;
+    setForm((prev) =>
+      prev.additional_domains.includes(val)
+        ? prev
+        : { ...prev, additional_domains: [...prev.additional_domains, val] }
+    );
+    setNewDomain("");
+  };
+
+  const removeDomain = (d: string) =>
+    setForm((prev) => ({ ...prev, additional_domains: prev.additional_domains.filter((x) => x !== d) }));
 
   const { data: branding, isLoading: loadingBranding } = useQuery({
     queryKey: ["branding-detail", id],
