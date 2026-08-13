@@ -379,6 +379,7 @@ export default function Bewerbungsgespraech() {
       setBooked(true);
       setConfirmOpen(false);
       setIsRebooking(false);
+      trackMetaLead();
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
