@@ -51,6 +51,16 @@ export default function BewerbungsgespraechPublic() {
       if (data) {
         setBranding(data as BrandingData);
       } else {
+        const { data: extra } = await supabase
+          .from("brandings")
+          .select(cols)
+          .overlaps("additional_domains", [host, root, norm(host), norm(root)])
+          .maybeSingle();
+        if (extra) {
+          setBranding(extra as BrandingData);
+          setBrandingReady(true);
+          return;
+        }
         const { data: customs } = await supabase
           .from("brandings")
           .select(`${cols}, custom_email_link`)
