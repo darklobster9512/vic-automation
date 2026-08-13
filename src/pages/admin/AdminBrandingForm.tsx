@@ -151,6 +151,7 @@ export default function AdminBrandingForm() {
         managing_director: branding.managing_director || "",
         vat_id: branding.vat_id || "",
         domain: branding.domain || "",
+        additional_domains: ((branding as any).additional_domains as string[] | null) ?? [],
         subdomain_prefix: branding.subdomain_prefix || "",
         custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
         custom_email_link: (branding as any).custom_email_link || "",
