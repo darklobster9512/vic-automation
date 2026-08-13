@@ -73,6 +73,7 @@ const initialForm: BrandingForm = {
   managing_director: "",
   vat_id: "",
   domain: "",
+  additional_domains: [],
   subdomain_prefix: "",
   custom_email_link_enabled: false,
   custom_email_link: "",
