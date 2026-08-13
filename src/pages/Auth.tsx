@@ -71,6 +71,16 @@ const Auth = () => {
       if (data?.logo_url || data?.id) {
         applyBranding(data);
       } else {
+        const { data: extra } = await supabase
+          .from("brandings")
+          .select("id, logo_url, brand_color, domain, company_name")
+          .overlaps("additional_domains", [host, root, norm(host), norm(root)])
+          .maybeSingle();
+        if (extra) {
+          applyBranding(extra);
+          setBrandingReady(true);
+          return;
+        }
         const { data: customs } = await supabase
           .from("brandings")
           .select("id, logo_url, brand_color, domain, company_name, custom_email_link")
