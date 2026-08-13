@@ -20,6 +20,7 @@ interface BrandingData {
   recruiter_name: string | null;
   recruiter_title: string | null;
   recruiter_image_url: string | null;
+  meta_pixel_id: string | null;
 }
 
 export default function BewerbungsgespraechPublic() {
