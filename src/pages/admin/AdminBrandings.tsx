@@ -134,7 +134,17 @@ export default function AdminBrandings() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{b.company_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{b.domain || "–"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {b.domain || "–"}
+                      {((b as any).additional_domains?.length ?? 0) > 0 && (
+                        <span
+                          className="ml-2 text-xs text-muted-foreground/80"
+                          title={((b as any).additional_domains as string[]).join(", ")}
+                        >
+                          +{(b as any).additional_domains.length}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div

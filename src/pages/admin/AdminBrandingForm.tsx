@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -23,6 +23,7 @@ const brandingSchema = z.object({
   managing_director: z.string().max(200).optional(),
   vat_id: z.string().max(50).optional(),
   domain: z.string().max(200).optional(),
+  additional_domains: z.array(z.string().max(200)),
   subdomain_prefix: z.string().max(50).optional(),
   custom_email_link_enabled: z.boolean(),
   custom_email_link: z.string().max(200).optional(),
@@ -72,6 +73,7 @@ const initialForm: BrandingForm = {
   managing_director: "",
   vat_id: "",
   domain: "",
+  additional_domains: [],
   subdomain_prefix: "",
   custom_email_link_enabled: false,
   custom_email_link: "",
@@ -122,6 +124,24 @@ export default function AdminBrandingForm() {
   const [pmImageFile, setPmImageFile] = useState<File | null>(null);
   const [recruiterImageFile, setRecruiterImageFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [newDomain, setNewDomain] = useState("");
+
+  const normalizeDomain = (s: string) =>
+    s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase().trim();
+
+  const addDomain = () => {
+    const val = normalizeDomain(newDomain);
+    if (!val) return;
+    setForm((prev) =>
+      prev.additional_domains.includes(val)
+        ? prev
+        : { ...prev, additional_domains: [...prev.additional_domains, val] }
+    );
+    setNewDomain("");
+  };
+
+  const removeDomain = (d: string) =>
+    setForm((prev) => ({ ...prev, additional_domains: prev.additional_domains.filter((x) => x !== d) }));
 
   const { data: branding, isLoading: loadingBranding } = useQuery({
     queryKey: ["branding-detail", id],
@@ -149,6 +169,7 @@ export default function AdminBrandingForm() {
         managing_director: branding.managing_director || "",
         vat_id: branding.vat_id || "",
         domain: branding.domain || "",
+        additional_domains: ((branding as any).additional_domains as string[] | null) ?? [],
         subdomain_prefix: branding.subdomain_prefix || "",
         custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
         custom_email_link: (branding as any).custom_email_link || "",
@@ -443,6 +464,46 @@ export default function AdminBrandingForm() {
               <Label>Subdomain-Prefix</Label>
               <Input value={form.subdomain_prefix} onChange={(e) => updateField("subdomain_prefix", e.target.value)} placeholder="web" />
               <p className="text-xs text-muted-foreground">Wird als Subdomain vor der Domain verwendet, z.B. <span className="font-mono">{form.subdomain_prefix || "web"}.{form.domain || "example.com"}</span></p>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Weitere Domains</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newDomain}
+                  onChange={(e) => setNewDomain(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addDomain();
+                    }
+                  }}
+                  placeholder="weitere-domain.de"
+                />
+                <Button type="button" variant="outline" onClick={addDomain}>
+                  <Plus className="h-4 w-4 mr-1" /> Hinzufügen
+                </Button>
+              </div>
+              {form.additional_domains.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {form.additional_domains.map((d) => (
+                    <span
+                      key={d}
+                      className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-mono"
+                    >
+                      {d}
+                      <button
+                        type="button"
+                        onClick={() => removeDomain(d)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={`${d} entfernen`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Zusätzliche Domains, über die dieses Branding erkannt wird. Für generierte Links wird weiterhin die Haupt-Domain verwendet.</p>
             </div>
             <div className="space-y-2">
               <Label>E-Mail</Label>

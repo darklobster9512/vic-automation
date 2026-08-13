@@ -217,6 +217,7 @@ export type Database = {
       }
       brandings: {
         Row: {
+          additional_domains: string[]
           brand_color: string | null
           chat_avatar_url: string | null
           chat_display_name: string | null
@@ -279,6 +280,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          additional_domains?: string[]
           brand_color?: string | null
           chat_avatar_url?: string | null
           chat_display_name?: string | null
@@ -341,6 +343,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          additional_domains?: string[]
           brand_color?: string | null
           chat_avatar_url?: string | null
           chat_display_name?: string | null
