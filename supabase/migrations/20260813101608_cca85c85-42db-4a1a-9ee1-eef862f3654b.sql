@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN IF NOT EXISTS additional_domains text[] NOT NULL DEFAULT '{}'::text[];
