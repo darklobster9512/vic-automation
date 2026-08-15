@@ -37,6 +37,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          accepted_at: string | null
           branding_id: string | null
           city: string | null
           created_at: string
@@ -58,6 +59,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          accepted_at?: string | null
           branding_id?: string | null
           city?: string | null
           created_at?: string
@@ -79,6 +81,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          accepted_at?: string | null
           branding_id?: string | null
           city?: string | null
           created_at?: string
