@@ -161,6 +161,7 @@ Deno.serve(async (req) => {
         resume_url,
         created_by: owner_id,
         status: auto_accept ? "bewerbungsgespraech" : "neu",
+        accepted_at: auto_accept ? new Date().toISOString() : null,
       })
       .select("id")
       .single();

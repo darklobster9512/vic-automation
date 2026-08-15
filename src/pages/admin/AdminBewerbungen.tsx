@@ -433,7 +433,7 @@ export default function AdminBewerbungen() {
       // 3. Only NOW update status — notifications succeeded
       const { error } = await supabase
         .from("applications")
-        .update({ status: "bewerbungsgespraech" })
+        .update({ status: "bewerbungsgespraech", accepted_at: new Date().toISOString() })
         .eq("id", app.id);
       if (error) throw error;
     },
