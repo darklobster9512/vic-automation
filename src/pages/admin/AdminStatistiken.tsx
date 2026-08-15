@@ -337,8 +337,8 @@ export default function AdminStatistiken() {
 
   const totals = useMemo(() => {
     const appsTotal = apps.length;
-    const accepted = apps.filter((a) => !ACCEPTED_EXCLUDED.includes(a.status)).length;
-    const bookedTotal = apps.filter((a) => booked.has(a.id)).length;
+    const acceptedTotal = accepted.length;
+    const bookedTotal = booked.length;
     const ivTotal = interviews.length;
     const ivOk = interviews.filter((i) => i.status === "erfolgreich").length;
     const ivFail = interviews.filter((i) => i.status === "fehlgeschlagen").length;
@@ -346,7 +346,7 @@ export default function AdminStatistiken() {
     const fwOk = workdays.filter((w) => w.status === "erfolgreich").length;
     return {
       appsTotal,
-      accepted,
+      accepted: acceptedTotal,
       bookedTotal,
       ivTotal,
       ivOk,
@@ -356,7 +356,7 @@ export default function AdminStatistiken() {
       accounts: accounts.length,
       contracts: contracts.length,
     };
-  }, [apps, booked, interviews, workdays, accounts, contracts]);
+  }, [apps, accepted, booked, interviews, workdays, accounts, contracts]);
 
   const kpis = [
     { label: "Bewerbungen", value: totals.appsTotal, sub: `${totals.accepted} akzeptiert (${fmtPct(totals.accepted, totals.appsTotal)})`, icon: FileText, accent: "text-blue-600 bg-blue-50" },
