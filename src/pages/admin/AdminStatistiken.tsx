@@ -80,7 +80,7 @@ async function fetchAll<T>(build: (from: number, to: number) => any): Promise<T[
   return out;
 }
 
-const ACCEPTED_EXCLUDED = ["neu", "abgelehnt"];
+
 
 /* ---------- page ---------- */
 
@@ -119,21 +119,41 @@ export default function AdminStatistiken() {
     },
   });
 
-  /* --- Termine der Bewerbungen aus dem Zeitraum (für "Termin gebucht") --- */
+  /* --- Akzeptierte Bewerbungen (nach Akzeptier-Datum) --- */
+  const acceptedQ = useQuery({
+    queryKey: ["stats-accepted", ...qk],
+    enabled,
+    queryFn: async () => {
+      const rows = await fetchAll<{ id: string; accepted_at: string }>((f, t) =>
+        supabase
+          .from("applications")
+          .select("id, accepted_at")
+          .eq("branding_id", activeBrandingId!)
+          .not("accepted_at", "is", null)
+          .neq("status", "abgelehnt")
+          .gte("accepted_at", `${fromStr}T00:00:00`)
+          .lte("accepted_at", `${toStr}T23:59:59.999`)
+          .range(f, t)
+      );
+      return rows;
+    },
+  });
+
+  /* --- Gebuchte Termine (nach Buchungsdatum) --- */
   const bookedQ = useQuery({
     queryKey: ["stats-booked", ...qk],
     enabled,
     queryFn: async () => {
-      const rows = await fetchAll<{ application_id: string }>((f, t) =>
+      const rows = await fetchAll<{ id: string; created_at: string }>((f, t) =>
         supabase
           .from("interview_appointments")
-          .select("application_id, applications!inner(branding_id, created_at)")
+          .select("id, created_at, applications!inner(branding_id)")
           .eq("applications.branding_id", activeBrandingId!)
-          .gte("applications.created_at", `${fromStr}T00:00:00`)
-          .lte("applications.created_at", `${toStr}T23:59:59.999`)
+          .gte("created_at", `${fromStr}T00:00:00`)
+          .lte("created_at", `${toStr}T23:59:59.999`)
           .range(f, t)
       );
-      return new Set(rows.map((r) => r.application_id));
+      return rows;
     },
   });
 
@@ -218,12 +238,13 @@ export default function AdminStatistiken() {
   });
 
   const loading =
-    appsQ.isLoading || bookedQ.isLoading || interviewsQ.isLoading || firstWorkdayQ.isLoading || accountsQ.isLoading || contractsQ.isLoading;
+    appsQ.isLoading || acceptedQ.isLoading || bookedQ.isLoading || interviewsQ.isLoading || firstWorkdayQ.isLoading || accountsQ.isLoading || contractsQ.isLoading;
 
   /* ---------- aggregation ---------- */
 
   const apps = appsQ.data ?? [];
-  const booked = bookedQ.data ?? new Set<string>();
+  const accepted = acceptedQ.data ?? [];
+  const booked = bookedQ.data ?? [];
   const interviews = interviewsQ.data ?? [];
   const workdays = firstWorkdayQ.data ?? [];
   const accounts = accountsQ.data ?? [];
@@ -232,16 +253,16 @@ export default function AdminStatistiken() {
   const appsByDay = useMemo(() => {
     const m = new Map<string, { total: number; accepted: number; booked: number }>();
     days.forEach((day) => m.set(day, { total: 0, accepted: 0, booked: 0 }));
-    apps.forEach((a) => {
-      const day = a.created_at.slice(0, 10);
+    const bump = (day: string, key: "total" | "accepted" | "booked") => {
       const e = m.get(day) ?? { total: 0, accepted: 0, booked: 0 };
-      e.total++;
-      if (!ACCEPTED_EXCLUDED.includes(a.status)) e.accepted++;
-      if (booked.has(a.id)) e.booked++;
+      e[key]++;
       m.set(day, e);
-    });
+    };
+    apps.forEach((a) => bump(a.created_at.slice(0, 10), "total"));
+    accepted.forEach((a) => bump(a.accepted_at.slice(0, 10), "accepted"));
+    booked.forEach((b) => bump(b.created_at.slice(0, 10), "booked"));
     return days.map((day) => ({ day, ...(m.get(day) ?? { total: 0, accepted: 0, booked: 0 }) }));
-  }, [apps, booked, days]);
+  }, [apps, accepted, booked, days]);
 
   const interviewsByDay = useMemo(() => {
     const m = new Map<string, { total: number; ok: number; fail: number; mailbox: number; open: number }>();
@@ -316,8 +337,8 @@ export default function AdminStatistiken() {
 
   const totals = useMemo(() => {
     const appsTotal = apps.length;
-    const accepted = apps.filter((a) => !ACCEPTED_EXCLUDED.includes(a.status)).length;
-    const bookedTotal = apps.filter((a) => booked.has(a.id)).length;
+    const acceptedTotal = accepted.length;
+    const bookedTotal = booked.length;
     const ivTotal = interviews.length;
     const ivOk = interviews.filter((i) => i.status === "erfolgreich").length;
     const ivFail = interviews.filter((i) => i.status === "fehlgeschlagen").length;
@@ -325,7 +346,7 @@ export default function AdminStatistiken() {
     const fwOk = workdays.filter((w) => w.status === "erfolgreich").length;
     return {
       appsTotal,
-      accepted,
+      accepted: acceptedTotal,
       bookedTotal,
       ivTotal,
       ivOk,
@@ -335,7 +356,7 @@ export default function AdminStatistiken() {
       accounts: accounts.length,
       contracts: contracts.length,
     };
-  }, [apps, booked, interviews, workdays, accounts, contracts]);
+  }, [apps, accepted, booked, interviews, workdays, accounts, contracts]);
 
   const kpis = [
     { label: "Bewerbungen", value: totals.appsTotal, sub: `${totals.accepted} akzeptiert (${fmtPct(totals.accepted, totals.appsTotal)})`, icon: FileText, accent: "text-blue-600 bg-blue-50" },
@@ -430,6 +451,9 @@ export default function AdminStatistiken() {
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Funnel</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Ereigniszahlen im Zeitraum (Akzeptierdatum bzw. Buchungsdatum) – nicht zwingend dieselben Personen.
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {funnel.map((f) => (
