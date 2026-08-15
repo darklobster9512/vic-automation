@@ -61,6 +61,7 @@ export default function AdminBrandings() {
           <img src="/fortellogo.png" alt="for.tel" className="h-10 object-contain" />
           <img src="/limexlogo.png" alt="limex" className="h-10 object-contain" />
           <img src="/vonalogo.png" alt="VONA" className="h-10 object-contain" />
+          <img src="/voellerlogo.png" alt="VÖLLER" className="h-10 object-contain" />
         </div>
         <div className="flex items-center justify-between">
           <div>
