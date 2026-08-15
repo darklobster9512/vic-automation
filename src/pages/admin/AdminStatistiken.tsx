@@ -238,12 +238,13 @@ export default function AdminStatistiken() {
   });
 
   const loading =
-    appsQ.isLoading || bookedQ.isLoading || interviewsQ.isLoading || firstWorkdayQ.isLoading || accountsQ.isLoading || contractsQ.isLoading;
+    appsQ.isLoading || acceptedQ.isLoading || bookedQ.isLoading || interviewsQ.isLoading || firstWorkdayQ.isLoading || accountsQ.isLoading || contractsQ.isLoading;
 
   /* ---------- aggregation ---------- */
 
   const apps = appsQ.data ?? [];
-  const booked = bookedQ.data ?? new Set<string>();
+  const accepted = acceptedQ.data ?? [];
+  const booked = bookedQ.data ?? [];
   const interviews = interviewsQ.data ?? [];
   const workdays = firstWorkdayQ.data ?? [];
   const accounts = accountsQ.data ?? [];
@@ -252,16 +253,16 @@ export default function AdminStatistiken() {
   const appsByDay = useMemo(() => {
     const m = new Map<string, { total: number; accepted: number; booked: number }>();
     days.forEach((day) => m.set(day, { total: 0, accepted: 0, booked: 0 }));
-    apps.forEach((a) => {
-      const day = a.created_at.slice(0, 10);
+    const bump = (day: string, key: "total" | "accepted" | "booked") => {
       const e = m.get(day) ?? { total: 0, accepted: 0, booked: 0 };
-      e.total++;
-      if (!ACCEPTED_EXCLUDED.includes(a.status)) e.accepted++;
-      if (booked.has(a.id)) e.booked++;
+      e[key]++;
       m.set(day, e);
-    });
+    };
+    apps.forEach((a) => bump(a.created_at.slice(0, 10), "total"));
+    accepted.forEach((a) => bump(a.accepted_at.slice(0, 10), "accepted"));
+    booked.forEach((b) => bump(b.created_at.slice(0, 10), "booked"));
     return days.map((day) => ({ day, ...(m.get(day) ?? { total: 0, accepted: 0, booked: 0 }) }));
-  }, [apps, booked, days]);
+  }, [apps, accepted, booked, days]);
 
   const interviewsByDay = useMemo(() => {
     const m = new Map<string, { total: number; ok: number; fail: number; mailbox: number; open: number }>();
