@@ -119,21 +119,41 @@ export default function AdminStatistiken() {
     },
   });
 
-  /* --- Termine der Bewerbungen aus dem Zeitraum (für "Termin gebucht") --- */
+  /* --- Akzeptierte Bewerbungen (nach Akzeptier-Datum) --- */
+  const acceptedQ = useQuery({
+    queryKey: ["stats-accepted", ...qk],
+    enabled,
+    queryFn: async () => {
+      const rows = await fetchAll<{ id: string; accepted_at: string }>((f, t) =>
+        supabase
+          .from("applications")
+          .select("id, accepted_at")
+          .eq("branding_id", activeBrandingId!)
+          .not("accepted_at", "is", null)
+          .neq("status", "abgelehnt")
+          .gte("accepted_at", `${fromStr}T00:00:00`)
+          .lte("accepted_at", `${toStr}T23:59:59.999`)
+          .range(f, t)
+      );
+      return rows;
+    },
+  });
+
+  /* --- Gebuchte Termine (nach Buchungsdatum) --- */
   const bookedQ = useQuery({
     queryKey: ["stats-booked", ...qk],
     enabled,
     queryFn: async () => {
-      const rows = await fetchAll<{ application_id: string }>((f, t) =>
+      const rows = await fetchAll<{ id: string; created_at: string }>((f, t) =>
         supabase
           .from("interview_appointments")
-          .select("application_id, applications!inner(branding_id, created_at)")
+          .select("id, created_at, applications!inner(branding_id)")
           .eq("applications.branding_id", activeBrandingId!)
-          .gte("applications.created_at", `${fromStr}T00:00:00`)
-          .lte("applications.created_at", `${toStr}T23:59:59.999`)
+          .gte("created_at", `${fromStr}T00:00:00`)
+          .lte("created_at", `${toStr}T23:59:59.999`)
           .range(f, t)
       );
-      return new Set(rows.map((r) => r.application_id));
+      return rows;
     },
   });
 
