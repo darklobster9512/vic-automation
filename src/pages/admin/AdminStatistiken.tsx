@@ -80,7 +80,7 @@ async function fetchAll<T>(build: (from: number, to: number) => any): Promise<T[
   return out;
 }
 
-const ACCEPTED_EXCLUDED = ["neu", "abgelehnt"];
+
 
 /* ---------- page ---------- */
 
@@ -451,6 +451,9 @@ export default function AdminStatistiken() {
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Funnel</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Ereigniszahlen im Zeitraum (Akzeptierdatum bzw. Buchungsdatum) – nicht zwingend dieselben Personen.
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {funnel.map((f) => (
