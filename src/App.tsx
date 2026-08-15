@@ -19,6 +19,7 @@ import AdminMitarbeiterDetail from "./pages/admin/AdminMitarbeiterDetail";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
 import AdminAuftragsverteilung from "./pages/admin/AdminAuftragsverteilung";
 import AdminBdStatus from "./pages/admin/AdminBdStatus";
+import AdminStatistiken from "./pages/admin/AdminStatistiken";
 import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminAnhaengeDetail from "./pages/admin/AdminAnhaengeDetail";
@@ -77,6 +78,7 @@ const AuthenticatedRoutes = () => (
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="statistiken" element={<AdminStatistiken />} />
         <Route path="brandings" element={<AdminBrandings />} />
         <Route path="brandings/neu" element={<AdminBrandingForm />} />
         <Route path="brandings/:id" element={<AdminBrandingForm />} />
