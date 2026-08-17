@@ -1,11 +1,11 @@
 # Kennenlerngespräch-Buchung: E-Mails & Karriere-Link
 
-## 1. Keine "Bewerbung angenommen"-Mail bei Direktbuchung
-Wer sich über `/buchen` oder `/bewerbungsgespraech/buchen` einträgt, wird weiterhin automatisch akzeptiert, bekommt aber keine Annahme-Mail mehr.
+## 1. Keine "Bewerbung angenommen"-Mail und keine SMS bei Direktbuchung
+Wer sich über `/buchen` oder `/bewerbungsgespraech/buchen` einträgt, wird weiterhin automatisch akzeptiert, bekommt aber weder die Annahme-Mail noch die Annahme-SMS.
 
 - `BewerbungsgespraechPublic.tsx` sendet zusätzlich das Feld `skip_acceptance_email=true` an `submit-application`.
-- `submit-application` überspringt bei gesetztem Flag den Mailversand (Telegram-Benachrichtigung und SMS-Logik bleiben unverändert).
-- Andere Wege (Admin-Annahme, Caller-API, externe Formulare mit `auto_accept`) senden die Mail weiterhin.
+- `submit-application` überspringt bei gesetztem Flag sowohl den E-Mail- als auch den SMS-Versand zur Bewerbungsannahme (Telegram-Benachrichtigung bleibt).
+- Andere Wege (Admin-Annahme, Caller-API, externe Formulare mit `auto_accept`) senden E-Mail und SMS weiterhin.
 
 ## 2. Karriere-Link in der Terminbestätigung
 Die Mail "Terminbestätigung – Kennenlerngespräch" (in `src/pages/Bewerbungsgespraech.tsx`) bekommt dieselbe Fußzeile wie die Annahme-Mail:
