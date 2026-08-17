@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, ArrowRight, ArrowLeft, Clock, Home, MessageCircle } from "lucide-react";
 import { ContactCard } from "@/components/ContactCard";
 import { hexToHSL } from "@/lib/hexToHSL";
+import { buildKarriereLink } from "@/lib/buildKarriereLink";
 
 interface BrandingData {
   id: string;
@@ -21,6 +22,9 @@ interface BrandingData {
   recruiter_title: string | null;
   recruiter_image_url: string | null;
   meta_pixel_id: string | null;
+  domain: string | null;
+  custom_email_link_enabled: boolean | null;
+  custom_email_link: string | null;
 }
 
 export default function BewerbungsgespraechPublic() {
@@ -42,7 +46,7 @@ export default function BewerbungsgespraechPublic() {
       const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
       const norm = (s: string) =>
         s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase().trim();
-      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id";
+      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id, domain, custom_email_link_enabled, custom_email_link";
 
       const { data } = await supabase
         .from("brandings")
@@ -65,7 +69,7 @@ export default function BewerbungsgespraechPublic() {
         }
         const { data: customs } = await supabase
           .from("brandings")
-          .select(`${cols}, custom_email_link`)
+          .select(cols)
           .eq("custom_email_link_enabled", true);
         const match = (customs ?? []).find(
           (r: any) => r.custom_email_link && [host, root].includes(norm(r.custom_email_link))
@@ -114,6 +118,7 @@ export default function BewerbungsgespraechPublic() {
       formData.append("phone", phone.trim());
       formData.append("branding_id", branding.id);
       formData.append("auto_accept", "true");
+      formData.append("skip_acceptance_email", "true");
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
