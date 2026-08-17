@@ -20,15 +20,24 @@ function buildEmailHtml(opts: {
 }): string {
   const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
+  const linkify = (line: string) => {
+    if (/<a\s/i.test(line)) return line;
+    return line.replace(/(https?:\/\/[^\s<>"']+[^\s<>"'.,;:)])/g, (url) =>
+      `<a href="${url}" target="_blank" style="color:${brandColor};text-decoration:underline;word-break:break-all;">${url}</a>`
+    );
+  };
+
   const linesHtml = bodyLines
-    .map((line) => {
-      const isInfoLine = /^(E-Mail|Passwort|Auftrag|Datum|Uhrzeit|Startdatum|Ihr Startdatum):/i.test(line.trim());
+    .map((raw) => {
+      const line = linkify(raw);
+      const isInfoLine = /^(E-Mail|Passwort|Auftrag|Datum|Uhrzeit|Startdatum|Ihr Startdatum):/i.test(raw.trim());
       if (isInfoLine) {
         return `<div style="margin:4px 0;padding:10px 14px;background-color:#f8fafc;border-left:3px solid ${brandColor};border-radius:0 6px 6px 0;font-size:14px;line-height:1.5;color:#1e293b;font-family:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;">${line}</div>`;
       }
       return `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.7;color:#374151;">${line}</p>`;
     })
     .join("\n");
+
 
   const buttonHtml = buttonText && buttonUrl
     ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px 0;"><tr><td style="border-radius:8px;background-color:${brandColor};box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);"><a href="${buttonUrl}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;letter-spacing:0.2px;">${buttonText}</a></td></tr></table>`
