@@ -355,6 +355,22 @@ export default function BewerbungsgespraechPublic() {
           </div>
         </div>
 
+        {buildKarriereLink(branding) && (
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Besuchen Sie auch unsere{" "}
+            <a
+              href={buildKarriereLink(branding)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline underline-offset-2"
+              style={{ color: brandColor }}
+            >
+              Karriereseite
+            </a>
+          </p>
+        )}
+
+
         {branding?.company_name && (
           <div className="mt-8 flex items-center justify-center gap-2">
             <div className="h-px w-8 bg-slate-200" />
