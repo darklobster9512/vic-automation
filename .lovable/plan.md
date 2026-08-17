@@ -1,6 +1,6 @@
-# 404 auf /buchen und /bewerbungsgespraech/buchen (voeller-it.solutions)
+# Fehlende Buchungsrouten im Production-Build von voeller-it.solutions
 
-## Befund
+## Bestätigter Befund
 
 Im Code sind beide Routen vorhanden (`src/App.tsx`, öffentlicher Routen-Block):
 
@@ -9,57 +9,37 @@ Im Code sind beide Routen vorhanden (`src/App.tsx`, öffentlicher Routen-Block):
 /buchen                      -> BewerbungsgespraechPublic
 ```
 
-Im Lovable-Preview laden beide Seiten. Das Projekt ist in Lovable **nicht published** — `https://voeller-it.solutions/` wird laut deiner Angabe über ein eigenes/externes Hosting ausgeliefert.
+Die Live-Domain wurde direkt geprüft:
 
-Ein „404 Not Found" auf einer Unterseite, während die Startseite lädt, ist typischerweise **kein React-Router-Problem**, sondern eines von zwei Dingen auf dem eigenen Server:
+- `https://voeller-it.solutions/buchen` liefert HTTP 200 und anschließend die React-Seite „404 / Oops! Page not found“.
+- `https://voeller-it.solutions/bewerbungsgespraech/buchen` verhält sich identisch.
+- Nginx liefert für beide URLs korrekt dieselbe `index.html` aus. Der SPA-Fallback funktioniert also.
+- Das aktuell ausgelieferte Bundle `/assets/index-D7yY3ama.js` enthält weder `/buchen` noch `/bewerbungsgespraech/buchen`.
+- Im aktuellen Projektcode stehen beide Routen dagegen ausdrücklich in `src/App.tsx`.
 
-1. **Kein SPA-Fallback**: Der Webserver sucht eine echte Datei `/buchen` und liefert 404, statt `index.html` auszuliefern. Dann sind auch `/karriere`, `/r/<code>`, `/arbeitsvertrag/<id>` betroffen.
-2. **Veralteter Build**: Auf dem Server liegt ein älterer Build, in dem die Route `/buchen` noch nicht existierte. Dann würde allerdings die React-404-Seite („Oops! Page not found") erscheinen, nicht ein Server-404.
-
-Unterscheidungsmerkmal: Server-404 = schlichte Fehlerseite des Webservers. App-404 = unsere Seite mit „404 / Oops! Page not found".
+Damit ist die Ursache bestätigt: **Auf `voeller-it.solutions` liegt nicht derselbe Frontend-Build wie in der Lovable-Preview.** Andere aktuelle Änderungen können durchaus enthalten sein; konkret die beiden Buchungsrouten fehlen aber im ausgelieferten Bundle.
 
 ## Vorgehen
 
-### Schritt 1: Ursache eindeutig bestimmen
-Prüfen, was der Server bei `https://voeller-it.solutions/buchen` tatsächlich zurückgibt (HTTP-Status und Content-Type). Zusätzlich `/karriere` testen:
-- Beide 404 → fehlender SPA-Fallback (Fall 1).
-- Nur `/buchen` betroffen, `/bewerbungsgespraech/buchen` funktioniert → veralteter Build (Fall 2).
+### 1. Deployment-Quelle korrigieren
+Sicherstellen, dass der externe Deployment-Prozess genau den aktuellen Projektstand baut, in dem `src/App.tsx` beide öffentlichen Routen enthält. Insbesondere prüfen, ob der Server aus einem älteren Git-Stand, einem anderen Branch oder einem zwischengespeicherten Build-Artefakt deployed.
 
-### Schritt 2a: SPA-Fallback auf dem eigenen Server einrichten
-Diese Konfiguration muss auf dem Server gemacht werden (nicht im Lovable-Projekt änderbar). Je nach Webserver:
+### 2. Frontend vollständig neu bauen und ausliefern
+- Production-Build aus dem aktuellen Stand erzeugen.
+- Den vollständigen Inhalt von `dist/` atomar auf `voeller-it.solutions` ersetzen; nicht nur einzelne Assets kopieren.
+- Alte gehashte Assets dürfen bleiben, aber `index.html` muss auf das neue Bundle zeigen.
+- Falls vor Nginx ein CDN oder Deployment-Cache sitzt, `index.html` invalidieren.
 
-Nginx:
-```text
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
-
-Apache (`.htaccess` im Web-Root):
-```text
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
-```
-
-Caddy:
-```text
-try_files {path} /index.html
-```
-
-### Schritt 2b: Aktuellen Build deployen
-Falls es am Build liegt: neuen Production-Build erzeugen und den kompletten Inhalt von `dist/` auf den Server hochladen (alte Dateien ersetzen), Browser-Cache/CDN-Cache leeren.
-
-### Schritt 3: Verifikation
-`/buchen` und `/bewerbungsgespraech/buchen` direkt aufrufen und per Reload prüfen. Zusätzlich sicherstellen, dass die Domain-Erkennung greift (Branding Völler IT wird über `domain` bzw. `additional_domains` aufgelöst).
+### 3. Live verifizieren
+- Im neuen ausgelieferten JavaScript-Bundle prüfen, dass beide Routen enthalten sind.
+- `/buchen` und `/bewerbungsgespraech/buchen` direkt öffnen und neu laden.
+- Prüfen, dass statt der App-404 der Intro-Step „Kennenlerngespräch buchen“ erscheint und das Völler-Branding aufgelöst wird.
 
 ## Änderungen im Projekt-Code
 
-Vorerst **keine**. Die Routen sind korrekt definiert; die Ursache liegt in der Auslieferung.
-
-Nur falls du den Server-Fallback nicht konfigurieren kannst, gibt es eine Code-Alternative: Umstellung auf `HashRouter` (URLs würden dann `…/#/buchen` lauten). Das ist ein spürbarer Eingriff (alle bestehenden Links, SMS-Shortlinks und E-Mail-Links müssten angepasst werden) und sollte nur der letzte Ausweg sein.
+**Keine Änderung am Router nötig.** Der aktuelle Projektcode ist korrekt. Er muss lediglich tatsächlich auf den externen Server deployed werden.
 
 ## Nicht im Scope
 - Keine Änderungen an Inhalten der Buchungsseite.
 - Keine Änderungen an Branding-, SMS- oder E-Mail-Logik.
+- Keine Änderung von `BrowserRouter` oder der Nginx-SPA-Konfiguration.
