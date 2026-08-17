@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import MetaPixel from "@/components/MetaPixel";
 import { useNavigate, useLocation } from "react-router-dom";
 import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Clock, Home, MessageCircle } from "lucide-react";
 import { ContactCard } from "@/components/ContactCard";
 import { hexToHSL } from "@/lib/hexToHSL";
 
@@ -28,6 +28,7 @@ export default function BewerbungsgespraechPublic() {
   const location = useLocation();
   const [branding, setBranding] = useState<BrandingData | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
+  const [step, setStep] = useState<"intro" | "form">("intro");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -188,74 +189,164 @@ export default function BewerbungsgespraechPublic() {
           <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
 
           <div className="p-6">
-            <h1 className="text-2xl font-semibold tracking-tight mb-1">
-              Bewerbungsgespräch buchen
-            </h1>
-            <p className="text-sm text-muted-foreground mb-6">
-              Tragen Sie Ihre Daten ein, um einen Termin zu vereinbaren.
-            </p>
+            <AnimatePresence mode="wait">
+              {step === "intro" ? (
+                <motion.div
+                  key="intro"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-5"
+                >
+                  <div className="space-y-2">
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                      Kennenlerngespräch buchen
+                    </h1>
+                    <p className="text-base font-medium" style={{ color: brandColor }}>
+                      Prozesstester (m/w/d) im Homeoffice
+                    </p>
+                  </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="firstName">Vorname</Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Max"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lastName">Nachname</Label>
-                  <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Mustermann"
-                    required
-                  />
-                </div>
-              </div>
+                  <div className="space-y-4 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${brandColor}12` }}
+                      >
+                        <MessageCircle className="h-4 w-4" style={{ color: brandColor }} />
+                      </div>
+                      <p className="pt-1.5">
+                        Lernen Sie uns in einem kurzen, unverbindlichen Gespräch kennen.
+                      </p>
+                    </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="email">E-Mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="max@beispiel.de"
-                  required
-                />
-              </div>
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${brandColor}12` }}
+                      >
+                        <Clock className="h-4 w-4" style={{ color: brandColor }} />
+                      </div>
+                      <p className="pt-1.5">
+                        Dauer: nur 10–15 Minuten.
+                      </p>
+                    </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">Telefonnummer</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+49 123 4567890"
-                  required
-                />
-              </div>
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${brandColor}12` }}
+                      >
+                        <Home className="h-4 w-4" style={{ color: brandColor }} />
+                      </div>
+                      <p className="pt-1.5">
+                        Ihr persönlicher Ansprechpartner <span className="font-semibold text-foreground">Jonas Hagenauer</span> begleitet Sie durch den Bewerbungsprozess und beantwortet Ihre Fragen.
+                      </p>
+                    </div>
+                  </div>
 
-              <Button
-                type="submit"
-                className="w-full rounded-xl h-11 font-medium"
-                style={{ backgroundColor: brandColor }}
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Weiter zur Terminbuchung"
-                )}
-              </Button>
-            </form>
+                  <Button
+                    onClick={() => setStep("form")}
+                    className="w-full rounded-xl h-11 font-medium text-white"
+                    style={{ backgroundColor: brandColor }}
+                  >
+                    Weiter
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="form"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-1">
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                      Kennenlerngespräch buchen
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                      Tragen Sie Ihre Daten ein, um einen Termin zu vereinbaren.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="firstName">Vorname</Label>
+                        <Input
+                          id="firstName"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          placeholder="Max"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lastName">Nachname</Label>
+                        <Input
+                          id="lastName"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          placeholder="Mustermann"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email">E-Mail</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="max@beispiel.de"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone">Telefonnummer</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+49 123 4567890"
+                        required
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full rounded-xl h-11 font-medium"
+                      style={{ backgroundColor: brandColor }}
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Weiter zur Terminbuchung"
+                      )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full h-9 text-muted-foreground"
+                      onClick={() => setStep("intro")}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Zurück zur Übersicht
+                    </Button>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
