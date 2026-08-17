@@ -313,7 +313,7 @@ export default function Bewerbungsgespraech() {
         "gespraech_gebucht",
         {
           icon: "📅",
-          title: isRebooking ? "Bewerbungsgespräch umgebucht" : "Bewerbungsgespräch gebucht",
+          title: isRebooking ? "Kennenlerngespräch umgebucht" : "Kennenlerngespräch gebucht",
           fields: [
             { icon: "👤", label: "Name", value: applicantName, bold: true },
             { icon: "📱", label: "Telefon", value: application?.phone },
@@ -331,11 +331,11 @@ export default function Bewerbungsgespraech() {
         await sendEmail({
           to: application.email,
           recipient_name: applicantName,
-          subject: `Ihr Bewerbungsgespräch am ${formattedDateLong}`,
-          body_title: "Terminbestätigung – Bewerbungsgespräch",
+          subject: `Ihr Kennenlerngespräch am ${formattedDateLong}`,
+          body_title: "Terminbestätigung – Kennenlerngespräch",
           body_lines: [
             `Hallo ${application.first_name},`,
-            `Ihr Bewerbungsgespräch wurde erfolgreich ${isRebooking ? "umgebucht" : "gebucht"}.`,
+            `Ihr Kennenlerngespräch wurde erfolgreich ${isRebooking ? "umgebucht" : "gebucht"}.`,
             `Datum: ${formattedDateLong}`,
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf das Gespräch mit Ihnen!`,
@@ -353,7 +353,7 @@ export default function Bewerbungsgespraech() {
           .single();
         const smsText = (tpl as any)?.message
           ? ((tpl as any).message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
-          : `Hallo ${application.first_name}, Ihr Bewerbungsgespräch ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
+          : `Hallo ${application.first_name}, Ihr Kennenlerngespräch ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
         let smsSender: string | undefined;
         if (application.branding_id) {
           const { data: branding } = await supabase
@@ -490,7 +490,7 @@ export default function Bewerbungsgespraech() {
                 <div>
                   <h2 className="text-xl font-semibold">Termin bestätigt</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
+                    {applicantName}, Ihr Kennenlerngespräch wurde erfolgreich gebucht.
                   </p>
                 </div>
               </div>
@@ -627,8 +627,8 @@ export default function Bewerbungsgespraech() {
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {isRebooking
-                  ? "Wählen Sie einen neuen Termin für Ihr Bewerbungsgespräch."
-                  : `Wählen Sie einen passenden Termin für Ihr Bewerbungsgespräch${companyName ? ` bei ${companyName}` : ""}.`}
+                  ? "Wählen Sie einen neuen Termin für Ihr Kennenlerngespräch."
+                  : `Wählen Sie einen passenden Termin für Ihr Kennenlerngespräch${companyName ? ` bei ${companyName}` : ""}.`}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
