@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ContactCard } from "@/components/ContactCard";
 import MetaPixel, { trackMetaLead } from "@/components/MetaPixel";
+import { buildKarriereLink } from "@/lib/buildKarriereLink";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const [sh, sm] = start.split(":").map(Number);
