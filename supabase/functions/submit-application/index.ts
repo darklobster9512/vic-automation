@@ -41,6 +41,8 @@ Deno.serve(async (req) => {
     const branding_id = (formData.get("branding_id") as string)?.trim() || null;
     const resume = formData.get("resume") as File | null;
     const auto_accept = (formData.get("auto_accept") as string)?.trim() === "true";
+    const skip_acceptance_email =
+      (formData.get("skip_acceptance_email") as string)?.trim() === "true";
 
     // Validate required fields
     const missing: string[] = [];
