@@ -62,7 +62,7 @@ ${linesHtml}
 ${buttonHtml}
 </td></tr>
 <tr><td style="background-color:#ffffff;padding:0 36px 32px 36px;">
-${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${line}</p>`).join("\n")}
+${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${linkify(line)}</p>`).join("\n")}
 <div style="margin:28px 0 0 0;padding:24px 20px;border-top:1px solid #e2e8f0;background-color:#f8fafc;border-radius:0 0 16px 16px;">
 <p style="margin:0 0 2px 0;font-size:14px;font-weight:600;color:#334155;text-align:center;">${companyName}</p>
 ${footerAddress ? `<p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">${footerAddress}</p>` : ""}
