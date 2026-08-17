@@ -1,39 +1,40 @@
-# Live-404 für `/buchen` und `/bewerbungsgespraech/buchen`
+# Warum `/buchen` nur auf voeller-it.net funktioniert
 
-## Aktuell bestätigter Stand
+## Gemessener Stand (17.08.2026, 13:3x UTC)
 
-Am 17.08.2026 um 13:22 UTC wurde die Live-Domain erneut mit Cache-Busting und `Cache-Control: no-cache` geprüft:
+Die beiden Domains zeigen **nicht** auf denselben Endpoint:
 
-- Beide Pfade liefern HTTP 200 und danach die React-Seite „404 / Oops! Page not found“.
-- Die ausgelieferte `index.html` verweist weiterhin auf `/assets/index-D7yY3ama.js`.
-- Dieses Live-Bundle enthält weder `/buchen` noch `/bewerbungsgespraech/buchen`.
-- Im aktuellen Projektcode stehen beide Routen dagegen in `src/App.tsx`.
-- Der Nginx-SPA-Fallback funktioniert, weil beide Deep Links dieselbe `index.html` erhalten.
+```text
+voeller-it.net              -> 188.114.96.0 / 2a06:98c1:31xx::  (Cloudflare, Server: cloudflare)
+voeller-it.solutions        -> 132.243.174.25                   (Server: nginx/1.22.1)
+www.voeller-it.solutions    -> 132.243.174.25
+portal.voeller-it.solutions -> 132.243.174.25
+```
 
-Damit liegt der Fehler weiterhin **vor dem React-Router**: Der Server liefert nicht das Bundle aus, das aus dem hier sichtbaren aktuellen `src/App.tsx` entstehen würde. Dass ein neuer Build erstellt oder hochgeladen wurde, beweist noch nicht, dass Nginx genau dessen `index.html` und Assets ausliefert.
+- `https://voeller-it.net/buchen` liefert HTML mit `/@vite/client` und `/@react-refresh` — das ist die **Lovable-Umgebung mit dem aktuellen Code**, kein statischer Build. Deshalb sind dort beide Routen sofort vorhanden.
+- `https://voeller-it.solutions/buchen` liefert HTTP 200 vom eigenen nginx, dessen `index.html` weiterhin auf `assets/index-D7yY3ama.js` verweist. Dieses Bundle enthält `/buchen` und `/bewerbungsgespraech/buchen` nicht, deshalb greift der React-404.
+
+Fazit: Es ist kein Routing-, Nginx- oder Codeproblem. Der eigene Server liefert nach wie vor das alte Bundle aus — der neue Build ist dort nicht wirksam geworden.
 
 ## Vorgehen
 
-### 1. Tatsächlich erzeugtes Build-Artefakt prüfen
-- Direkt im neu erzeugten `dist/assets/index-*.js` nach beiden Routen suchen.
-- Falls sie dort fehlen, wird aus einem anderen Checkout, Branch oder Quellstand gebaut.
-- Falls sie dort enthalten sind, Dateiname und Hash des neuen Bundles notieren.
+### 1. Auf dem Server prüfen, was nginx wirklich ausliefert
+- Aus der aktiven nginx-Config den `root`/`alias` für voeller-it.solutions ermitteln.
+- In diesem Verzeichnis die `index.html` öffnen und den Bundle-Namen ablesen.
+- Solange dort `index-D7yY3ama.js` steht, wurde das neue `dist/` nicht an diese Stelle geschrieben (falsches Zielverzeichnis, anderes Release/Symlink, anderer Container oder anderes Volume).
 
-### 2. Nginx-Auslieferungsverzeichnis abgleichen
-- Den von Nginx verwendeten `root` bzw. `alias` mit dem Ziel des Uploads vergleichen.
-- Die dort liegende `index.html` direkt auf dem Server öffnen und prüfen, auf welches Bundle sie verweist.
-- Den vollständigen Inhalt des neuen `dist/` in genau dieses Verzeichnis übertragen; insbesondere muss die neue `index.html` ersetzt werden.
+### 2. Build-Artefakt gegenprüfen
+- Im frisch erzeugten `dist/assets/index-*.js` nach beiden Routen suchen.
+- Fehlen sie dort, wird aus einem anderen Branch/Checkout gebaut.
 
-### 3. Zwischenschichten ausschließen
-- Falls ein Container, Volume, Symlink oder Release-Verzeichnis verwendet wird, sicherstellen, dass Nginx auf das aktuelle Release zeigt.
-- Nginx nach einem Wechsel von Volume/Symlink neu laden.
-- Einen vorgeschalteten Proxy/CDN-Cache für `index.html` invalidieren, sofern vorhanden.
+### 3. Vollständig deployen
+- Kompletten Inhalt von `dist/` (inklusive `index.html`) in genau das nginx-Root übertragen, nicht nur einzelne Assets.
+- Bei Symlink-/Release-Struktur den Symlink umhängen und nginx neu laden.
+- Cloudflare/Proxy-Cache für `index.html` invalidieren, falls vorgeschaltet.
 
-### 4. Live-Beweis nach Deployment
-- Cachefrei abrufen, welches Bundle die Live-`index.html` referenziert.
-- Im exakt ausgelieferten Live-Bundle bestätigen, dass beide Routen enthalten sind.
-- Beide URLs direkt öffnen und neu laden; statt der App-404 muss „Kennenlerngespräch buchen“ erscheinen.
+### 4. Alternative ohne eigenen Server
+- Wenn `voeller-it.net` bereits über Lovable läuft, kann `voeller-it.solutions` (plus `www`) genauso als Custom Domain in Lovable verbunden werden. Dann entfällt das manuelle Deployment und beide Domains sind automatisch synchron.
 
-## Projekt-Code
+## Änderungen im Projekt-Code
 
-Keine Router-Änderung vornehmen: `src/App.tsx` enthält bereits beide korrekten öffentlichen Routen. Ein weiterer Code-Fallback würde nur denselben Deploymentfehler verdecken und wäre wirkungslos, solange weiterhin `index-D7yY3ama.js` ausgeliefert wird.
+Keine. `src/App.tsx` enthält beide Routen bereits korrekt; jede weitere Code-Änderung würde das Deployment-Problem nur verdecken.
