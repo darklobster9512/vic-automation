@@ -176,12 +176,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Send confirmation email
+    // Send confirmation email (and acceptance SMS) — skipped for direct booking flow
     try {
       const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
       const fullName = `${first_name} ${last_name}`;
 
-      if (auto_accept) {
+      if (skip_acceptance_email) {
+        console.log("skip_acceptance_email=true → no acceptance email/SMS sent");
+      } else if (auto_accept) {
         // "Bewerbung angenommen" email with booking button (same as AdminBewerbungen)
         let bookingUrl = "";
         let karriereLink = "";
