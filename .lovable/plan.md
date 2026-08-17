@@ -1,48 +1,52 @@
 # Warum `/buchen` nur über voeller-it.net funktioniert
 
-## Gemessener Stand (17.08.2026, 13:3x UTC)
+## Messung gegen die Origin-IP (17.08.2026, 13:35 UTC)
 
-Du hast recht: Hinter Cloudflare landet auch `voeller-it.net` auf **derselben Origin-IP** `132.243.174.25`. Trotzdem liefert derselbe nginx je nach Host-Header zwei völlig verschiedene Anwendungen aus. Direkt gegen die Origin getestet (`curl --resolve <host>:443:132.243.174.25`):
+Ja, beide Domains landen auf derselben IP `132.243.174.25`. Genau deshalb ist der folgende Test aussagekräftig — es wurde direkt gegen diese Origin gefragt, nur mit unterschiedlichem Host-Header:
 
 ```text
-Host: voeller-it.net          -> 200, HTML enthält /@vite/client   (Vite-DEV-Server, Live-Code)
-Host: www.voeller-it.net      -> 200, HTML enthält /@vite/client
-Host: voeller-it.solutions    -> 200, HTML enthält assets/index-D7yY3ama.js  (statischer ALTER Build)
+curl -sk --resolve <host>:443:132.243.174.25 https://<host>/buchen
+
+voeller-it.net              200  -> /@vite/client
+nichtexistent.example.com   200  -> /@vite/client
+voeller-it.solutions        200  -> assets/index-D7yY3ama.js
+www.voeller-it.solutions    200  -> assets/index-D7yY3ama.js
 ```
 
-Daraus folgt eindeutig:
+Der entscheidende Punkt ist die dritte Zeile im Test: Ein frei erfundener Hostname bekommt **dieselbe** Antwort wie `voeller-it.net`.
 
-- Es gibt **zwei getrennte nginx-server-Blöcke** auf derselben Maschine.
-- Der `.net`-Block **proxied auf einen laufenden Vite-Dev-Server** — deshalb ist dort immer der aktuelle Code inklusive `/buchen` und `/bewerbungsgespraech/buchen` vorhanden.
-- Der `.solutions`-Block liefert ein **statisches `dist/`-Verzeichnis**, dessen `index.html` weiterhin auf `index-D7yY3ama.js` zeigt. Dieses Bundle enthält beide Routen nicht, deshalb der React-404.
+Daraus folgt:
 
-Der neue Build ist also nicht in dem Verzeichnis gelandet, aus dem der `.solutions`-server-Block ausliefert. Es ist kein Router-, kein SPA-Fallback- und kein Cloudflare-Problem.
+- Für `voeller-it.net` existiert auf dem Server **kein eigener server-Block**. Die Anfrage fällt in den `default_server`, und dieser proxied auf einen laufenden Vite-Dev-Server. Deshalb ist dort immer der aktuelle Code inklusive `/buchen` sichtbar.
+- Für `voeller-it.solutions` und `www.voeller-it.solutions` **gibt es** einen eigenen server-Block, und der liefert ein statisches Verzeichnis aus, dessen `index.html` weiterhin `index-D7yY3ama.js` referenziert. Dieses Bundle enthält `/buchen` und `/bewerbungsgespraech/buchen` nicht.
+
+Die Configs wirken identisch, weil der Unterschied nicht im sichtbaren `.solutions`-File liegt, sondern darin, dass `.net` gar nicht davon bedient wird.
 
 ## Vorgehen auf dem Server
 
-### 1. Beide server-Blöcke gegenüberstellen
-- `nginx -T` ausgeben und die Blöcke für `server_name voeller-it.net` und `server_name voeller-it.solutions` vergleichen.
-- Notieren: der eine hat `proxy_pass` auf den Dev-Server-Port, der andere ein `root`-Verzeichnis.
-
-### 2. Das `root`-Verzeichnis des `.solutions`-Blocks prüfen
-- Dort `index.html` öffnen und den referenzierten Bundle-Namen ablesen.
-- Steht dort `index-D7yY3ama.js`, wurde das neue `dist/` woandershin kopiert (falsches Zielverzeichnis, anderes Release-Verzeichnis, Symlink nicht umgehängt, anderer Container/Volume).
-
-### 3. Deployment korrigieren
-- Aktuellen Stand bauen und im Build selbst verifizieren, dass beide Routen im `dist/assets/index-*.js` vorkommen.
-- Den **kompletten** `dist/`-Inhalt inklusive `index.html` in exakt dieses `root` übertragen.
-- Bei Symlink-/Release-Struktur den Symlink umhängen und nginx neu laden.
-- Anschließend den Cloudflare-Cache für `index.html` purgen.
-
-### 4. Alternative: beide Domains gleich behandeln
-Wenn `.solutions` dieselbe Anwendung wie `.net` zeigen soll, kann der `.solutions`-Block einfach denselben `proxy_pass` bzw. dasselbe `root` verwenden wie der `.net`-Block. Dann kann der Build für `.solutions` nie wieder auseinanderlaufen.
-
-### 5. Verifikation
-```text
-curl -sk --resolve voeller-it.solutions:443:132.243.174.25 https://voeller-it.solutions/buchen | grep -o 'assets/index-[^"]*\.js'
+### 1. Effektive Config auslesen
+```bash
+nginx -T | grep -nE 'server_name|root |proxy_pass|default_server'
 ```
-Der Bundle-Name muss dem neuen Build entsprechen; danach `/buchen` und `/bewerbungsgespraech/buchen` im Browser öffnen — es muss „Kennenlerngespräch buchen“ erscheinen.
+Erwartung: ein Block mit `default_server` + `proxy_pass` (Vite), ein Block mit `server_name voeller-it.solutions www.voeller-it.solutions` + `root`.
+
+### 2. Das `root` des `.solutions`-Blocks prüfen
+```bash
+grep -o 'assets/index-[^"]*\.js' <root>/index.html
+```
+Steht dort `index-D7yY3ama.js`, ist der neue Build nie in diesem Verzeichnis angekommen (falsches Zielverzeichnis, Release-Symlink nicht umgehängt, anderes Volume/Container).
+
+### 3. Korrigieren — eine der beiden Varianten
+- **A (empfohlen, dauerhaft):** Den `.solutions`-Block auf dieselbe Quelle zeigen lassen wie der Default-Block (gleicher `proxy_pass` bzw. gleiches `root`). Dann können beide Domains nie wieder auseinanderlaufen.
+- **B:** Den kompletten neuen `dist/`-Inhalt inklusive `index.html` in genau dieses `root` deployen, Symlink umhängen, `nginx -s reload`, danach Cloudflare-Cache für `index.html` purgen.
+
+### 4. Verifikation
+```bash
+curl -sk --resolve voeller-it.solutions:443:132.243.174.25 \
+  https://voeller-it.solutions/buchen | grep -o 'assets/index-[^"]*\.js'
+```
+Der Bundle-Name muss sich geändert haben; danach `/buchen` und `/bewerbungsgespraech/buchen` öffnen — es muss „Kennenlerngespräch buchen“ erscheinen.
 
 ## Änderungen im Projekt-Code
 
-Keine. `src/App.tsx` enthält beide Routen bereits korrekt; eine Code-Änderung würde die falsche Auslieferung nur verdecken.
+Keine. `src/App.tsx` enthält beide Routen bereits korrekt.
