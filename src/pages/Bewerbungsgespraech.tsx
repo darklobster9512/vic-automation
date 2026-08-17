@@ -328,6 +328,16 @@ export default function Bewerbungsgespraech() {
 
 
       if (application?.email) {
+        let karriereLink: string | null = null;
+        if (application.branding_id) {
+          const { data: brandingLink } = await supabase
+            .from("brandings")
+            .select("domain, custom_email_link_enabled, custom_email_link")
+            .eq("id", application.branding_id)
+            .maybeSingle();
+          karriereLink = buildKarriereLink(brandingLink as any);
+        }
+
         await sendEmail({
           to: application.email,
           recipient_name: applicantName,
@@ -340,10 +350,14 @@ export default function Bewerbungsgespraech() {
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf das Gespräch mit Ihnen!`,
           ],
+          footer_lines: karriereLink
+            ? [`Besuchen Sie auch unsere Karriereseite: ${karriereLink}`]
+            : undefined,
           event_type: "gespraech_bestaetigung",
           branding_id: application.branding_id,
         });
       }
+
 
       if (application?.phone) {
         const { data: tpl } = await supabase
