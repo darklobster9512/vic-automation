@@ -25,6 +25,7 @@ interface BrandingData {
 
 export default function BewerbungsgespraechPublic() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [branding, setBranding] = useState<BrandingData | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -149,7 +150,9 @@ export default function BewerbungsgespraechPublic() {
 
   return (
     <>
-      {branding?.meta_pixel_id && <MetaPixel pixelId={branding.meta_pixel_id} />}
+      {location.pathname === "/bewerbungsgespraech/buchen" && branding?.meta_pixel_id && (
+        <MetaPixel pixelId={branding.meta_pixel_id} />
+      )}
       <div
         className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center"
         style={hslStr ? { "--primary": hslStr } as React.CSSProperties : undefined}
