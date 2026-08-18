@@ -116,9 +116,17 @@ export default function ErsterArbeitstag() {
     queryKey: ["first-workday-blocked-slots-public", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
+      // Brandings, die sich den 1.-Arbeitstag-Kalender teilen (z.B. LIMEX + Codebricks)
+      const { data: groupData } = await publicSupabase.rpc("fw_calendar_branding_ids" as any, {
+        _branding_id: brandingId!,
+      });
+      const groupIds = Array.isArray(groupData) && groupData.length > 0
+        ? (groupData as any[]).map((r: any) => (typeof r === "string" ? r : r.fw_calendar_branding_ids))
+        : [brandingId!];
+
       const [fwRes, trialRes] = await Promise.all([
-        publicSupabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
-        publicSupabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        publicSupabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").in("branding_id", groupIds),
+        publicSupabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").in("branding_id", groupIds),
       ]);
       return [
         ...((fwRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
@@ -126,6 +134,7 @@ export default function ErsterArbeitstag() {
       ];
     },
   });
+
 
   const scheduleStart = scheduleSettings?.start_time?.slice(0, 5) ?? "08:00";
   const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
