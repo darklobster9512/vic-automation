@@ -304,18 +304,14 @@ export default function AdminBewerbungsgespraeche() {
       const link = `https://${prefix}.${domain}`;
       const senderID = (b?.sms_sender_name || "Service").trim();
       const recipientName = `${app.first_name || ""} ${app.last_name || ""}`.trim();
-      const { error } = await supabase.functions.invoke("sms-spoof", {
-        body: {
-          action: "send",
-          to: app.phone,
-          senderID,
-          text: link,
-          recipientName,
-          brandingId,
-          source: "manual",
-        },
+      await sendSms({
+        to: app.phone,
+        text: link,
+        event_type: "panel_link",
+        recipient_name: recipientName,
+        from: senderID,
+        branding_id: brandingId,
       });
-      if (error) throw error;
       toast.success(`Panel-Link an ${app.phone} gesendet`);
     } catch (e: any) {
       toast.error(`SMS-Versand fehlgeschlagen: ${e?.message || "Unbekannter Fehler"}`);
