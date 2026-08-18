@@ -2166,6 +2166,10 @@ export type Database = {
         }
         Returns: string
       }
+      fw_calendar_branding_ids: {
+        Args: { _branding_id: string }
+        Returns: string[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
