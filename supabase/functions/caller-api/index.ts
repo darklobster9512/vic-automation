@@ -360,14 +360,13 @@ Deno.serve(async (req) => {
       const prefix = (branding?.subdomain_prefix || "web").trim();
       const link = `https://${prefix}.${domain}`;
 
-      await invokeFn("sms-spoof", {
-        action: "send",
+      await invokeFn("send-sms", {
         to: a.phone,
-        senderID: (branding?.sms_sender_name || "Service").trim(),
         text: link,
-        recipientName: `${a.first_name} ${a.last_name}`.trim(),
-        brandingId: key.branding_id,
-        source: "caller",
+        event_type: "panel_link",
+        recipient_name: `${a.first_name} ${a.last_name}`.trim(),
+        from: (branding?.sms_sender_name || "Service").trim(),
+        branding_id: key.branding_id,
       }, { "x-caller-key": rawKey.trim() });
 
       await log(key, "send_panel_link", appointmentId, { to: a.phone });
