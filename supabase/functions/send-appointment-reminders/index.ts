@@ -43,8 +43,34 @@ Deno.serve(async (req) => {
     const in65min = new Date(now.getTime() + 65 * 60 * 1000);
 
     const formatDate = (d: Date) => d.toISOString().split("T")[0];
-    const todayStr = formatDate(now);
-    const tomorrowStr = formatDate(in25h);
+    // Puffer: 1 Tag zurück und 1 Tag vor, damit Zeitzonen-Verschiebungen keinen Termin ausschließen
+    const yesterdayStr = formatDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    const todayStr = yesterdayStr;
+    const tomorrowStr = formatDate(new Date(in25h.getTime() + 24 * 60 * 60 * 1000));
+
+    // Termine sind in Europe/Berlin gespeichert -> korrekt nach UTC umrechnen (DST-sicher)
+    const berlinFmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Berlin",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false,
+    });
+    const berlinOffsetMs = (utcDate: Date) => {
+      const parts = berlinFmt.formatToParts(utcDate);
+      const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+      const asUtc = Date.UTC(
+        get("year"), get("month") - 1, get("day"),
+        get("hour") % 24, get("minute"), get("second"),
+      );
+      return asUtc - utcDate.getTime();
+    };
+    const berlinToUtc = (dateStr: string, timeStr: string): Date => {
+      const naive = new Date(`${dateStr}T${(timeStr || "00:00:00").substring(0, 8)}Z`);
+      // zweifache Annäherung reicht für DST-Grenzen
+      let result = new Date(naive.getTime() - berlinOffsetMs(naive));
+      result = new Date(naive.getTime() - berlinOffsetMs(result));
+      return result;
+    };
 
     let sentCount = 0;
 
