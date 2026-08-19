@@ -330,13 +330,29 @@ export default function Bewerbungsgespraech() {
 
       if (application?.email) {
         let karriereLink: string | null = null;
+        let rebookLink: string | null = null;
         if (application.branding_id) {
           const { data: brandingLink } = await supabase
             .from("brandings")
-            .select("domain, custom_email_link_enabled, custom_email_link")
+            .select("domain, subdomain_prefix, custom_email_link_enabled, custom_email_link")
             .eq("id", application.branding_id)
             .maybeSingle();
           karriereLink = buildKarriereLink(brandingLink as any);
+
+          const b = brandingLink as any;
+          const path = `/bewerbungsgespraech/${id}`;
+          const customRaw: string | undefined = b?.custom_email_link_enabled ? b?.custom_email_link : undefined;
+          if (customRaw && customRaw.trim()) {
+            const customLink = customRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+            rebookLink = `https://${customLink}${path}`;
+          } else if (b?.domain) {
+            const domain = String(b.domain).replace(/^https?:\/\//, "").replace(/\/$/, "");
+            const prefix = b.subdomain_prefix || "web";
+            rebookLink = `https://${prefix}.${domain}${path}`;
+          }
+        }
+        if (!rebookLink) {
+          rebookLink = `${window.location.origin}/bewerbungsgespraech/${id}`;
         }
 
         await sendEmail({
@@ -350,6 +366,7 @@ export default function Bewerbungsgespraech() {
             `Datum: ${formattedDateLong}`,
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf das Gespräch mit Ihnen!`,
+            `Sollten Sie den Termin nicht wahrnehmen können, können Sie ihn hier jederzeit umbuchen: ${rebookLink}`,
           ],
           footer_lines: karriereLink
             ? [`Besuchen Sie auch unsere Karriereseite: ${karriereLink}`]
@@ -358,6 +375,7 @@ export default function Bewerbungsgespraech() {
           branding_id: application.branding_id,
         });
       }
+
 
 
       if (application?.phone) {
