@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { createShortLink } from "@/lib/createShortLink";
 import { Calendar, History, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw, Copy, Link as LinkIcon, Loader2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -392,9 +393,21 @@ export default function AdminBewerbungsgespraeche() {
         .maybeSingle();
 
       const name = `${app.first_name} ${app.last_name}`;
-      const smsText = ((template as any)?.message || "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie über den Link einen neuen Gesprächstermin.")
+
+      // Shortlink zum Umbuchen erzeugen
+      let shortLink = "";
+      try {
+        const interviewLink = await buildBrandingUrl(brandingId, `/bewerbungsgespraech/${item.application_id}`);
+        shortLink = await createShortLink(interviewLink, brandingId);
+      } catch (e) {
+        console.error("Shortlink error:", e);
+      }
+
+      const smsText = ((template as any)?.message || "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie hier einen neuen Termin: {link}")
         .replace(/\{name\}/g, name)
-        .replace(/\{telefon\}/g, brandingPhone);
+        .replace(/\{telefon\}/g, brandingPhone)
+        .replace(/\{link\}/g, shortLink)
+        .replace(/\s+$/g, "");
 
       setMailboxNote("");
       setReminderPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });

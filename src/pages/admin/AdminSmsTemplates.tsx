@@ -32,7 +32,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
   auftrag_zugewiesen: ["{name}", "{auftrag}"],
   bewertung_genehmigt: ["{name}", "{auftrag}", "{praemie}"],
   bewertung_abgelehnt: ["{name}", "{auftrag}"],
-  gespraech_erinnerung: ["{name}", "{telefon}"],
+  gespraech_erinnerung: ["{name}", "{telefon}", "{link}"],
   gespraech_bestaetigung: ["{name}", "{datum}", "{uhrzeit}"],
   probetag_bestaetigung: ["{name}", "{datum}", "{uhrzeit}"],
   gespraech_erinnerung_auto: ["{name}", "{datum}", "{uhrzeit}"],
