@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         .lte("appointment_date", tomorrowStr);
 
       for (const apt of rows ?? []) {
-        const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
+        const aptDateTime = berlinToUtc(apt.appointment_date, apt.appointment_time);
         if (aptDateTime <= now || aptDateTime > in25h) continue;
 
         const app = (apt as any).applications;
@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
         .lte("appointment_date", tomorrowStr);
 
       for (const apt of rows ?? []) {
-        const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
+        const aptDateTime = berlinToUtc(apt.appointment_date, apt.appointment_time);
         if (aptDateTime < in60min || aptDateTime >= in65min) continue;
 
         const app = (apt as any).applications;
