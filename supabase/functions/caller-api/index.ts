@@ -106,10 +106,39 @@ async function loadAppointment(key: any, appointmentId: string) {
 async function getBranding(brandingId: string) {
   const { data } = await admin
     .from("brandings")
-    .select("id, company_name, logo_url, domain, subdomain_prefix, sms_sender_name, phone")
+    .select("id, company_name, logo_url, domain, subdomain_prefix, sms_sender_name, phone, custom_email_link_enabled, custom_email_link")
     .eq("id", brandingId)
     .maybeSingle();
   return data as any;
+}
+
+function brandingBaseUrl(branding: any): string | null {
+  if (branding?.custom_email_link_enabled && branding?.custom_email_link?.trim()) {
+    const custom = branding.custom_email_link.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+    return `https://${custom}`;
+  }
+  if (branding?.domain) {
+    const domain = branding.domain.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+    const prefix = (branding.subdomain_prefix || "web").trim();
+    return `https://${prefix}.${domain}`;
+  }
+  return null;
+}
+
+// Erzeugt einen Shortlink (/r/<code>) auf die Umbuchungs-Seite des Bewerbers
+async function createRebookShortLink(branding: any, applicationId: string): Promise<string> {
+  const base = brandingBaseUrl(branding);
+  if (!base || !applicationId) return "";
+  const target = `${base}/bewerbungsgespraech/${applicationId}`;
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  const { error } = await admin.from("short_links").insert({ code, target_url: target });
+  if (error) {
+    console.error("short link insert failed:", error.message);
+    return target;
+  }
+  return `${base}/r/${code}`;
 }
 
 Deno.serve(async (req) => {
