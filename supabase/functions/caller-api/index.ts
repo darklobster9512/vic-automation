@@ -417,10 +417,13 @@ Deno.serve(async (req) => {
           .select("message")
           .eq("event_type", "gespraech_erinnerung")
           .maybeSingle();
+        const shortLink = await createRebookShortLink(branding, item.application_id);
         text = ((template as any)?.message ||
-          "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie über den Link einen neuen Gesprächstermin.")
+          "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie hier einen neuen Termin: {link}")
           .replace(/\{name\}/g, name)
-          .replace(/\{telefon\}/g, branding?.phone || "");
+          .replace(/\{telefon\}/g, branding?.phone || "")
+          .replace(/\{link\}/g, shortLink)
+          .trimEnd();
       }
 
       await invokeFn("send-sms", {
@@ -477,10 +480,13 @@ Deno.serve(async (req) => {
           .select("message")
           .eq("event_type", "gespraech_erinnerung")
           .maybeSingle();
+        const shortLink = await createRebookShortLink(branding, item.application_id);
         const message = ((template as any)?.message ||
-          "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie über den Link einen neuen Gesprächstermin.")
+          "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie hier einen neuen Termin: {link}")
           .replace(/\{name\}/g, name)
-          .replace(/\{telefon\}/g, branding?.phone || "");
+          .replace(/\{telefon\}/g, branding?.phone || "")
+          .replace(/\{link\}/g, shortLink)
+          .trimEnd();
         return json({ message });
       }
 
