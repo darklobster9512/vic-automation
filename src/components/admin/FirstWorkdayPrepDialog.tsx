@@ -451,7 +451,7 @@ export default function FirstWorkdayPrepDialog({
                   <div className="flex items-center justify-between gap-2">
                     <Label>4. Info / Fragen und Antworten</Label>
                     <div className="flex items-center gap-2">
-                      <Select onValueChange={applyTemplate}>
+                      <Select value={selectedTemplateId || undefined} onValueChange={applyTemplate}>
                         <SelectTrigger className="h-8 w-[200px] text-xs">
                           <SelectValue placeholder="Vorlage wählen" />
                         </SelectTrigger>
