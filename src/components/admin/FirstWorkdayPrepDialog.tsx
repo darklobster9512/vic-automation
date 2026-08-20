@@ -19,6 +19,33 @@ import { toast } from "sonner";
 
 export const DEFAULT_IDENT_FIELDS = ["Identcode", "Identlink", "Anmeldename", "Email", "Passwort"];
 
+// Bankspezifische Ident-Felder (Schlüsselwort → Felder). Nicht gelistete Banken behalten die Standardfelder.
+const BANK_IDENT_FIELDS: Array<{ keyword: string; fields: string[] }> = [
+  { keyword: "deutsche bank", fields: ["Identlink", "Email"] },
+  { keyword: "consorsbank", fields: ["Identlink", "Email"] },
+  { keyword: "postbank", fields: ["Identlink", "Email"] },
+  { keyword: "bbva", fields: ["Identlink", "Email", "Anmeldename", "Passwort"] },
+  { keyword: "dkb", fields: ["Identlink", "Email"] },
+];
+
+const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+function fieldsForOrder(order: any): string[] {
+  const hay = normalize(`${order?.title ?? ""} ${order?.provider ?? ""}`);
+  const match = BANK_IDENT_FIELDS.find((b) => hay.includes(b.keyword));
+  return match ? match.fields : DEFAULT_IDENT_FIELDS;
+}
+
+function templateForOrder(order: any, templates: Array<{ id: string; name: string }> | undefined) {
+  if (!templates?.length) return null;
+  const hay = normalize(`${order?.title ?? ""} ${order?.provider ?? ""}`);
+  const sorted = [...templates].sort((a, b) => b.name.length - a.name.length);
+  return sorted.find((t) => {
+    const n = normalize(t.name);
+    return n.length > 1 && hay.includes(n);
+  }) ?? null;
+}
+
 export interface PrepRow {
   id: string;
   appointment_id: string;
