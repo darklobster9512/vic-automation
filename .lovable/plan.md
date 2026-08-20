@@ -6,9 +6,10 @@
 - Zu diesen 20 gibt es 4 Kennenlerngespräch-Termine, aber keine Probetage, keine 1.-Arbeitstag-Termine und keine Arbeitsverträge.
 
 ## Vorgehen
-1. Löschen dieser 20 Codebricks-Bewerbungen inklusive der 4 zugehörigen Kennenlerngespräch-Termine.
-2. LIMEX bleibt unverändert; keine E-Mails, SMS oder Telegram-Nachrichten.
-3. Kontrolle danach: Codebricks sollte 183 Bewerbungen behalten, 0 Überschneidungen mit LIMEX.
+1. Löschen nur der 16 Codebricks-Bewerbungen mit Status "Neu", die eine LIMEX-Überschneidung haben.
+2. Die 4 Bewerbungen mit gebuchtem Kennenlerngespräch bleiben inklusive Termin erhalten.
+3. LIMEX bleibt unverändert; keine E-Mails, SMS oder Telegram-Nachrichten.
+4. Kontrolle danach: Codebricks sollte 187 Bewerbungen behalten.
 
 ## Hinweis
-Telefonnummern werden normalisiert verglichen (nur Ziffern). Falls die 4 Bewerbungen mit gebuchtem Termin erhalten bleiben sollen, kurz Bescheid geben — dann werden nur die 16 "Neu"-Einträge gelöscht.
+Telefonnummern werden normalisiert verglichen (nur Ziffern).
