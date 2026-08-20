@@ -709,17 +709,31 @@ const AdminBewertungen = () => {
         <TabsContent value="in-review">
           {(() => {
             const placeholderReviews = pendingReviews.filter((r) => r.order_type === "platzhalter");
-            return placeholderReviews.length > 0 ? (
-              <div className="flex justify-end mb-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={processing === "__bulk__"}
-                  onClick={() => handleApproveAllSilent(placeholderReviews)}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {processing === "__bulk__" ? "Genehmige..." : `Alle Platzhalter genehmigen (ohne SMS) · ${placeholderReviews.length}`}
-                </Button>
+            const starterReviews = pendingReviews.filter((r) => r.is_starter_job);
+            return placeholderReviews.length > 0 || starterReviews.length > 0 ? (
+              <div className="flex justify-end gap-2 mb-3">
+                {placeholderReviews.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={processing === "__bulk__"}
+                    onClick={() => handleApproveAllSilent(placeholderReviews)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {processing === "__bulk__" ? "Genehmige..." : `Alle Platzhalter genehmigen (ohne SMS) · ${placeholderReviews.length}`}
+                  </Button>
+                )}
+                {starterReviews.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={processing === "__bulk__"}
+                    onClick={() => handleApproveAllSilent(starterReviews)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {processing === "__bulk__" ? "Genehmige..." : `Alle Starter-Jobs genehmigen · ${starterReviews.length}`}
+                  </Button>
+                )}
               </div>
             ) : null;
           })()}
