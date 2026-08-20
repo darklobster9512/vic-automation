@@ -294,18 +294,41 @@ export default function FirstWorkdayPrepDialog({
             {/* Step 1: Auftrag */}
             <div className="space-y-2">
               <Label>1. Auftrag (Bankdrop)</Label>
-              <Select value={orderId} onValueChange={setOrderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Auftrag auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {orders.map((o: any) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.order_number ? `#${o.order_number} – ` : ""}{o.title}{o.provider ? ` (${o.provider})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={orderPickerOpen} onOpenChange={setOrderPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                    <span className="truncate">
+                      {selectedOrder
+                        ? `${selectedOrder.order_number ? `#${selectedOrder.order_number} – ` : ""}${selectedOrder.title}${selectedOrder.provider ? ` (${selectedOrder.provider})` : ""}`
+                        : "Auftrag auswählen..."}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Auftrag suchen..." />
+                    <CommandList>
+                      <CommandEmpty>Keine Treffer.</CommandEmpty>
+                      <CommandGroup>
+                        {(orders as any[]).map((o) => (
+                          <CommandItem
+                            key={o.id}
+                            value={`${o.order_number ?? ""} ${o.title ?? ""} ${o.provider ?? ""}`}
+                            onSelect={() => handleOrderSelect(o.id)}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${orderId === o.id ? "opacity-100" : "opacity-0"}`} />
+                            <div className="flex flex-col">
+                              <span>{o.order_number ? `#${o.order_number} – ` : ""}{o.title}</span>
+                              {o.provider && <span className="text-xs text-muted-foreground">{o.provider}</span>}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {orders.length === 0 && (
                 <p className="text-xs text-muted-foreground">Keine Bankdrop-Aufträge für dieses Branding vorhanden.</p>
               )}
