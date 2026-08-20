@@ -153,10 +153,12 @@ export default function FirstWorkdayPrepDialog({
   );
   const [phoneUrl, setPhoneUrl] = useState(existing?.phone_api_url ?? "");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [orderPickerOpen, setOrderPickerOpen] = useState(false);
   const [testData, setTestData] = useState<Array<{ label: string; value: string }>>(
     existing?.test_data?.length ? existing.test_data : DEFAULT_IDENT_FIELDS.map((f) => ({ label: f, value: "" }))
   );
   const [infoNotes, setInfoNotes] = useState(existing?.info_notes ?? "");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [customFieldName, setCustomFieldName] = useState("");
   const [saving, setSaving] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
@@ -168,6 +170,7 @@ export default function FirstWorkdayPrepDialog({
     setProvider((existing?.phone_api_url ?? "").startsWith("smsbot://") ? "smsbot" : "anosim");
     setTestData(existing?.test_data?.length ? existing.test_data : DEFAULT_IDENT_FIELDS.map((f) => ({ label: f, value: "" })));
     setInfoNotes(existing?.info_notes ?? "");
+    setSelectedTemplateId("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existing?.id]);
 
