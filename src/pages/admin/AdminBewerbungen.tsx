@@ -1613,6 +1613,35 @@ export default function AdminBewerbungen() {
         )}
       </motion.div>
 
+      {/* Blacklist löschen bestätigen */}
+      <Dialog open={blacklistDialogOpen} onOpenChange={setBlacklistDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Blacklist-Bewerbungen löschen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {blacklistedApplications.length} Bewerbung(en) mit einer E-Mail, die bereits in einem anderen
+              Branding existiert, werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBlacklistDialogOpen(false)}>
+                Abbrechen
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteBlacklistMutation.isPending}
+                onClick={() =>
+                  deleteBlacklistMutation.mutate(blacklistedApplications.map((a: any) => a.id))
+                }
+              >
+                {deleteBlacklistMutation.isPending ? "Lösche..." : "Endgültig löschen"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Queue-Einstellungen */}
       <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
         <DialogContent className="sm:max-w-md">
