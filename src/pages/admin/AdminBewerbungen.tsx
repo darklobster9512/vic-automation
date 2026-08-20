@@ -215,6 +215,41 @@ export default function AdminBewerbungen() {
     },
   });
 
+  // Blacklist: gleiche E-Mail in einem anderen Branding
+  const { data: blacklistMap } = useQuery({
+    queryKey: ["blacklist-emails", activeBrandingId, applications?.length],
+    enabled: ready && !!applications?.length,
+    queryFn: async () => {
+      const emails = Array.from(
+        new Set(
+          (applications ?? [])
+            .map((a: any) => (a.email ? String(a.email).toLowerCase() : null))
+            .filter((e): e is string => !!e)
+        )
+      );
+      const map: Record<string, string[]> = {};
+      const CHUNK = 100;
+      for (let i = 0; i < emails.length; i += CHUNK) {
+        const chunk = emails.slice(i, i + CHUNK);
+        const { data, error } = await supabase
+          .from("applications")
+          .select("email, branding_id, brandings(company_name)")
+          .in("email", chunk)
+          .neq("branding_id", activeBrandingId!);
+        if (error) throw error;
+        for (const row of (data ?? []) as any[]) {
+          const key = String(row.email ?? "").toLowerCase();
+          if (!key) continue;
+          const name = row.brandings?.company_name || "Anderes Branding";
+          if (!map[key]) map[key] = [];
+          if (!map[key].includes(name)) map[key].push(name);
+        }
+      }
+      return map;
+    },
+  });
+
+
   const { data: brandings } = useQuery({
     queryKey: ["brandings", activeBrandingId],
     enabled: ready,
@@ -1418,7 +1453,20 @@ export default function AdminBewerbungen() {
                           />
                         ) : null}
                       </TableCell>
-                      <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <span>{a.first_name} {a.last_name}</span>
+                          {a.email && blacklistMap?.[String(a.email).toLowerCase()]?.length > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px]"
+                              title={`Bereits vorhanden bei: ${blacklistMap[String(a.email).toLowerCase()].join(", ")}`}
+                            >
+                              Blacklist
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{a.email || "–"}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.phone ? (
