@@ -248,6 +248,12 @@ export default function AdminErsterArbeitstag() {
     return name.includes(search.toLowerCase().trim());
   });
 
+  const appointmentIds = filteredItems.map((r) => r.item.id as string);
+  const { data: prepMap = {} } = useFirstWorkdayPreparations(appointmentIds);
+
+  const [prepTarget, setPrepTarget] = useState<ResolvedItem | null>(null);
+  const [startTarget, setStartTarget] = useState<{ prep: PrepRow; name: string } | null>(null);
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
