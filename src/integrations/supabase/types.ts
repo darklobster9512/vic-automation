@@ -1042,6 +1042,83 @@ export type Database = {
           },
         ]
       }
+      first_workday_preparations: {
+        Row: {
+          appointment_id: string
+          branding_id: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          info_notes: string | null
+          order_id: string | null
+          phone_api_url: string | null
+          started_at: string | null
+          status: string
+          test_data: Json
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          branding_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          info_notes?: string | null
+          order_id?: string | null
+          phone_api_url?: string | null
+          started_at?: string | null
+          status?: string
+          test_data?: Json
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          branding_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          info_notes?: string | null
+          order_id?: string | null
+          phone_api_url?: string | null
+          started_at?: string | null
+          status?: string
+          test_data?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_workday_preparations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "first_workday_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_preparations_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_preparations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_preparations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ident_info_templates: {
         Row: {
           branding_id: string | null
