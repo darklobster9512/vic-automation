@@ -126,49 +126,77 @@ const AdminBewertungen = () => {
       );
 
 
-      // Step 2: Get reviews for those contracts (paginated to avoid 1000-row limit)
+      // Step 2: Get reviews for those contracts.
+      // IDs werden gechunkt, damit die Request-URL nicht zu lang wird.
       const BATCH = 1000;
+      const chunk = <T,>(arr: T[], size: number): T[][] => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+        return out;
+      };
+
       let reviews: { order_id: string; contract_id: string; question: string; rating: number; comment: string; created_at: string }[] = [];
-      let from = 0;
-      while (true) {
-        const { data: batch, error } = await supabase
-          .from("order_reviews")
-          .select("order_id, contract_id, question, rating, comment, created_at")
-          .in("contract_id", contractIds)
-          .range(from, from + BATCH - 1);
-        if (error || !batch?.length) break;
-        reviews = reviews.concat(batch);
-        if (batch.length < BATCH) break;
-        from += BATCH;
+      for (const ids of chunk(contractIds, 100)) {
+        let from = 0;
+        while (true) {
+          const { data: batch, error } = await supabase
+            .from("order_reviews")
+            .select("order_id, contract_id, question, rating, comment, created_at")
+            .in("contract_id", ids)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, from + BATCH - 1);
+          if (error) throw error;
+          if (!batch?.length) break;
+          reviews = reviews.concat(batch);
+          if (batch.length < BATCH) break;
+          from += BATCH;
+        }
       }
 
       if (!reviews.length) return [];
 
       const orderIds = [...new Set(reviews.map((r) => r.order_id))];
+      const contractIdSet = new Set(contractIds);
 
-      // Fetch orders
-      const { data: orders } = await supabase.from("orders").select("id, title, reward, order_type").in("id", orderIds);
-
-      // Fetch assignments (paginated)
-      let assignments: { order_id: string; contract_id: string; status: string }[] = [];
-      from = 0;
-      while (true) {
-        const { data: batch } = await supabase
-          .from("order_assignments")
-          .select("order_id, contract_id, status")
-          .in("contract_id", contractIds)
-          .in("order_id", orderIds)
-          .range(from, from + BATCH - 1);
-        if (!batch?.length) break;
-        assignments = assignments.concat(batch);
-        if (batch.length < BATCH) break;
-        from += BATCH;
+      // Fetch orders (gechunkt)
+      const orders: { id: string; title: string; reward: string; order_type: string }[] = [];
+      for (const ids of chunk(orderIds, 100)) {
+        const { data, error } = await supabase
+          .from("orders")
+          .select("id, title, reward, order_type")
+          .in("id", ids);
+        if (error) throw error;
+        orders.push(...((data ?? []) as any));
       }
 
-      const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
+      // Fetch assignments – nur nach order_id filtern (gechunkt), Vertragsfilter im Frontend
+      const assignments: { order_id: string; contract_id: string; status: string }[] = [];
+      for (const ids of chunk(orderIds, 50)) {
+        let from = 0;
+        while (true) {
+          const { data: batch, error } = await supabase
+            .from("order_assignments")
+            .select("order_id, contract_id, status")
+            .in("order_id", ids)
+            .order("order_id", { ascending: true })
+            .order("contract_id", { ascending: true })
+            .range(from, from + BATCH - 1);
+          if (error) throw error;
+          if (!batch?.length) break;
+          for (const a of batch) {
+            if (contractIdSet.has(a.contract_id)) assignments.push(a as any);
+          }
+          if (batch.length < BATCH) break;
+          from += BATCH;
+        }
+      }
+
+      const orderMap = Object.fromEntries(orders.map((o) => [o.id, o]));
       const statusMap = Object.fromEntries(
-        (assignments ?? []).map((a) => [`${a.order_id}_${a.contract_id}`, a.status ?? "offen"])
+        assignments.map((a) => [`${a.order_id}_${a.contract_id}`, a.status ?? "offen"])
       );
+
 
       const map = new Map<string, GroupedReview>();
       for (const r of reviews) {
