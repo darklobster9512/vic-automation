@@ -478,6 +478,27 @@ export default function AdminErsterArbeitstag() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {prepTarget && (
+        <FirstWorkdayPrepDialog
+          open={!!prepTarget}
+          onOpenChange={(v) => { if (!v) setPrepTarget(null); }}
+          appointmentId={prepTarget.item.id}
+          contractId={prepTarget.item.employment_contracts?.id ?? prepTarget.item.contract_id ?? null}
+          brandingId={prepTarget.item.employment_contracts?.branding_id ?? activeBrandingId ?? null}
+          employeeName={`${prepTarget.firstName} ${prepTarget.lastName}`.trim()}
+          existing={(prepMap as Record<string, PrepRow>)[prepTarget.item.id] ?? null}
+        />
+      )}
+
+      {startTarget && (
+        <FirstWorkdayStartDialog
+          open={!!startTarget}
+          onOpenChange={(v) => { if (!v) setStartTarget(null); }}
+          prep={startTarget.prep}
+          employeeName={startTarget.name}
+        />
+      )}
     </>
   );
 }
