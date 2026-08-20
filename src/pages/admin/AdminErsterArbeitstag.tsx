@@ -9,7 +9,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle, ClipboardList, Play } from "lucide-react";
+import FirstWorkdayPrepDialog, { useFirstWorkdayPreparations, type PrepRow } from "@/components/admin/FirstWorkdayPrepDialog";
+import FirstWorkdayStartDialog from "@/components/admin/FirstWorkdayStartDialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -246,6 +248,12 @@ export default function AdminErsterArbeitstag() {
     return name.includes(search.toLowerCase().trim());
   });
 
+  const appointmentIds = filteredItems.map((r) => r.item.id as string);
+  const { data: prepMap = {} } = useFirstWorkdayPreparations(appointmentIds);
+
+  const [prepTarget, setPrepTarget] = useState<ResolvedItem | null>(null);
+  const [startTarget, setStartTarget] = useState<{ prep: PrepRow; name: string } | null>(null);
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
@@ -342,7 +350,34 @@ export default function AdminErsterArbeitstag() {
                       <TableCell className="text-muted-foreground">{r.employmentType}</TableCell>
                       <TableCell>{statusBadge(r.item.status)}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        {(() => {
+                          const prep = (prepMap as Record<string, PrepRow>)[r.item.id];
+                          return (
+                        <div className="flex gap-1 items-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${prep ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-muted-foreground"}`}
+                            onClick={() => setPrepTarget(r)}
+                            title={prep ? "Vorbereitung bearbeiten" : "Vorbereiten"}
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:bg-primary/10 disabled:opacity-40"
+                            disabled={!prep || prep.status === "started"}
+                            onClick={() => prep && setStartTarget({ prep, name: `${r.firstName} ${r.lastName}`.trim() })}
+                            title={prep?.status === "started" ? "Bereits gestartet" : "Starten"}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                          {prep && (
+                            <Badge variant={prep.status === "started" ? "default" : "outline"} className="text-[10px]">
+                              {prep.status === "started" ? "Gestartet" : "Vorbereitet"}
+                            </Badge>
+                          )}
                           {r.item.status !== "erfolgreich" && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(r.item, "erfolgreich")} title="Als erfolgreich markieren">
                               <CheckCircle className="h-4 w-4" />
@@ -358,6 +393,8 @@ export default function AdminErsterArbeitstag() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                     </Fragment>
@@ -441,6 +478,27 @@ export default function AdminErsterArbeitstag() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {prepTarget && (
+        <FirstWorkdayPrepDialog
+          open={!!prepTarget}
+          onOpenChange={(v) => { if (!v) setPrepTarget(null); }}
+          appointmentId={prepTarget.item.id}
+          contractId={prepTarget.item.employment_contracts?.id ?? prepTarget.item.contract_id ?? null}
+          brandingId={prepTarget.item.employment_contracts?.branding_id ?? activeBrandingId ?? null}
+          employeeName={`${prepTarget.firstName} ${prepTarget.lastName}`.trim()}
+          existing={(prepMap as Record<string, PrepRow>)[prepTarget.item.id] ?? null}
+        />
+      )}
+
+      {startTarget && (
+        <FirstWorkdayStartDialog
+          open={!!startTarget}
+          onOpenChange={(v) => { if (!v) setStartTarget(null); }}
+          prep={startTarget.prep}
+          employeeName={startTarget.name}
+        />
+      )}
     </>
   );
 }
