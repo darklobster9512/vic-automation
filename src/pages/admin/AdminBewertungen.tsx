@@ -31,6 +31,7 @@ interface GroupedReview {
   order_title: string;
   order_reward: string;
   order_type: string;
+  is_starter_job: boolean;
   employee_name: string;
   avg_rating: number;
   date: string;
