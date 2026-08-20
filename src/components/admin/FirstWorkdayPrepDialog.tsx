@@ -19,6 +19,33 @@ import { toast } from "sonner";
 
 export const DEFAULT_IDENT_FIELDS = ["Identcode", "Identlink", "Anmeldename", "Email", "Passwort"];
 
+// Bankspezifische Ident-Felder (Schlüsselwort → Felder). Nicht gelistete Banken behalten die Standardfelder.
+const BANK_IDENT_FIELDS: Array<{ keyword: string; fields: string[] }> = [
+  { keyword: "deutsche bank", fields: ["Identlink", "Email"] },
+  { keyword: "consorsbank", fields: ["Identlink", "Email"] },
+  { keyword: "postbank", fields: ["Identlink", "Email"] },
+  { keyword: "bbva", fields: ["Identlink", "Email", "Anmeldename", "Passwort"] },
+  { keyword: "dkb", fields: ["Identlink", "Email"] },
+];
+
+const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+function fieldsForOrder(order: any): string[] {
+  const hay = normalize(`${order?.title ?? ""} ${order?.provider ?? ""}`);
+  const match = BANK_IDENT_FIELDS.find((b) => hay.includes(b.keyword));
+  return match ? match.fields : DEFAULT_IDENT_FIELDS;
+}
+
+function templateForOrder(order: any, templates: Array<{ id: string; name: string }> | undefined) {
+  if (!templates?.length) return null;
+  const hay = normalize(`${order?.title ?? ""} ${order?.provider ?? ""}`);
+  const sorted = [...templates].sort((a, b) => b.name.length - a.name.length);
+  return sorted.find((t) => {
+    const n = normalize(t.name);
+    return n.length > 1 && hay.includes(n);
+  }) ?? null;
+}
+
 export interface PrepRow {
   id: string;
   appointment_id: string;
@@ -126,10 +153,12 @@ export default function FirstWorkdayPrepDialog({
   );
   const [phoneUrl, setPhoneUrl] = useState(existing?.phone_api_url ?? "");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [orderPickerOpen, setOrderPickerOpen] = useState(false);
   const [testData, setTestData] = useState<Array<{ label: string; value: string }>>(
     existing?.test_data?.length ? existing.test_data : DEFAULT_IDENT_FIELDS.map((f) => ({ label: f, value: "" }))
   );
   const [infoNotes, setInfoNotes] = useState(existing?.info_notes ?? "");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [customFieldName, setCustomFieldName] = useState("");
   const [saving, setSaving] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
@@ -141,6 +170,7 @@ export default function FirstWorkdayPrepDialog({
     setProvider((existing?.phone_api_url ?? "").startsWith("smsbot://") ? "smsbot" : "anosim");
     setTestData(existing?.test_data?.length ? existing.test_data : DEFAULT_IDENT_FIELDS.map((f) => ({ label: f, value: "" })));
     setInfoNotes(existing?.info_notes ?? "");
+    setSelectedTemplateId("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existing?.id]);
 
@@ -177,11 +207,38 @@ export default function FirstWorkdayPrepDialog({
         }));
   }, [provider, smsbotRentals, phoneEntries, phoneDisplayMap]);
 
+  const selectedOrder = useMemo(
+    () => (orders as any[]).find((o) => o.id === orderId) ?? null,
+    [orders, orderId]
+  );
+
   const applyTemplate = (templateId: string) => {
     const tpl = infoTemplates?.find((t) => t.id === templateId);
     if (!tpl) return;
     if (infoNotes.trim() && !window.confirm("Vorhandenen Text mit der Vorlage überschreiben?")) return;
+    setSelectedTemplateId(templateId);
     setInfoNotes(tpl.content);
+  };
+
+  // Auftrag gewählt → bankspezifische Felder setzen und passende Info-Vorlage vorauswählen
+  const handleOrderSelect = (newOrderId: string) => {
+    setOrderId(newOrderId);
+    setOrderPickerOpen(false);
+    if (newOrderId === orderId) return;
+    const order = (orders as any[]).find((o) => o.id === newOrderId);
+    if (!order) return;
+
+    setTestData((prev) => {
+      const byLabel = new Map(prev.map((f) => [f.label.toLowerCase(), f.value]));
+      return fieldsForOrder(order).map((label) => ({ label, value: byLabel.get(label.toLowerCase()) ?? "" }));
+    });
+
+    const tpl = templateForOrder(order, infoTemplates as any);
+    if (tpl && !infoNotes.trim()) {
+      setSelectedTemplateId(tpl.id);
+      const full = infoTemplates?.find((t) => t.id === tpl.id);
+      if (full) setInfoNotes(full.content);
+    }
   };
 
   const updateField = (i: number, patch: Partial<{ label: string; value: string }>) =>
@@ -237,18 +294,41 @@ export default function FirstWorkdayPrepDialog({
             {/* Step 1: Auftrag */}
             <div className="space-y-2">
               <Label>1. Auftrag (Bankdrop)</Label>
-              <Select value={orderId} onValueChange={setOrderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Auftrag auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {orders.map((o: any) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.order_number ? `#${o.order_number} – ` : ""}{o.title}{o.provider ? ` (${o.provider})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={orderPickerOpen} onOpenChange={setOrderPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                    <span className="truncate">
+                      {selectedOrder
+                        ? `${selectedOrder.order_number ? `#${selectedOrder.order_number} – ` : ""}${selectedOrder.title}${selectedOrder.provider ? ` (${selectedOrder.provider})` : ""}`
+                        : "Auftrag auswählen..."}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Auftrag suchen..." />
+                    <CommandList>
+                      <CommandEmpty>Keine Treffer.</CommandEmpty>
+                      <CommandGroup>
+                        {(orders as any[]).map((o) => (
+                          <CommandItem
+                            key={o.id}
+                            value={`${o.order_number ?? ""} ${o.title ?? ""} ${o.provider ?? ""}`}
+                            onSelect={() => handleOrderSelect(o.id)}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${orderId === o.id ? "opacity-100" : "opacity-0"}`} />
+                            <div className="flex flex-col">
+                              <span>{o.order_number ? `#${o.order_number} – ` : ""}{o.title}</span>
+                              {o.provider && <span className="text-xs text-muted-foreground">{o.provider}</span>}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {orders.length === 0 && (
                 <p className="text-xs text-muted-foreground">Keine Bankdrop-Aufträge für dieses Branding vorhanden.</p>
               )}
@@ -371,7 +451,7 @@ export default function FirstWorkdayPrepDialog({
                   <div className="flex items-center justify-between gap-2">
                     <Label>4. Info / Fragen und Antworten</Label>
                     <div className="flex items-center gap-2">
-                      <Select onValueChange={applyTemplate}>
+                      <Select value={selectedTemplateId || undefined} onValueChange={applyTemplate}>
                         <SelectTrigger className="h-8 w-[200px] text-xs">
                           <SelectValue placeholder="Vorlage wählen" />
                         </SelectTrigger>
