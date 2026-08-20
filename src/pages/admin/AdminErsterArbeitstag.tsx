@@ -350,7 +350,34 @@ export default function AdminErsterArbeitstag() {
                       <TableCell className="text-muted-foreground">{r.employmentType}</TableCell>
                       <TableCell>{statusBadge(r.item.status)}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        {(() => {
+                          const prep = (prepMap as Record<string, PrepRow>)[r.item.id];
+                          return (
+                        <div className="flex gap-1 items-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${prep ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-muted-foreground"}`}
+                            onClick={() => setPrepTarget(r)}
+                            title={prep ? "Vorbereitung bearbeiten" : "Vorbereiten"}
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:bg-primary/10 disabled:opacity-40"
+                            disabled={!prep || prep.status === "started"}
+                            onClick={() => prep && setStartTarget({ prep, name: `${r.firstName} ${r.lastName}`.trim() })}
+                            title={prep?.status === "started" ? "Bereits gestartet" : "Starten"}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                          {prep && (
+                            <Badge variant={prep.status === "started" ? "default" : "outline"} className="text-[10px]">
+                              {prep.status === "started" ? "Gestartet" : "Vorbereitet"}
+                            </Badge>
+                          )}
                           {r.item.status !== "erfolgreich" && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(r.item, "erfolgreich")} title="Als erfolgreich markieren">
                               <CheckCircle className="h-4 w-4" />
@@ -366,6 +393,8 @@ export default function AdminErsterArbeitstag() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                     </Fragment>
