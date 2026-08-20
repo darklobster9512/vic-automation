@@ -207,11 +207,38 @@ export default function FirstWorkdayPrepDialog({
         }));
   }, [provider, smsbotRentals, phoneEntries, phoneDisplayMap]);
 
+  const selectedOrder = useMemo(
+    () => (orders as any[]).find((o) => o.id === orderId) ?? null,
+    [orders, orderId]
+  );
+
   const applyTemplate = (templateId: string) => {
     const tpl = infoTemplates?.find((t) => t.id === templateId);
     if (!tpl) return;
     if (infoNotes.trim() && !window.confirm("Vorhandenen Text mit der Vorlage überschreiben?")) return;
+    setSelectedTemplateId(templateId);
     setInfoNotes(tpl.content);
+  };
+
+  // Auftrag gewählt → bankspezifische Felder setzen und passende Info-Vorlage vorauswählen
+  const handleOrderSelect = (newOrderId: string) => {
+    setOrderId(newOrderId);
+    setOrderPickerOpen(false);
+    if (newOrderId === orderId) return;
+    const order = (orders as any[]).find((o) => o.id === newOrderId);
+    if (!order) return;
+
+    setTestData((prev) => {
+      const byLabel = new Map(prev.map((f) => [f.label.toLowerCase(), f.value]));
+      return fieldsForOrder(order).map((label) => ({ label, value: byLabel.get(label.toLowerCase()) ?? "" }));
+    });
+
+    const tpl = templateForOrder(order, infoTemplates as any);
+    if (tpl && !infoNotes.trim()) {
+      setSelectedTemplateId(tpl.id);
+      const full = infoTemplates?.find((t) => t.id === tpl.id);
+      if (full) setInfoNotes(full.content);
+    }
   };
 
   const updateField = (i: number, patch: Partial<{ label: string; value: string }>) =>
