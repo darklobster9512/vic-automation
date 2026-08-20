@@ -275,6 +275,40 @@ export default function AdminBewerbungen() {
     onError: () => toast.error("Fehler beim Löschen"),
   });
 
+  // Alle Bewerbungen mit Blacklist-Treffer (gleiche E-Mail in anderem Branding)
+  const blacklistedApplications = useMemo(() => {
+    if (!blacklistMap) return [] as any[];
+    return (applications ?? []).filter(
+      (a: any) => a.email && (blacklistMap[String(a.email).toLowerCase()]?.length ?? 0) > 0
+    );
+  }, [applications, blacklistMap]);
+
+  const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
+
+  const deleteBlacklistMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const CHUNK = 100;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { error } = await supabase
+          .from("applications")
+          .delete()
+          .in("id", ids.slice(i, i + CHUNK));
+        if (error) throw error;
+      }
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      setBlacklistDialogOpen(false);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["blacklist-emails"] });
+      toast.success(`${count} Blacklist-Bewerbung(en) gelöscht`);
+    },
+    onError: () => toast.error("Fehler beim Löschen"),
+  });
+
+
+
   const acceptMutation = useMutation({
     mutationFn: async (app: any) => {
       // 1. Prepare links
