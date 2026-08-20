@@ -9,7 +9,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle, ClipboardList, Play } from "lucide-react";
+import FirstWorkdayPrepDialog, { useFirstWorkdayPreparations, type PrepRow } from "@/components/admin/FirstWorkdayPrepDialog";
+import FirstWorkdayStartDialog from "@/components/admin/FirstWorkdayStartDialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
