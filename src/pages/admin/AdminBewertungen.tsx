@@ -70,7 +70,7 @@ const AdminBewertungen = () => {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
-  const { data: grouped = [], isLoading } = useQuery({
+  const { data: grouped = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-bewertungen", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
@@ -556,6 +556,22 @@ const AdminBewertungen = () => {
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight">Bewertungen</h1>
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          Bewertungen konnten nicht geladen werden – Status könnten unvollständig sein.{" "}
+          {(error as Error)?.message}
+          <div className="mt-3">
+            <Button size="sm" variant="outline" onClick={() => refetch()}>Erneut laden</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   const searchLower = search.trim().toLowerCase();
   const filteredGrouped = grouped
