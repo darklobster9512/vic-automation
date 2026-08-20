@@ -31,6 +31,7 @@ interface GroupedReview {
   order_title: string;
   order_reward: string;
   order_type: string;
+  is_starter_job: boolean;
   employee_name: string;
   avg_rating: number;
   date: string;
@@ -160,11 +161,11 @@ const AdminBewertungen = () => {
       const contractIdSet = new Set(contractIds);
 
       // Fetch orders (gechunkt)
-      const orders: { id: string; title: string; reward: string; order_type: string }[] = [];
+      const orders: { id: string; title: string; reward: string; order_type: string; is_starter_job: boolean }[] = [];
       for (const ids of chunk(orderIds, 100)) {
         const { data, error } = await supabase
           .from("orders")
-          .select("id, title, reward, order_type")
+          .select("id, title, reward, order_type, is_starter_job")
           .in("id", ids);
         if (error) throw error;
         orders.push(...((data ?? []) as any));
@@ -209,6 +210,7 @@ const AdminBewertungen = () => {
             order_title: o?.title ?? "Unbekannt",
             order_reward: o?.reward ?? "0€",
             order_type: o?.order_type ?? "",
+            is_starter_job: !!o?.is_starter_job,
             employee_name: contractMap[r.contract_id] ?? "Unbekannt",
             avg_rating: 0,
             date: r.created_at,
@@ -707,17 +709,31 @@ const AdminBewertungen = () => {
         <TabsContent value="in-review">
           {(() => {
             const placeholderReviews = pendingReviews.filter((r) => r.order_type === "platzhalter");
-            return placeholderReviews.length > 0 ? (
-              <div className="flex justify-end mb-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={processing === "__bulk__"}
-                  onClick={() => handleApproveAllSilent(placeholderReviews)}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {processing === "__bulk__" ? "Genehmige..." : `Alle Platzhalter genehmigen (ohne SMS) · ${placeholderReviews.length}`}
-                </Button>
+            const starterReviews = pendingReviews.filter((r) => r.is_starter_job);
+            return placeholderReviews.length > 0 || starterReviews.length > 0 ? (
+              <div className="flex justify-end gap-2 mb-3">
+                {placeholderReviews.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={processing === "__bulk__"}
+                    onClick={() => handleApproveAllSilent(placeholderReviews)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {processing === "__bulk__" ? "Genehmige..." : `Alle Platzhalter genehmigen (ohne SMS) · ${placeholderReviews.length}`}
+                  </Button>
+                )}
+                {starterReviews.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={processing === "__bulk__"}
+                    onClick={() => handleApproveAllSilent(starterReviews)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {processing === "__bulk__" ? "Genehmige..." : `Alle Starter-Jobs genehmigen · ${starterReviews.length}`}
+                  </Button>
+                )}
               </div>
             ) : null;
           })()}

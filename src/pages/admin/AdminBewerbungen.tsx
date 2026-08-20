@@ -275,6 +275,40 @@ export default function AdminBewerbungen() {
     onError: () => toast.error("Fehler beim Löschen"),
   });
 
+  // Alle Bewerbungen mit Blacklist-Treffer (gleiche E-Mail in anderem Branding)
+  const blacklistedApplications = useMemo(() => {
+    if (!blacklistMap) return [] as any[];
+    return (applications ?? []).filter(
+      (a: any) => a.email && (blacklistMap[String(a.email).toLowerCase()]?.length ?? 0) > 0
+    );
+  }, [applications, blacklistMap]);
+
+  const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
+
+  const deleteBlacklistMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const CHUNK = 100;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { error } = await supabase
+          .from("applications")
+          .delete()
+          .in("id", ids.slice(i, i + CHUNK));
+        if (error) throw error;
+      }
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      setBlacklistDialogOpen(false);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["blacklist-emails"] });
+      toast.success(`${count} Blacklist-Bewerbung(en) gelöscht`);
+    },
+    onError: () => toast.error("Fehler beim Löschen"),
+  });
+
+
+
   const acceptMutation = useMutation({
     mutationFn: async (app: any) => {
       // 1. Prepare links
@@ -1399,8 +1433,25 @@ export default function AdminBewerbungen() {
              <p className="text-muted-foreground">Keine Bewerbungen mit diesem Status vorhanden.</p>
            </div>
          ) : (
-           <div className="premium-card overflow-hidden">
-            {/* Bulk accept bar */}
+            <div className="premium-card overflow-hidden">
+             {/* Blacklist bar */}
+             {blacklistedApplications.length > 0 && !bulkProcessing.inProgress && (
+               <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                 <span className="text-sm text-muted-foreground">
+                   {blacklistedApplications.length} Bewerbung(en) mit Blacklist-Treffer
+                 </span>
+                 <Button
+                   size="sm"
+                   variant="destructive"
+                   onClick={() => setBlacklistDialogOpen(true)}
+                   disabled={deleteBlacklistMutation.isPending}
+                 >
+                   <Trash2 className="h-4 w-4 mr-1" />
+                   Blacklist löschen · {blacklistedApplications.length}
+                 </Button>
+               </div>
+             )}
+             {/* Bulk accept bar */}
             {selectedIds.size > 0 && !bulkProcessing.inProgress && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
                 <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
@@ -1561,6 +1612,35 @@ export default function AdminBewerbungen() {
           </div>
         )}
       </motion.div>
+
+      {/* Blacklist löschen bestätigen */}
+      <Dialog open={blacklistDialogOpen} onOpenChange={setBlacklistDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Blacklist-Bewerbungen löschen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {blacklistedApplications.length} Bewerbung(en) mit einer E-Mail, die bereits in einem anderen
+              Branding existiert, werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBlacklistDialogOpen(false)}>
+                Abbrechen
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteBlacklistMutation.isPending}
+                onClick={() =>
+                  deleteBlacklistMutation.mutate(blacklistedApplications.map((a: any) => a.id))
+                }
+              >
+                {deleteBlacklistMutation.isPending ? "Lösche..." : "Endgültig löschen"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Queue-Einstellungen */}
       <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
