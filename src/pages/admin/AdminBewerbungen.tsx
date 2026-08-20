@@ -1433,8 +1433,25 @@ export default function AdminBewerbungen() {
              <p className="text-muted-foreground">Keine Bewerbungen mit diesem Status vorhanden.</p>
            </div>
          ) : (
-           <div className="premium-card overflow-hidden">
-            {/* Bulk accept bar */}
+            <div className="premium-card overflow-hidden">
+             {/* Blacklist bar */}
+             {blacklistedApplications.length > 0 && !bulkProcessing.inProgress && (
+               <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                 <span className="text-sm text-muted-foreground">
+                   {blacklistedApplications.length} Bewerbung(en) mit Blacklist-Treffer
+                 </span>
+                 <Button
+                   size="sm"
+                   variant="destructive"
+                   onClick={() => setBlacklistDialogOpen(true)}
+                   disabled={deleteBlacklistMutation.isPending}
+                 >
+                   <Trash2 className="h-4 w-4 mr-1" />
+                   Blacklist löschen · {blacklistedApplications.length}
+                 </Button>
+               </div>
+             )}
+             {/* Bulk accept bar */}
             {selectedIds.size > 0 && !bulkProcessing.inProgress && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
                 <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
