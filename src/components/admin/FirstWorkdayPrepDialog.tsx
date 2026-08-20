@@ -33,9 +33,10 @@ export interface PrepRow {
 }
 
 export function useFirstWorkdayPreparations(appointmentIds: string[]) {
+  const sortedIds = [...appointmentIds].sort();
   return useQuery({
-    queryKey: ["first-workday-preparations", appointmentIds.length],
-    enabled: appointmentIds.length > 0,
+    queryKey: ["first-workday-preparations", sortedIds.join(",")],
+    enabled: sortedIds.length > 0,
     queryFn: async () => {
       const map: Record<string, PrepRow> = {};
       const CHUNK = 100;
