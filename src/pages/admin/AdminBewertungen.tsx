@@ -161,11 +161,11 @@ const AdminBewertungen = () => {
       const contractIdSet = new Set(contractIds);
 
       // Fetch orders (gechunkt)
-      const orders: { id: string; title: string; reward: string; order_type: string }[] = [];
+      const orders: { id: string; title: string; reward: string; order_type: string; is_starter_job: boolean }[] = [];
       for (const ids of chunk(orderIds, 100)) {
         const { data, error } = await supabase
           .from("orders")
-          .select("id, title, reward, order_type")
+          .select("id, title, reward, order_type, is_starter_job")
           .in("id", ids);
         if (error) throw error;
         orders.push(...((data ?? []) as any));
@@ -210,6 +210,7 @@ const AdminBewertungen = () => {
             order_title: o?.title ?? "Unbekannt",
             order_reward: o?.reward ?? "0€",
             order_type: o?.order_type ?? "",
+            is_starter_job: !!o?.is_starter_job,
             employee_name: contractMap[r.contract_id] ?? "Unbekannt",
             avg_rating: 0,
             date: r.created_at,
