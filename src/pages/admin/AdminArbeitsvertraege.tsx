@@ -582,9 +582,14 @@ export default function AdminArbeitsvertraege() {
             )}
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>Schließen</Button>
             {selectedContract?.status === "eingereicht" && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all" onClick={() => openStartDateDialog(selectedContract)}>
-                <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
-              </Button>
+              <>
+                <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
+                  <Trash2 className="h-4 w-4 mr-1" /> Benutzerkonto löschen
+                </Button>
+                <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all" onClick={() => openStartDateDialog(selectedContract)}>
+                  <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
+                </Button>
+              </>
             )}
           </DialogFooter>
         </DialogContent>
