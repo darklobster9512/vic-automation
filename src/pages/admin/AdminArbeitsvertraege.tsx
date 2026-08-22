@@ -125,6 +125,29 @@ export default function AdminArbeitsvertraege() {
     setStartDateDialogOpen(true);
   };
 
+  const handleDeleteEmployee = async () => {
+    if (!selectedContract) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-employee", {
+        body: { contractId: selectedContract.id },
+      });
+      if (error || (data as any)?.error) {
+        toast.error((data as any)?.error || "Fehler beim Löschen.");
+        return;
+      }
+      toast.success("Benutzerkonto und Vertrag gelöscht.");
+      setDeleteConfirmOpen(false);
+      setDialogOpen(false);
+      setSelectedContract(null);
+      queryClient.invalidateQueries({ queryKey: ["arbeitsvertraege"] });
+    } catch {
+      toast.error("Fehler beim Löschen.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
 
   const handleApprove = async (contractId: string) => {
     try {
