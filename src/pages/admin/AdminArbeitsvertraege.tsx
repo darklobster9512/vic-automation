@@ -646,6 +646,33 @@ export default function AdminArbeitsvertraege() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={(v) => { if (!isDeleting) setDeleteConfirmOpen(v); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Benutzerkonto löschen?</DialogTitle>
+            <DialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden. Vertrag, Login und alle zugehörigen Daten werden unwiderruflich entfernt.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContract && (
+            <div className="rounded-lg border border-border p-3 text-sm">
+              <p className="font-medium">
+                {`${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim() || "Unbekannt"}
+              </p>
+              <p className="text-muted-foreground">{selectedContract.email || "–"}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" disabled={isDeleting} onClick={() => setDeleteConfirmOpen(false)}>Abbrechen</Button>
+            <Button variant="destructive" disabled={isDeleting} onClick={handleDeleteEmployee}>
+              {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Endgültig löschen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
