@@ -33,6 +33,8 @@ export default function AdminArbeitsvertraege() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
