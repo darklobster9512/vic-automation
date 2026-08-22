@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy, CalendarIcon, Search } from "lucide-react";
+import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy, CalendarIcon, Search, Trash2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -33,6 +33,8 @@ export default function AdminArbeitsvertraege() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -121,6 +123,29 @@ export default function AdminArbeitsvertraege() {
     const parsed = dateStr ? new Date(dateStr + "T00:00:00") : undefined;
     setConfirmedStartDate(parsed);
     setStartDateDialogOpen(true);
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!selectedContract) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-employee", {
+        body: { contractId: selectedContract.id },
+      });
+      if (error || (data as any)?.error) {
+        toast.error((data as any)?.error || "Fehler beim Löschen.");
+        return;
+      }
+      toast.success("Benutzerkonto und Vertrag gelöscht.");
+      setDeleteConfirmOpen(false);
+      setDialogOpen(false);
+      setSelectedContract(null);
+      queryClient.invalidateQueries({ queryKey: ["arbeitsvertraege"] });
+    } catch {
+      toast.error("Fehler beim Löschen.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
 
@@ -557,9 +582,14 @@ export default function AdminArbeitsvertraege() {
             )}
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>Schließen</Button>
             {selectedContract?.status === "eingereicht" && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all" onClick={() => openStartDateDialog(selectedContract)}>
-                <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
-              </Button>
+              <>
+                <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
+                  <Trash2 className="h-4 w-4 mr-1" /> Benutzerkonto löschen
+                </Button>
+                <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all" onClick={() => openStartDateDialog(selectedContract)}>
+                  <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
+                </Button>
+              </>
             )}
           </DialogFooter>
         </DialogContent>
@@ -612,6 +642,33 @@ export default function AdminArbeitsvertraege() {
               onClick={() => selectedContract && handleApprove(selectedContract.id)}
             >
               <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen & bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={(v) => { if (!isDeleting) setDeleteConfirmOpen(v); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Benutzerkonto löschen?</DialogTitle>
+            <DialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden. Vertrag, Login und alle zugehörigen Daten werden unwiderruflich entfernt.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContract && (
+            <div className="rounded-lg border border-border p-3 text-sm">
+              <p className="font-medium">
+                {`${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim() || "Unbekannt"}
+              </p>
+              <p className="text-muted-foreground">{selectedContract.email || "–"}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" disabled={isDeleting} onClick={() => setDeleteConfirmOpen(false)}>Abbrechen</Button>
+            <Button variant="destructive" disabled={isDeleting} onClick={handleDeleteEmployee}>
+              {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Endgültig löschen
             </Button>
           </DialogFooter>
         </DialogContent>
