@@ -127,44 +127,33 @@ type ParsedApplicant = {
   phone: string;
 };
 
-function formatPhone(raw: string): string {
-  let cleaned = raw.replace(/[^0-9+]/g, "");
-  if (cleaned.startsWith("0")) {
-    cleaned = "+49" + cleaned.substring(1);
-  }
-  return cleaned;
-}
-
-function formatName(name: string): string {
-  if (name !== name.toUpperCase()) return name;
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-}
-
 function parseMassImportLine(line: string): ParsedApplicant | string {
   const trimmed = line.trim();
   if (!trimmed) return "Leere Zeile";
 
-  const emailMatch = trimmed.match(/\S+@\S+\.\S+/);
-  if (!emailMatch) return "Keine E-Mail erkannt";
+  const emailMatch = trimmed.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+  const email = emailMatch ? normalizeEmail(emailMatch[0]) : "";
 
-  const email = emailMatch[0];
-  const emailIndex = trimmed.indexOf(email);
+  // Remove email token from the line (also for @indeedemail.com, which is dropped)
+  const withoutEmail = emailMatch ? trimmed.replace(emailMatch[0], " ") : trimmed;
 
-  const namePart = trimmed.substring(0, emailIndex).trim();
-  const phonePart = trimmed.substring(emailIndex + email.length).trim();
+  const phoneMatch = withoutEmail.match(/(?:\+|00)?[\d][\d\s()/.-]{6,20}/);
+  if (!phoneMatch) return "Keine Telefonnummer erkannt";
+  const phone = normalizePhone(phoneMatch[0]);
+  if (!phone) return "Telefonnummer ungültig";
 
+  const namePart = withoutEmail.replace(phoneMatch[0], " ").replace(/\s+/g, " ").trim();
   if (!namePart) return "Kein Name erkannt";
-  if (!phonePart) return "Keine Telefonnummer erkannt";
 
   const nameWords = namePart.split(/\s+/);
   if (nameWords.length < 2) return "Vor- und Nachname erforderlich";
 
-  const firstName = nameWords.slice(0, -1).map(w => formatName(w)).join(" ");
-  const lastName = formatName(nameWords[nameWords.length - 1]);
-  const phone = formatPhone(phonePart);
+  const firstName = normalizeName(nameWords.slice(0, -1).join(" "));
+  const lastName = normalizeName(nameWords[nameWords.length - 1]);
 
   return { first_name: firstName, last_name: lastName, email, phone };
 }
+
 
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
