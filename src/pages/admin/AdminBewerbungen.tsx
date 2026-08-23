@@ -903,17 +903,21 @@ export default function AdminBewerbungen() {
         parsed.push(result);
       }
     });
-    const existingEmails = new Set(
+    const existingKeys = new Set(
       (applications || [])
-        .map((a: any) => (a.email || "").toLowerCase().trim())
+        .flatMap((a: any) => [
+          (a.email || "").toLowerCase().trim(),
+          normalizePhone(a.phone || ""),
+        ])
         .filter(Boolean)
     );
     const seen = new Set<string>();
     const duplicates: ParsedApplicant[] = [];
     const uniqueToImport: ParsedApplicant[] = [];
     parsed.forEach((p) => {
-      const key = p.email.toLowerCase().trim();
-      if (existingEmails.has(key) || seen.has(key)) {
+      const key = p.email.toLowerCase().trim() || p.phone;
+      if (existingKeys.has(key) || seen.has(key)) {
+
         duplicates.push(p);
       } else {
         seen.add(key);
