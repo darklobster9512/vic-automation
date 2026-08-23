@@ -6,6 +6,15 @@ import { sendTelegram } from "@/lib/sendTelegram";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { createShortLink } from "@/lib/createShortLink";
+import {
+  extractApplicantFromPdf,
+  applicantToLine,
+  normalizeName,
+  normalizePhone,
+  normalizeEmail,
+  type CvExtractionResult,
+} from "@/lib/cvExtraction";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,44 +136,33 @@ type ParsedApplicant = {
   phone: string;
 };
 
-function formatPhone(raw: string): string {
-  let cleaned = raw.replace(/[^0-9+]/g, "");
-  if (cleaned.startsWith("0")) {
-    cleaned = "+49" + cleaned.substring(1);
-  }
-  return cleaned;
-}
-
-function formatName(name: string): string {
-  if (name !== name.toUpperCase()) return name;
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-}
-
 function parseMassImportLine(line: string): ParsedApplicant | string {
   const trimmed = line.trim();
   if (!trimmed) return "Leere Zeile";
 
-  const emailMatch = trimmed.match(/\S+@\S+\.\S+/);
-  if (!emailMatch) return "Keine E-Mail erkannt";
+  const emailMatch = trimmed.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+  const email = emailMatch ? normalizeEmail(emailMatch[0]) : "";
 
-  const email = emailMatch[0];
-  const emailIndex = trimmed.indexOf(email);
+  // Remove email token from the line (also for @indeedemail.com, which is dropped)
+  const withoutEmail = emailMatch ? trimmed.replace(emailMatch[0], " ") : trimmed;
 
-  const namePart = trimmed.substring(0, emailIndex).trim();
-  const phonePart = trimmed.substring(emailIndex + email.length).trim();
+  const phoneMatch = withoutEmail.match(/(?:\+|00)?[\d][\d\s()/.-]{6,20}/);
+  if (!phoneMatch) return "Keine Telefonnummer erkannt";
+  const phone = normalizePhone(phoneMatch[0]);
+  if (!phone) return "Telefonnummer ungültig";
 
+  const namePart = withoutEmail.replace(phoneMatch[0], " ").replace(/\s+/g, " ").trim();
   if (!namePart) return "Kein Name erkannt";
-  if (!phonePart) return "Keine Telefonnummer erkannt";
 
   const nameWords = namePart.split(/\s+/);
   if (nameWords.length < 2) return "Vor- und Nachname erforderlich";
 
-  const firstName = nameWords.slice(0, -1).map(w => formatName(w)).join(" ");
-  const lastName = formatName(nameWords[nameWords.length - 1]);
-  const phone = formatPhone(phonePart);
+  const firstName = normalizeName(nameWords.slice(0, -1).join(" "));
+  const lastName = normalizeName(nameWords[nameWords.length - 1]);
 
   return { first_name: firstName, last_name: lastName, email, phone };
 }
+
 
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
@@ -187,7 +185,60 @@ export default function AdminBewerbungen() {
   const [delayMin, setDelayMin] = useState("60");
   const [delayMax, setDelayMax] = useState("100");
   const cancelBulkRef = useRef(false);
+  const [cvResults, setCvResults] = useState<CvExtractionResult[]>([]);
+  const [cvProgress, setCvProgress] = useState<{ total: number; done: number; running: boolean }>({ total: 0, done: 0, running: false });
+  const cvInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => () => { cancelBulkRef.current = true; }, []);
+
+  const handleCvFiles = useCallback(async (files: File[]) => {
+    const pdfs = files.filter((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+    if (!pdfs.length) {
+      toast.error("Bitte PDF-Dateien auswählen");
+      return;
+    }
+    setCvResults([]);
+    setCvProgress({ total: pdfs.length, done: 0, running: true });
+
+    const results: CvExtractionResult[] = [];
+    const CHUNK = 3;
+    for (let i = 0; i < pdfs.length; i += CHUNK) {
+      const chunk = pdfs.slice(i, i + CHUNK);
+      const chunkResults = await Promise.all(
+        chunk.map(async (file) => {
+          try {
+            return await extractApplicantFromPdf(file);
+          } catch (e) {
+            return { fileName: file.name, data: null, status: "failed" as const, message: "Auswertung fehlgeschlagen" };
+          }
+        })
+      );
+      results.push(...chunkResults);
+      setCvResults([...results]);
+      setCvProgress({ total: pdfs.length, done: results.length, running: results.length < pdfs.length });
+    }
+
+    setCvProgress({ total: pdfs.length, done: results.length, running: false });
+
+    const okLines = results
+      .filter((r) => r.status === "ok" && r.data)
+      .map((r) => applicantToLine(r.data!));
+
+    if (okLines.length) {
+      setMassImportText((prev) => {
+        const existing = prev.split("\n").map((l) => l.trim()).filter(Boolean);
+        const merged = [...existing];
+        okLines.forEach((line) => {
+          if (!merged.includes(line)) merged.push(line);
+        });
+        return merged.join("\n");
+      });
+      setMassImportErrors([]);
+      toast.success(`${okLines.length} von ${results.length} Lebensläufen übernommen`);
+    } else {
+      toast.error("Keine vollständigen Daten erkannt");
+    }
+  }, []);
+
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -693,7 +744,7 @@ export default function AdminBewerbungen() {
       const rows = applicants.map((a) => ({
         first_name: a.first_name,
         last_name: a.last_name,
-        email: a.email,
+        email: a.email || null,
         phone: a.phone,
         branding_id: form.branding_id,
         is_indeed: isIndeed && !isExternal && !isMeta,
@@ -852,17 +903,21 @@ export default function AdminBewerbungen() {
         parsed.push(result);
       }
     });
-    const existingEmails = new Set(
+    const existingKeys = new Set(
       (applications || [])
-        .map((a: any) => (a.email || "").toLowerCase().trim())
+        .flatMap((a: any) => [
+          (a.email || "").toLowerCase().trim(),
+          normalizePhone(a.phone || ""),
+        ])
         .filter(Boolean)
     );
     const seen = new Set<string>();
     const duplicates: ParsedApplicant[] = [];
     const uniqueToImport: ParsedApplicant[] = [];
     parsed.forEach((p) => {
-      const key = p.email.toLowerCase().trim();
-      if (existingEmails.has(key) || seen.has(key)) {
+      const key = p.email.toLowerCase().trim() || p.phone;
+      if (existingKeys.has(key) || seen.has(key)) {
+
         duplicates.push(p);
       } else {
         seen.add(key);
@@ -918,10 +973,10 @@ export default function AdminBewerbungen() {
       }
       setErrors({});
       createMutation.mutate({
-        first_name: formatName(form.first_name),
-        last_name: formatName(form.last_name),
+        first_name: normalizeName(form.first_name),
+        last_name: normalizeName(form.last_name),
         email: form.email,
-        phone: formatPhone(form.phone),
+        phone: normalizePhone(form.phone),
         branding_id: form.branding_id,
         is_indeed: isIndeed,
         is_external: isExternal && !isMeta,
@@ -940,9 +995,9 @@ export default function AdminBewerbungen() {
       setErrors({});
       const formatted = {
         ...result.data,
-        first_name: formatName(result.data.first_name),
-        last_name: formatName(result.data.last_name),
-        phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
+        first_name: normalizeName(result.data.first_name),
+        last_name: normalizeName(result.data.last_name),
+        phone: result.data.phone ? normalizePhone(result.data.phone) : undefined,
         is_indeed: false,
         is_external: false,
         is_meta: false,
@@ -1186,7 +1241,7 @@ export default function AdminBewerbungen() {
        </Select>
        </div>
 
-       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); setCvResults([]); setCvProgress({ total: 0, done: 0, running: false }); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
@@ -1224,7 +1279,81 @@ export default function AdminBewerbungen() {
               {/* Mass Import Textarea */}
               {(isIndeed || isExternal || isMeta) && isMassImport ? (
                 <>
+                  {isExternal && (
+                    <div className="space-y-2">
+                      <Label>Lebensläufe hochladen (PDF)</Label>
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleCvFiles(Array.from(e.dataTransfer.files));
+                        }}
+                        onClick={() => cvInputRef.current?.click()}
+                        className="cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/20 p-6 text-center hover:bg-muted/40 transition-colors"
+                      >
+                        <Upload className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-medium">PDFs hierher ziehen oder klicken</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Name, E-Mail und Handynummer werden automatisch ausgelesen
+                        </p>
+                        <input
+                          ref={cvInputRef}
+                          type="file"
+                          accept="application/pdf"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            handleCvFiles(Array.from(e.target.files || []));
+                            e.target.value = "";
+                          }}
+                        />
+                      </div>
+
+                      {cvProgress.total > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{cvProgress.done} / {cvProgress.total} ausgewertet</span>
+                            {cvProgress.running && <span>läuft…</span>}
+                          </div>
+                          <Progress value={(cvProgress.done / cvProgress.total) * 100} />
+                        </div>
+                      )}
+
+                      {cvResults.length > 0 && (
+                        <div className="rounded-lg border border-border divide-y max-h-56 overflow-y-auto">
+                          {cvResults.map((r, i) => (
+                            <div key={i} className="p-2 text-xs flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{r.fileName}</p>
+                                <p className="text-muted-foreground truncate">
+                                  {r.data
+                                    ? [`${r.data.first_name} ${r.data.last_name}`.trim(), r.data.email, r.data.phone]
+                                        .filter(Boolean)
+                                        .join(" · ") || "—"
+                                    : "—"}
+                                  {r.message ? ` · ${r.message}` : ""}
+                                </p>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  r.status === "ok"
+                                    ? "border-green-500 text-green-700 bg-green-50 shrink-0"
+                                    : r.status === "incomplete"
+                                    ? "border-yellow-500 text-yellow-700 bg-yellow-50 shrink-0"
+                                    : "border-destructive text-destructive bg-destructive/10 shrink-0"
+                                }
+                              >
+                                {r.status === "ok" ? "OK" : r.status === "incomplete" ? "Unvollständig" : "Fehler"}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="space-y-2">
+
                     <Label>Bewerber (eine Zeile pro Person)</Label>
                     <Textarea
                       value={massImportText}
