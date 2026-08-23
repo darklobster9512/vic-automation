@@ -6,6 +6,15 @@ import { sendTelegram } from "@/lib/sendTelegram";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { createShortLink } from "@/lib/createShortLink";
+import {
+  extractApplicantFromPdf,
+  applicantToLine,
+  normalizeName,
+  normalizePhone,
+  normalizeEmail,
+  type CvExtractionResult,
+} from "@/lib/cvExtraction";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
