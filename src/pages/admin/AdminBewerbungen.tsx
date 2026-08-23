@@ -1275,7 +1275,81 @@ export default function AdminBewerbungen() {
               {/* Mass Import Textarea */}
               {(isIndeed || isExternal || isMeta) && isMassImport ? (
                 <>
+                  {isExternal && (
+                    <div className="space-y-2">
+                      <Label>Lebensläufe hochladen (PDF)</Label>
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleCvFiles(Array.from(e.dataTransfer.files));
+                        }}
+                        onClick={() => cvInputRef.current?.click()}
+                        className="cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/20 p-6 text-center hover:bg-muted/40 transition-colors"
+                      >
+                        <Upload className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-medium">PDFs hierher ziehen oder klicken</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Name, E-Mail und Handynummer werden automatisch ausgelesen
+                        </p>
+                        <input
+                          ref={cvInputRef}
+                          type="file"
+                          accept="application/pdf"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            handleCvFiles(Array.from(e.target.files || []));
+                            e.target.value = "";
+                          }}
+                        />
+                      </div>
+
+                      {cvProgress.total > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{cvProgress.done} / {cvProgress.total} ausgewertet</span>
+                            {cvProgress.running && <span>läuft…</span>}
+                          </div>
+                          <Progress value={(cvProgress.done / cvProgress.total) * 100} />
+                        </div>
+                      )}
+
+                      {cvResults.length > 0 && (
+                        <div className="rounded-lg border border-border divide-y max-h-56 overflow-y-auto">
+                          {cvResults.map((r, i) => (
+                            <div key={i} className="p-2 text-xs flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{r.fileName}</p>
+                                <p className="text-muted-foreground truncate">
+                                  {r.data
+                                    ? [`${r.data.first_name} ${r.data.last_name}`.trim(), r.data.email, r.data.phone]
+                                        .filter(Boolean)
+                                        .join(" · ") || "—"
+                                    : "—"}
+                                  {r.message ? ` · ${r.message}` : ""}
+                                </p>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  r.status === "ok"
+                                    ? "border-green-500 text-green-700 bg-green-50 shrink-0"
+                                    : r.status === "incomplete"
+                                    ? "border-yellow-500 text-yellow-700 bg-yellow-50 shrink-0"
+                                    : "border-destructive text-destructive bg-destructive/10 shrink-0"
+                                }
+                              >
+                                {r.status === "ok" ? "OK" : r.status === "incomplete" ? "Unvollständig" : "Fehler"}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="space-y-2">
+
                     <Label>Bewerber (eine Zeile pro Person)</Label>
                     <Textarea
                       value={massImportText}
