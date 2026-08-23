@@ -1,9 +1,6 @@
-import { pdfjs } from "react-pdf";
+import { pdfjs } from "@/lib/pdfWorker";
 import { supabase } from "@/integrations/supabase/client";
 
-if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-}
 
 export type ExtractedApplicant = {
   first_name: string;
@@ -133,20 +130,28 @@ export function fallbackExtract(text: string, fileName: string): Partial<Extract
 /** Full extraction for one PDF: pdf.js text -> AI edge function -> normalize -> fallback. */
 export async function extractApplicantFromPdf(file: File): Promise<CvExtractionResult> {
   let text = "";
+  let readError: string | null = null;
   try {
     text = await extractPdfText(file);
   } catch (e) {
-    return {
-      fileName: file.name,
-      data: null,
-      status: "failed",
-      message: "PDF konnte nicht gelesen werden",
-    };
+    readError = e instanceof Error ? e.message : String(e);
+    console.error("PDF read failed", file.name, e);
   }
 
   if (!text.trim()) {
-    return { fileName: file.name, data: null, status: "failed", message: "Kein Text im PDF gefunden" };
+    const fbOnly = fallbackExtract("", file.name);
+    const first = normalizeName(fbOnly.first_name || "");
+    const last = normalizeName(fbOnly.last_name || "");
+    return {
+      fileName: file.name,
+      data: first || last ? { first_name: first, last_name: last, email: "", phone: "" } : null,
+      status: first || last ? "incomplete" : "failed",
+      message: readError
+        ? `PDF konnte nicht gelesen werden: ${readError}`
+        : "Kein Text im PDF gefunden",
+    };
   }
+
 
   let ai: Partial<ExtractedApplicant> = {};
   try {
