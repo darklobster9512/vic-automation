@@ -744,7 +744,7 @@ export default function AdminBewerbungen() {
       const rows = applicants.map((a) => ({
         first_name: a.first_name,
         last_name: a.last_name,
-        email: a.email,
+        email: a.email || null,
         phone: a.phone,
         branding_id: form.branding_id,
         is_indeed: isIndeed && !isExternal && !isMeta,
@@ -1241,7 +1241,7 @@ export default function AdminBewerbungen() {
        </Select>
        </div>
 
-       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); setCvResults([]); setCvProgress({ total: 0, done: 0, running: false }); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
