@@ -907,10 +907,10 @@ export default function AdminBewerbungen() {
       }
       setErrors({});
       createMutation.mutate({
-        first_name: formatName(form.first_name),
-        last_name: formatName(form.last_name),
+        first_name: normalizeName(form.first_name),
+        last_name: normalizeName(form.last_name),
         email: form.email,
-        phone: formatPhone(form.phone),
+        phone: normalizePhone(form.phone),
         branding_id: form.branding_id,
         is_indeed: isIndeed,
         is_external: isExternal && !isMeta,
@@ -929,9 +929,9 @@ export default function AdminBewerbungen() {
       setErrors({});
       const formatted = {
         ...result.data,
-        first_name: formatName(result.data.first_name),
-        last_name: formatName(result.data.last_name),
-        phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
+        first_name: normalizeName(result.data.first_name),
+        last_name: normalizeName(result.data.last_name),
+        phone: result.data.phone ? normalizePhone(result.data.phone) : undefined,
         is_indeed: false,
         is_external: false,
         is_meta: false,
