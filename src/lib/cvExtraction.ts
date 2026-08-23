@@ -1,9 +1,6 @@
-import { pdfjs } from "react-pdf";
+import { pdfjs } from "@/lib/pdfWorker";
 import { supabase } from "@/integrations/supabase/client";
 
-if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-}
 
 export type ExtractedApplicant = {
   first_name: string;
