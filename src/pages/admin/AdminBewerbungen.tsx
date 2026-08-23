@@ -185,7 +185,60 @@ export default function AdminBewerbungen() {
   const [delayMin, setDelayMin] = useState("60");
   const [delayMax, setDelayMax] = useState("100");
   const cancelBulkRef = useRef(false);
+  const [cvResults, setCvResults] = useState<CvExtractionResult[]>([]);
+  const [cvProgress, setCvProgress] = useState<{ total: number; done: number; running: boolean }>({ total: 0, done: 0, running: false });
+  const cvInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => () => { cancelBulkRef.current = true; }, []);
+
+  const handleCvFiles = useCallback(async (files: File[]) => {
+    const pdfs = files.filter((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+    if (!pdfs.length) {
+      toast.error("Bitte PDF-Dateien auswählen");
+      return;
+    }
+    setCvResults([]);
+    setCvProgress({ total: pdfs.length, done: 0, running: true });
+
+    const results: CvExtractionResult[] = [];
+    const CHUNK = 3;
+    for (let i = 0; i < pdfs.length; i += CHUNK) {
+      const chunk = pdfs.slice(i, i + CHUNK);
+      const chunkResults = await Promise.all(
+        chunk.map(async (file) => {
+          try {
+            return await extractApplicantFromPdf(file);
+          } catch (e) {
+            return { fileName: file.name, data: null, status: "failed" as const, message: "Auswertung fehlgeschlagen" };
+          }
+        })
+      );
+      results.push(...chunkResults);
+      setCvResults([...results]);
+      setCvProgress({ total: pdfs.length, done: results.length, running: results.length < pdfs.length });
+    }
+
+    setCvProgress({ total: pdfs.length, done: results.length, running: false });
+
+    const okLines = results
+      .filter((r) => r.status === "ok" && r.data)
+      .map((r) => applicantToLine(r.data!));
+
+    if (okLines.length) {
+      setMassImportText((prev) => {
+        const existing = prev.split("\n").map((l) => l.trim()).filter(Boolean);
+        const merged = [...existing];
+        okLines.forEach((line) => {
+          if (!merged.includes(line)) merged.push(line);
+        });
+        return merged.join("\n");
+      });
+      setMassImportErrors([]);
+      toast.success(`${okLines.length} von ${results.length} Lebensläufen übernommen`);
+    } else {
+      toast.error("Keine vollständigen Daten erkannt");
+    }
+  }, []);
+
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
