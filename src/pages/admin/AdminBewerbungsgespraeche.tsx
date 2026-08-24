@@ -305,9 +305,10 @@ export default function AdminBewerbungsgespraeche() {
       const link = `https://${prefix}.${domain}`;
       const senderID = (b?.sms_sender_name || "Service").trim();
       const recipientName = `${app.first_name || ""} ${app.last_name || ""}`.trim();
+      const text = `Hallo ${recipientName}, hier gelangen Sie zu Ihrem Portal: ${link}`;
       await sendSms({
         to: app.phone,
-        text: link,
+        text,
         event_type: "panel_link",
         recipient_name: recipientName,
         from: senderID,
