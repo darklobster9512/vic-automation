@@ -1,0 +1,31 @@
+# Registrierungen ohne Branding (z. B. Beate Stang) reparieren
+
+## Was ich geprüft habe
+
+- `profiles` von heute: Beate Stang (08:13) und Rosemarie Angel (08:27) haben `branding_id = NULL`; 11 andere Registrierungen von heute haben ein Branding.
+- Für Beate Stang existiert **kein** `employment_contracts`-Eintrag — nur ältere LIMEX-Bewerbungen mit derselben E-Mail.
+- `auth.users.raw_user_meta_data` enthält kein Branding; der DB-Trigger `handle_new_user` setzt `branding_id` nicht.
+- In `src/pages/Auth.tsx` passiert alles nach der Registrierung in **einem** `if (... && brandingId)`-Block: Branding setzen, Arbeitsvertrag anlegen, Willkommens-Mail, Telegram. Ist `brandingId` null, passiert nichts davon.
+- Die Domain-Erkennung fällt am Ende auf das Branding mit Domain `frik-maxeiner.de` zurück — dieses Branding existiert in der Tabelle `brandings` nicht mehr. Ergebnis: `brandingId = null`, Registrierung läuft "erfolgreich" durch, aber ohne Branding, ohne Vertrag, ohne Starteraufträge und ohne Willkommens-Mail.
+
+Das erklärt die Fälle exakt: die betroffenen Nutzer haben sich über eine Host-Adresse registriert, die keiner Branding-Domain (auch keiner `additional_domains` bzw. `custom_email_link`) zugeordnet ist.
+
+## Fix
+
+1. **Kein stiller Fallback mehr**
+   In `Auth.tsx`: Wenn kein Branding zur Domain gefunden wird, wird der Registrierungs-Tab gesperrt und ein Hinweis angezeigt ("Registrierung über diese Adresse nicht möglich"), statt ein Konto ohne Branding anzulegen. Login bleibt normal möglich.
+
+2. **Branding serverseitig mitschreiben**
+   Beim `signUp` wird `branding_id` in die `user_metadata` gelegt und `handle_new_user` so erweitert, dass `profiles.branding_id` direkt beim Anlegen gesetzt wird. Damit hängt das Branding nicht mehr an einem Folge-Update, das bei Netzwerkabbruch/Tab-Schließen ausfallen kann.
+
+3. **Fehlerbehandlung entkoppeln**
+   Vertragsanlage, Willkommens-Mail und Telegram werden einzeln abgesichert, damit ein Fehler in einem Schritt die anderen nicht mehr verhindert.
+
+4. **Nachtrag der betroffenen Nutzer**
+   Beate Stang und Rosemarie Angel bekommen per Datenkorrektur LIMEX als Branding und einen offenen Arbeitsvertrag (damit Starteraufträge greifen). Vorab prüfe ich für jeden Fall, zu welchem Branding er wirklich gehört (Bewerbung/Terminhistorie), und liste dir die Zuordnung vor dem Schreiben auf. Ältere Fälle ohne Branding (23.08.: 3, 22.08.: 2) zeige ich dir in derselben Übersicht zur Freigabe.
+
+## Technische Details
+
+- `src/pages/Auth.tsx`: Fallback auf `frik-maxeiner.de` entfernen, `brandingMissing`-Zustand, `signUp(options.data.branding_id)`, `try/catch` je Folgeaktion.
+- Migration: `handle_new_user` liest `NEW.raw_user_meta_data->>'branding_id'` und schreibt es in `profiles.branding_id`.
+- Datenkorrektur per SQL: `profiles.branding_id` setzen und fehlende `employment_contracts` (Status `offen`) anlegen — der bestehende Trigger `assign_starter_jobs` weist die Starteraufträge dann automatisch zu.
