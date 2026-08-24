@@ -1,98 +1,93 @@
-# FAQ-Analyse: Livechats LIMEX, Codebricks, Völler
+# Indeed-Leads (23.08.) für den Mass-Uploader
 
-Analysebasis: 1.735 Mitarbeiter-Nachrichten aus 198 Chats dieser drei Brandings.
+Aus der CSV (UTF-16, Tab-getrennt, 72 Zeilen) wurden 64 verwertbare Kontakte im Format `Vorname Nachname E-Mail +49...` erzeugt. Nachnamen, die im Feld `full_name` fehlten, wurden aus der E-Mail abgeleitet (z. B. `ankezeising6@gmail.com` -> Anke Zeising). Telefonnummern sind auf internationales Format normalisiert.
 
-| Branding | Chats | Mitarbeiter-Nachrichten |
-|---|---|---|
-| LIMEX Solutions | 148 | 1.450 |
-| Codebricks | 18 | 189 |
-| Völler IT Solutions | 32 | 96 |
+## Zum Kopieren ins Eingabefeld
 
-## Themenhäufigkeit (Treffer in Mitarbeiter-Nachrichten)
+```text
+Slaven Gudelj gudelj.slaven020@googlemail.com +4915901297464
+Kristanval Okafor okaforkristanval2007@gmail.com +491633872999
+Johyeon Yang qazxcver@gmail.com +4917641987441
+Muhammad Jawad Khan m.jawadyousafzai@gmail.com +4917623344535
+Melanie Heck melheck@gmx.de +4915153182928
+Meltem Özmen Arslan meltemarslan1906@gmail.com +905432110835
+Ian Thomas Hey ianthomashey06@gmail.com +4915209204667
+Eva Klein eva-klein@hotmail.de +4915253115805
+Sharon Joshi shaila_2j@rediffmail.com +4917687946965
+Keziban Ince i.keziban@googlemail.com +4915732389903
+Anke Zeising ankezeising6@gmail.com +4915563966845
+Jennifer Hauck info@jennifer-hauck.com +4917622013119
+Ali Raza Warraich razaali3466@gmail.com +351937907144
+Anthony Nelson an06395112@gmail.com +4915217738096
+Michael Wilhelm nahanni@web.de +4915162722444
+Ann-Marie Neitzke ann-marie96@mail.de +491759135882
+Marcus Braun marcusbraun2805@web.de +4915118729077
+Bjoern Bichler bjoernbichler@hotmail.de +4915129401377
+Andreas Seils seils0809@gmail.com +491782826801
+Juri Maier juri.maier1@web.de +4917641455814
+Nicole Richter richtern2@icloud.com +491755001773
+Tanja Katterbach tanja-frechen2006@web.de +491636364309
+Jens Meier meier.jens99@gmail.com +4915237643913
+Burak Canak burakcanak1995@gmail.com +4915758749715
+Astrid Vedder vedder.astrid@web.de +4915736943263
+Rob Wolf acid661@googlemail.com +491747027742
+Archana Gandhi archanagandh@gmail.com +4915510196144
+Tibor Vörös tiborvoeroes1702@gmail.com +491712378398
+Mathis Genge mathisgenge@gmail.com +4915757070789
+Tamara Kranitz kranitztamara75@gmail.com +4915568186982
+Aykut Erçok ercok@gmx.de +4917696517743
+Dorry Brenda dorrybrenda3@gmail.com +4915214311797
+Monika Voigt mdoerr160259@gmail.com +4915158403777
+Nilkanth Deshpande nilkanth_ae@yahoo.com +4917669598677
+Anna Maria Manea annamariamanea31@gmail.com +4915125370793
+Holger Janßen holgerjanssen@ewe.net +4917643445056
+Viki Violeta violeta.nikoli1987@gmail.com +4915202509923
+Natalie Berta medo565080@gmail.com +15095166248
+Donnie Avant dnnavant@me.com +4917641116920
+Daniel Reimann daniel.reimann1@web.de +4917655129176
+Alexander Kaufmann alexander.kaufmann@protonmail.ch +491708078953
+Zaharov Evdochia evdochiazaharov30@gmail.com +4915214332625
+Dominik Brohm brohmdominik671@gmail.com +491751257760
+Andi Drewes andreasdrewes749@gmail.com +491746500608
+Justin Schmidt jasminaf2@web.de +4917667047298
+Shakeel Khan atlantans79@gmail.com +4917664326226
+Arbnor Lajqi arbnorlajqi91@gmail.com +4916096437110
+Mwäsï Lêë mwasijeff936@gmail.com +4917624981691
+Marcel Rimoto Hintz mrh81292@gmail.com +4917665762009
+Daniel Heuser dheuser@magenta.de +4915731358393
+Nico Kaufmann niohaltern@gmail.com +4915114308345
+Marvin Schultz marvinschultz98@yahoo.com +4917672572867
+Kevin Korporal korporal016@gmail.com +4917671171476
+Joel Konjevic konjevicjoel8@gmail.com +4915562781971
+Jan Pavelt paveltjan7@gmail.com +4917674771493
+Manuchekhr Dzhumaev manuchekhrdzhumaev@icloud.com +491727308187
+Liam Alejandro dorow.benjaminclark@web.de +4915239605278
+Kader Amare danielmartinez2272@gmail.com +16237035199
+Anke Faendrich a.faendrich@web.de +491752353483
+Ann-Christin Lorbach ann_christinlorbach@yahoo.de +491778133398
+Marda Black black@gmx.de +491772524721
+Yosley Salas Cala rodriguezyelsoy@gmail.com +491607587936
+Roman Brammen roman.brammen@gmx.de +4917616712013
+Lisa Rios Jimenez lisa.rios98@aol.de +491604942776
+```
 
-| Thema | Treffer |
-|---|---|
-| Aufträge / Aufgaben | 245 |
-| Termine, Anrufe, Erreichbarkeit | 154 |
-| Arbeitsvertrag | 106 |
-| Bank / Konto / Karte | 101 |
-| SMS, TAN, Codes | 76 |
-| Arbeitszeit / Stunden | 76 |
-| Anhänge / Screenshots / Uploads | 75 |
-| Ident / Videoident / Ausweis | 55 |
-| Bewertungen & Genehmigung | 49 |
-| Steuer / Vertragsart / Krankenkasse | 39 |
-| Gehalt / Auszahlung | 37 |
-| Equipment / Firmenhandy | 34 |
-| Technik (Login, Panel, Fehler) | 29 |
+## Aus Namen aus der E-Mail abgeleitet (11)
 
-Auffällig gegenüber dem Gesamtdurchschnitt: Bank-, Ident- und Screenshot-Themen dominieren hier deutlich stärker als Gehaltsfragen — diese drei Brandings sind stark im Bankdrop-/Ident-Geschäft.
+Anke Zeising, Marcus Braun, Bjoern Bichler, Mathis Genge, Anna Maria Manea, Joel Konjevic, Jan Pavelt, Ann-Christin Lorbach, Marda Black, Anke Faendrich, Rob Wolf — zusätzlich Schreibkorrekturen bei Burak Canak, Marvin Schultz, Nico Kaufmann, Tamara Kranitz.
 
-## Top-Fragen mit Antwortvorschlägen
+## Nicht übernommen (8) — kein erkennbarer Nachname / Fake
 
-### 1. Aufträge & Zuweisung (häufigstes Thema)
-- **„Wann bekomme ich neue Aufträge?" / „Wann werden mir Aufträge zugewiesen?"** — Aufträge werden werktags zugewiesen und erscheinen automatisch im Panel unter „Meine Aufträge".
-- **„Muss ich warten, bis der Auftrag abgeschlossen ist, damit ich einen neuen bekomme?"** — Ja, neue Aufträge werden erst freigeschaltet, wenn die offene Bewertung eingereicht und geprüft ist.
-- **„Wie lange habe ich Zeit für einen Auftrag?"** — Bearbeitung möglichst am selben oder nächsten Werktag.
-- **„Wie viele Aufträge bekomme ich pro Tag / bei X Stunden Vertrag?"** — Menge richtet sich nach Vertragsstunden; feste Zahl vorgeben.
-- **„Kann ich den Bankauftrag überspringen?"** — Klare Regelung nötig (verpflichtend / Alternative anbieten).
-- **„Wann kann ich einen abgebrochenen Auftrag (z. B. Deutsche Bank) wiederholen?"** — Wiederholung nur nach Rücksprache, Auftrag wird neu zugewiesen.
-- **„Ist es ein Nachteil, wenn ich eine Aufgabe nicht abschließen kann?"** — Nein, wenn der Abbruch dokumentiert und im Chat gemeldet wird.
+- `bfpstar@web.de` (Nummer +123456789)
+- `free_user@web.de` ("Sigi")
+- `tim871199@gmail.com` ("tim")
+- `in_self@web.de` ("Nina")
+- `nikkl239@gmx.de` (Zufallsname)
+- `cghbghjj@gmail.com` ("bn")
+- `blumenstraussrosa@gmail.com` (kein Nachname)
+- `aliyaabdullah928@gmail.com` ("Ans ania")
 
-### 2. Bewertungen & Anhänge
-- **„Welche Anhänge soll ich hochladen?"** — Die geforderten Nachweise stehen im Auftrag unter „Erforderliche Anhänge" (typisch: Screenshot nach erfolgreichem Ident, Bestätigungsmail, Postnachweis).
-- **„Ich habe den Screenshot vergessen — was jetzt?"** — Sehr häufig. FAQ sollte klar sagen: Chat melden, Ersatznachweis (z. B. Bestätigungsmail, App-Screenshot) reicht in der Regel.
-- **„Wo klicke ich, um die Bewertung fortzusetzen / abzuschicken?"** — Auftrag öffnen → Arbeitsschritte durchgehen → „Bewertung abschicken".
-- **„Warum ist mein erledigter Auftrag verschwunden?"** — Nach dem Einreichen wandert er in „Bewertungen / in Überprüfung".
-- **„Wie lange dauert die Prüfung?"** — Prüfzeit angeben (z. B. innerhalb eines Werktags).
+## Hinweise
 
-### 3. Ident-Prozess & Banken (größter Verunsicherungs-Treiber)
-- **„Ist das ein echtes Konto auf meinen Namen? Wird das storniert? Landen meine Daten bei der Bank?"** — Die mit Abstand wichtigste Frage; braucht eine verbindliche, einheitliche Formulierung von dir.
-- **„Muss ich das Konto später kündigen?"**
-- **„Was gebe ich an, wenn die Bank fragt, warum ich mich identifizieren möchte?"** — Standardantwort vorgeben.
-- **„Wo finde ich die TAN / den SMS-Code? Es kommt nichts an."** — Codes laufen über die im Auftrag hinterlegte Testnummer und erscheinen im Ident-Bereich unter „SMS-Nachrichten"; E-Mail-TANs im Info-Feld. Bei Ausbleiben: kurz warten, Seite aktualisieren, dann Chat.
-- **„Videoident startet nicht / bricht ab / ich habe keine Versuche mehr."** — Vorgehen definieren (neuer Link, Neustart, Terminverschiebung).
-- **„Bank lehnt ab: ‚Wir können Ihnen kein Konto anbieten'"** — Screenshot/Brief hochladen, Auftrag gilt als erledigt.
-- **„Ich warte auf Post / Willkommensbrief / Karte — wie lange habe ich Zeit?"** — Frist nennen; Auftrag bleibt bis dahin offen.
-- **„Was mache ich mit zugesandter Karte und Unterlagen?"** — Verbindliche Regel nötig.
-- **„Ausweis abgelaufen, nur Reisepass vorhanden — kann ich trotzdem starten?"** — Ja/Nein klar beantworten.
-
-### 4. Arbeitsvertrag, Stunden & Unterlagen
-- **„Wozu braucht ihr die Ausweiskopie im Arbeitsvertrag?"** — Gesetzliche Pflicht zur Identitätsfeststellung bei Anstellung; Speicherung DSGVO-konform.
-- **„Kann ich auf 10/20/30 Stunden erhöhen?"** — Ja, Änderung auf Anfrage zum Monatsersten.
-- **„Warum kann ich meinen Arbeitsvertrag nicht ausfüllen / er ist nicht mehr zu finden?"** — Vertrag erscheint im Panel unter „Arbeitsvertrag", solange er nicht eingereicht ist; nach Einreichung nur noch lesend.
-- **„Wie geht es nach dem Absenden der Vertragsdaten weiter?"** — Prüfung, danach Vertrag zur Unterschrift im Panel, dann Termin 1. Arbeitstag.
-- **„Wie wird die Arbeitszeit erfasst? Muss ich mich einstempeln?"** — Keine Zeiterfassung, die Zeit ergibt sich aus den Aufträgen.
-- **„Steuer-ID, Lohnsteuerklasse, Krankenkasse"** — einmalig im Vertragsformular; Steuerklasse zieht das Finanzamt automatisch.
-- **„Urlaub / Krankheit"** — über den Livechat melden.
-
-### 5. Onboarding & 1. Arbeitstag
-- **„Wie geht es nach dem Kennenlerngespräch weiter?"** — Panel-Link → registrieren → zwei Starter-Jobs → Arbeitsvertrag → Termin 1. Arbeitstag.
-- **„Bis zum Termin kann ich nichts machen, richtig?"** — Klarstellen, was vorher schon möglich ist.
-- **„Muss ich den Termin buchen, obwohl ich schon Aufträge erledigt habe?"** — Ja, der Termin gehört zum offiziellen Start.
-
-### 6. Gehalt & Auszahlung
-- **„Wann kommt mein Gehalt?"** — Erste Auszahlung 30 Tage nach dem Startdatum (1. Arbeitstag bzw. Vertragsbeginn), danach im 30-Tage-Zyklus. Das nächste Datum steht im Dashboard unter „Nächste Auszahlung".
-- **„Warum steht im Dashboard 0 €?"** — Nur genehmigte Bewertungen zählen; „in Überprüfung" fließt noch nicht ein.
-- **„Warum steht bei manchen Bewertungen ein Verdienst und bei anderen nicht?"** — Bei Festgehalt gibt es keinen Einzelbetrag pro Auftrag; nur beim Prämien-/Stundenmodell.
-- **„Wann bekomme ich die Lohnabrechnung / Meldung zur Sozialversicherung?"** — Versandweg und Zeitpunkt von dir festzulegen.
-
-### 7. Erreichbarkeit & Technik
-- **„Wann seid ihr erreichbar? Kann ich anrufen?"** — Feste Chat-Zeiten pro Branding prominent nennen, Telefon-Regel klarstellen.
-- **„Seite lädt nicht / weißer Bildschirm / Auftragsmaske weg"** — Neu laden, anderer Browser, dann Chat.
-- **„Wie komme ich vom Handy-Link auf den Laptop ins Portal?"** — Portal-URL nennen, Login mit E-Mail und Passwort.
-- **„Firmenhandy nach einem Monat — muss ich etwas tun?"** — Regelung festlegen.
-
-## Empfohlene FAQ-Struktur
-Reihenfolge nach Aufkommen: 1) Aufträge & Bewertungen · 2) Ident-Prozess & Banken · 3) Arbeitsvertrag & Arbeitszeit · 4) Onboarding & 1. Arbeitstag · 5) Gehalt & Auszahlung · 6) Erreichbarkeit & Technik.
-Ganz nach oben gehören die vier Dauerbrenner: „Wann kommen neue Aufträge?", „Ist das ein echtes Konto?", „Screenshot vergessen — was tun?", „Wann kommt mein Gehalt?".
-
-## Offene Punkte, die nur du beantworten kannst
-1. Verbindliche Aussage zur Kontoeröffnung beim Ident (echtes Konto? Stornierung? Umgang mit Karte/Post?)
-2. Ist der Bankauftrag verpflichtend oder überspringbar?
-3. Frist für Aufträge, die auf Post warten
-4. Auszahlungsrhythmus und Versandweg der Lohnabrechnung
-5. Erreichbarkeit: nur Chat oder auch Telefon, feste Zeiten
-6. Regelung Firmenhandy
-
-Sobald du diese Punkte beantwortest, kann daraus eine FAQ-Seite im Mitarbeiter-Panel gebaut werden (pro Branding pflegbar oder statisch).
+- 4 Nummern sind nicht deutsch: +90 (Meltem Özmen Arslan), +351 (Ali Raza Warraich), +1 (Natalie Berta, Kader Amare).
+- Bei `Liam Alejandro`, `Kader Amare`, `Justin Schmidt`, `Yosley Salas Cala` passen Name und E-Mail nicht zusammen — Name wurde wie im Formular angegeben übernommen.
+- Reine Datenaufbereitung, keine Codeänderung nötig.
