@@ -34,7 +34,7 @@ Das erklärt die Fälle exakt: die betroffenen Nutzer haben sich über eine Host
    Vertragsanlage, Willkommens-Mail und Telegram werden einzeln abgesichert, damit ein Fehler in einem Schritt die anderen nicht mehr verhindert.
 
 4. **Nachtrag der betroffenen Nutzer**
-   Beate Stang und Rosemarie Angel bekommen per Datenkorrektur LIMEX als Branding und einen offenen Arbeitsvertrag (damit Starteraufträge greifen). Vorab prüfe ich für jeden Fall, zu welchem Branding er wirklich gehört (Bewerbung/Terminhistorie), und liste dir die Zuordnung vor dem Schreiben auf. Ältere Fälle ohne Branding (23.08.: 3, 22.08.: 2) zeige ich dir in derselben Übersicht zur Freigabe.
+   Alle oben gelisteten Konten bekommen ihr Branding gesetzt und einen offenen Arbeitsvertrag (damit Starteraufträge greifen). Bei den Fällen mit LIMEX-Bewerbung ist die Zuordnung eindeutig; bei den vier Konten ohne Bewerbung (Krajewski, Meyer, Targosz, Weber) lege ich dir vor dem Schreiben einen Vorschlag zur Freigabe vor.
 
 ## Technische Details
 
