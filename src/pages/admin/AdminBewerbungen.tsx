@@ -1281,7 +1281,7 @@ export default function AdminBewerbungen() {
               {/* Mass Import Textarea */}
               {(isIndeed || isExternal || isMeta) && isMassImport ? (
                 <>
-                  {isExternal && (
+                  {isExternal && isAdmin && (
                     <div className="space-y-2">
                       <Label>Lebensläufe hochladen (PDF)</Label>
                       <div
