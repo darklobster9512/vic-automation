@@ -64,6 +64,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { z } from "zod";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { useUserRole } from "@/hooks/useUserRole";
 
 
 const applicationSchema = z.object({
@@ -167,6 +168,7 @@ function parseMassImportLine(line: string): ParsedApplicant | string {
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [statsRange, setStatsRange] = useState<"24h" | "7d" | "all">("all");
+  const { isAdmin } = useUserRole();
   const [statusTab, setStatusTab] = useState<"neu" | "bewerbungsgespraech" | "termin_gebucht">("neu");
   const [page, setPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -1279,7 +1281,7 @@ export default function AdminBewerbungen() {
               {/* Mass Import Textarea */}
               {(isIndeed || isExternal || isMeta) && isMassImport ? (
                 <>
-                  {isExternal && (
+                  {isExternal && isAdmin && (
                     <div className="space-y-2">
                       <Label>Lebensläufe hochladen (PDF)</Label>
                       <div
