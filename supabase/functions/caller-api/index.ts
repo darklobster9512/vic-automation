@@ -388,12 +388,14 @@ Deno.serve(async (req) => {
       const domain = rawDomain.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
       const prefix = (branding?.subdomain_prefix || "web").trim();
       const link = `https://${prefix}.${domain}`;
+      const name = `${a.first_name || ""} ${a.last_name || ""}`.trim();
+      const text = `Hallo ${name}, hier gelangen Sie zu Ihrem Portal: ${link}`;
 
       await invokeFn("send-sms", {
         to: a.phone,
-        text: link,
+        text,
         event_type: "panel_link",
-        recipient_name: `${a.first_name} ${a.last_name}`.trim(),
+        recipient_name: name,
         from: (branding?.sms_sender_name || "Service").trim(),
         branding_id: key.branding_id,
       }, { "x-caller-key": rawKey.trim() });
