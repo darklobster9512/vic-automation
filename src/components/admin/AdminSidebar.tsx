@@ -145,8 +145,13 @@ export function AdminSidebar() {
         .eq("branding_id", activeBrandingId!);
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return 0;
-      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", contractIds);
-      return count ?? 0;
+      let total = 0;
+      for (let i = 0; i < contractIds.length; i += 100) {
+        const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", contractIds.slice(i, i + 100));
+        total += count ?? 0;
+      }
+      return total;
+
     },
     refetchInterval: 10000,
   });
@@ -159,8 +164,13 @@ export function AdminSidebar() {
       const { data: contracts } = await supabase.from("employment_contracts").select("id").eq("branding_id", activeBrandingId!);
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return 0;
-      const { count } = await supabase.from("order_assignments").select("*", { count: "exact", head: true }).eq("status", "in_pruefung").in("contract_id", contractIds);
-      return count ?? 0;
+      let total = 0;
+      for (let i = 0; i < contractIds.length; i += 100) {
+        const { count } = await supabase.from("order_assignments").select("*", { count: "exact", head: true }).eq("status", "in_pruefung").in("contract_id", contractIds.slice(i, i + 100));
+        total += count ?? 0;
+      }
+      return total;
+
     },
     refetchInterval: 30000,
   });
@@ -215,13 +225,18 @@ export function AdminSidebar() {
         .eq("branding_id", activeBrandingId!);
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return 0;
-      const { data } = await supabase
-        .from("order_attachments")
-        .select("contract_id, order_id")
-        .eq("status", "eingereicht")
-        .in("contract_id", contractIds);
-      const groups = new Set((data ?? []).map((a: any) => `${a.contract_id}__${a.order_id}`));
+      // IDs chunken, damit die Request-URL nicht zu lang wird (400 Bad Request)
+      const groups = new Set<string>();
+      for (let i = 0; i < contractIds.length; i += 100) {
+        const { data } = await supabase
+          .from("order_attachments")
+          .select("contract_id, order_id")
+          .eq("status", "eingereicht")
+          .in("contract_id", contractIds.slice(i, i + 100));
+        for (const a of (data ?? []) as any[]) groups.add(`${a.contract_id}__${a.order_id}`);
+      }
       return groups.size;
+
     },
     refetchInterval: 30000,
   });

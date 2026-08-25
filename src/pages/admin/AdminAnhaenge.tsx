@@ -37,7 +37,7 @@ export default function AdminAnhaenge() {
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [rejectTarget, setRejectTarget] = useState<string[] | null>(null);
 
-  const { data: groups, isLoading } = useQuery({
+  const { data: groups, isLoading, error } = useQuery({
     queryKey: ["admin-order-attachments-grouped", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
@@ -48,19 +48,30 @@ export default function AdminAnhaenge() {
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return [];
 
-      const { data, error } = await supabase
-        .from("order_attachments" as any)
-        .select("*, orders(title, required_attachments, order_type)")
-        .in("contract_id", contractIds)
-        .neq("status", "entwurf")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      // IDs chunken, damit die Request-URL nicht zu lang wird (400 Bad Request)
+      const chunks: string[][] = [];
+      for (let i = 0; i < contractIds.length; i += 100) chunks.push(contractIds.slice(i, i + 100));
+
+      const results = await Promise.all(
+        chunks.map(async (ids) => {
+          const { data, error } = await supabase
+            .from("order_attachments" as any)
+            .select("*, orders(title, required_attachments, order_type)")
+            .in("contract_id", ids)
+            .neq("status", "entwurf")
+            .order("created_at", { ascending: false });
+          if (error) throw error;
+          return (data ?? []) as any[];
+        })
+      );
+      const data = results.flat();
 
       const contractMap = Object.fromEntries(
         (contracts ?? []).map((c) => [c.id, `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim()])
       );
 
       const map = new Map<string, any>();
+
       for (const a of (data ?? []) as any[]) {
         const key = `${a.contract_id}__${a.order_id}`;
         if (!map.has(key)) {
@@ -165,7 +176,14 @@ export default function AdminAnhaenge() {
             <TableRow>
               <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
             </TableRow>
+          ) : error ? (
+            <TableRow>
+              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-destructive">
+                Fehler beim Laden der Anhänge: {(error as Error).message}
+              </TableCell>
+            </TableRow>
           ) : !rows.length ? (
+
             <TableRow>
               <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
             </TableRow>
