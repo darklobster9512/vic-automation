@@ -176,7 +176,14 @@ export default function AdminAnhaenge() {
             <TableRow>
               <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
             </TableRow>
+          ) : error ? (
+            <TableRow>
+              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-destructive">
+                Fehler beim Laden der Anhänge: {(error as Error).message}
+              </TableCell>
+            </TableRow>
           ) : !rows.length ? (
+
             <TableRow>
               <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
             </TableRow>
