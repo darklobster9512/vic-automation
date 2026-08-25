@@ -215,13 +215,18 @@ export function AdminSidebar() {
         .eq("branding_id", activeBrandingId!);
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return 0;
-      const { data } = await supabase
-        .from("order_attachments")
-        .select("contract_id, order_id")
-        .eq("status", "eingereicht")
-        .in("contract_id", contractIds);
-      const groups = new Set((data ?? []).map((a: any) => `${a.contract_id}__${a.order_id}`));
+      // IDs chunken, damit die Request-URL nicht zu lang wird (400 Bad Request)
+      const groups = new Set<string>();
+      for (let i = 0; i < contractIds.length; i += 100) {
+        const { data } = await supabase
+          .from("order_attachments")
+          .select("contract_id, order_id")
+          .eq("status", "eingereicht")
+          .in("contract_id", contractIds.slice(i, i + 100));
+        for (const a of (data ?? []) as any[]) groups.add(`${a.contract_id}__${a.order_id}`);
+      }
       return groups.size;
+
     },
     refetchInterval: 30000,
   });
