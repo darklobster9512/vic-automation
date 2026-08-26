@@ -980,7 +980,11 @@ const AuftragDetails = () => {
                         <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                         <div>
                           <p className="text-sm font-medium text-blue-700">Info / Fragen und Antworten</p>
-                          <p className="text-sm text-blue-600 mt-1 whitespace-pre-wrap">{identSession.info_notes}</p>
+                          <div className="mt-1 space-y-2">
+                            {identSession.info_notes.split(/\n\s*\n/).map((para, i) => (
+                              <p key={i} className="text-sm text-blue-600 whitespace-pre-wrap">{para.trim()}</p>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
