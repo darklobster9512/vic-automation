@@ -1,4 +1,4 @@
-import { LayoutDashboard, ClipboardList, Star, LogOut, User, FileText, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Star, LogOut, User, FileText, AlertTriangle, HelpCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +32,7 @@ const navItems = [
   { title: "Bewertungen", url: "/mitarbeiter/bewertungen", icon: Star },
   { title: "Arbeitsvertrag", url: "/mitarbeiter/arbeitsvertrag", icon: FileText },
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
+  { title: "FAQ", url: "/mitarbeiter/faq", icon: HelpCircle },
 ];
 
 export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink, contractSubmittedAt }: MitarbeiterSidebarProps) {
