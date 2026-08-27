@@ -38,6 +38,8 @@ export default function BewerbungsgespraechPublic() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [citizenship, setCitizenship] = useState<"ja" | "nein" | null>(null);
+  const citizenshipRequired = location.pathname === "/bewerbungsgespraech/buchen";
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -102,6 +104,10 @@ export default function BewerbungsgespraechPublic() {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
       toast.error("Bitte füllen Sie alle Felder aus.");
+      return;
+    }
+    if (citizenshipRequired && citizenship !== "ja") {
+      toast.error("Bitte bestätigen Sie die deutsche Staatsbürgerschaft.");
       return;
     }
     if (!branding?.id) {
@@ -326,11 +332,36 @@ export default function BewerbungsgespraechPublic() {
                       />
                     </div>
 
+                    {citizenshipRequired && (
+                      <div className="space-y-2">
+                        <Label>Besitzen Sie die deutsche Staatsbürgerschaft?</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {(["ja", "nein"] as const).map((val) => (
+                            <Button
+                              key={val}
+                              type="button"
+                              variant={citizenship === val ? "default" : "outline"}
+                              className="rounded-xl h-10"
+                              style={citizenship === val ? { backgroundColor: brandColor } : undefined}
+                              onClick={() => setCitizenship(val)}
+                            >
+                              {val === "ja" ? "Ja" : "Nein"}
+                            </Button>
+                          ))}
+                        </div>
+                        {citizenship === "nein" && (
+                          <p className="text-sm text-destructive">
+                            Für diese Position berücksichtigen wir ausschließlich Bewerberinnen und Bewerber mit deutscher Staatsbürgerschaft. Bitte bewerben Sie sich nur, wenn Sie diese Voraussetzung erfüllen.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <Button
                       type="submit"
                       className="w-full rounded-xl h-11 font-medium"
                       style={{ backgroundColor: brandColor }}
-                      disabled={submitting}
+                      disabled={submitting || (citizenshipRequired && citizenship !== "ja")}
                     >
                       {submitting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
