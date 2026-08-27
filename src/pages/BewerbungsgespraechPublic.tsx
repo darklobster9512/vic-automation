@@ -106,6 +106,10 @@ export default function BewerbungsgespraechPublic() {
       toast.error("Bitte füllen Sie alle Felder aus.");
       return;
     }
+    if (citizenshipRequired && citizenship !== "ja") {
+      toast.error("Bitte bestätigen Sie die deutsche Staatsbürgerschaft.");
+      return;
+    }
     if (!branding?.id) {
       toast.error("Branding konnte nicht ermittelt werden.");
       return;
