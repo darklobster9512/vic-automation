@@ -646,7 +646,17 @@ export default function AdminLivechat() {
               </div>
             )}
 
+            {/* KI-Antwortvorschlag */}
+            {active?.contract_id && (
+              <AiSuggestionBar
+                contractId={active.contract_id}
+                messages={messages}
+                onAccept={(text) => setExternalChatValue(text)}
+              />
+            )}
+
             {/* Input with templates */}
+
             <ChatInput
               onSend={handleSend}
               showTemplates
