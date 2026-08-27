@@ -754,7 +754,18 @@ export default function AdminBewerbungsgespraeche() {
                       </TableCell>
 
                       <TableCell className="font-medium">
-                        {item.applications?.first_name} {item.applications?.last_name}
+                        <span className="inline-flex items-center gap-1.5 flex-wrap">
+                          {item.applications?.first_name} {item.applications?.last_name}
+                          {item.applications?.email && (blacklistMap?.[String(item.applications.email).toLowerCase()]?.length ?? 0) > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] px-1.5 py-0"
+                              title={`Bereits vorhanden bei: ${blacklistMap![String(item.applications.email).toLowerCase()].join(", ")}`}
+                            >
+                              Blacklist
+                            </Badge>
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {item.applications?.phone ? (
