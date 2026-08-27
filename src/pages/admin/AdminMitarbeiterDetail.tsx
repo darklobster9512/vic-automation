@@ -975,7 +975,9 @@ export default function AdminMitarbeiterDetail() {
                         if (d.street) lines.push(d.street);
                         const cityLine = [d.zip_code, d.city].filter(Boolean).join(" ").trim();
                         if (cityLine) lines.push(cityLine);
-                        if (contract.marital_status) lines.push(contract.marital_status);
+                        if (contract.marital_status) lines.push(`Familienstand: ${contract.marital_status}`);
+                        if (contract.tax_id) lines.push(`Steuer-ID: ${contract.tax_id}`);
+                        if (contract.bank_name) lines.push(`Aktuelle Bank: ${contract.bank_name}`);
                         if (!lines.length) throw new Error("Keine Daten erkannt");
                         const extractedText = lines.join("\n");
                         setIdExtracted(extractedText);
