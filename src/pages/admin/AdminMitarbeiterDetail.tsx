@@ -977,8 +977,10 @@ export default function AdminMitarbeiterDetail() {
                         if (cityLine) lines.push(cityLine);
                         if (contract.marital_status) lines.push(contract.marital_status);
                         if (!lines.length) throw new Error("Keine Daten erkannt");
-                        setIdExtracted(lines.join("\n"));
-                        toast.success("Ausweisdaten extrahiert");
+                        const extractedText = lines.join("\n");
+                        setIdExtracted(extractedText);
+                        navigator.clipboard.writeText(extractedText);
+                        toast.success("Ausweisdaten extrahiert und kopiert");
                       } catch (e: any) {
                         toast.error(e?.message || "Extraktion fehlgeschlagen");
                       } finally {
