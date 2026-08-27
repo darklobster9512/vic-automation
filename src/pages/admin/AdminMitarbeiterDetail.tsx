@@ -1007,6 +1007,25 @@ export default function AdminMitarbeiterDetail() {
                 </div>
               </CardHeader>
               <CardContent className="pt-4 space-y-6">
+                {idExtracted && (
+                  <div className="border border-border rounded-xl p-4 bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold">Extrahierte Ausweisdaten</h4>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(idExtracted);
+                          toast.success("Kopiert");
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" /> Kopieren
+                      </Button>
+                    </div>
+                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{idExtracted}</pre>
+                  </div>
+                )}
+
                 {/* ID Document */}
                 <div>
                   <h4 className="text-sm font-semibold mb-3">
@@ -1031,25 +1050,6 @@ export default function AdminMitarbeiterDetail() {
                     </div>
                   )}
                 </div>
-
-                {idExtracted && (
-                  <div className="border border-border rounded-xl p-4 bg-muted/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold">Extrahierte Ausweisdaten</h4>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          navigator.clipboard.writeText(idExtracted);
-                          toast.success("Kopiert");
-                        }}
-                      >
-                        <Copy className="h-4 w-4 mr-2" /> Kopieren
-                      </Button>
-                    </div>
-                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{idExtracted}</pre>
-                  </div>
-                )}
 
 
                 {/* Meldenachweis */}
