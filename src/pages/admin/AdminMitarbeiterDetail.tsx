@@ -413,6 +413,8 @@ export default function AdminMitarbeiterDetail() {
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [reviewProcessing, setReviewProcessing] = useState<string | null>(null);
+  const [idExtracting, setIdExtracting] = useState(false);
+  const [idExtracted, setIdExtracted] = useState<string | null>(null);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-contract-detail", id] });
