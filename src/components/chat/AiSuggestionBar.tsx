@@ -17,20 +17,34 @@ export function AiSuggestionBar({ contractId, messages, onAccept }: AiSuggestion
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastUserMsgIdRef = useRef<string | null>(null);
+  const contractIdRef = useRef<string | null>(null);
 
   // Find last user message
   const lastUserMsg = [...messages].reverse().find((m) => m.sender_role === "user");
+  const lastMsgOverall = messages[messages.length - 1];
 
   useEffect(() => {
-    if (!lastUserMsg || lastUserMsg.id === lastUserMsgIdRef.current) return;
+    const contractChanged = contractIdRef.current !== contractId;
+    if (contractChanged) {
+      contractIdRef.current = contractId;
+      lastUserMsgIdRef.current = null;
+      setSuggestion(null);
+      setError(null);
+      setDismissed(false);
+    }
 
-    // New user message detected
+    if (!lastUserMsg) return;
+    // Nur vorschlagen, wenn die neueste Nachricht vom Mitarbeiter stammt
+    if (lastMsgOverall?.sender_role !== "user") return;
+    if (lastUserMsg.id === lastUserMsgIdRef.current) return;
+
     lastUserMsgIdRef.current = lastUserMsg.id;
     setDismissed(false);
     setSuggestion(null);
     setError(null);
     fetchSuggestion();
-  }, [lastUserMsg?.id, contractId]);
+  }, [lastUserMsg?.id, lastMsgOverall?.id, contractId]);
+
 
   const fetchSuggestion = async () => {
     setLoading(true);
@@ -56,11 +70,11 @@ export function AiSuggestionBar({ contractId, messages, onAccept }: AiSuggestion
     }
   };
 
-  // Don't show if last message is not from user, or dismissed
+  // Nur anzeigen, wenn die neueste Nachricht vom Mitarbeiter stammt
   if (!lastUserMsg || dismissed) return null;
-  // Don't show if the last message in the chat is from admin (already answered)
-  const lastMsg = messages[messages.length - 1];
-  if (lastMsg?.sender_role === "admin") return null;
+  if (lastMsgOverall?.sender_role !== "user") return null;
+  if (!loading && !suggestion && !error) return null;
+
 
   if (error) {
     return (

@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { AiSuggestionBar } from "@/components/chat/AiSuggestionBar";
+
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
@@ -646,7 +648,17 @@ export default function AdminLivechat() {
               </div>
             )}
 
+            {/* KI-Antwortvorschlag */}
+            {active?.contract_id && (
+              <AiSuggestionBar
+                contractId={active.contract_id}
+                messages={messages}
+                onAccept={(text) => setExternalChatValue(text)}
+              />
+            )}
+
             {/* Input with templates */}
+
             <ChatInput
               onSend={handleSend}
               showTemplates
