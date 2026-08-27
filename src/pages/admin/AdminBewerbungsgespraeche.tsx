@@ -225,7 +225,39 @@ export default function AdminBewerbungsgespraeche() {
     },
   });
 
-  
+  // Blacklist: gleiche E-Mail in einem anderen Branding
+  const { data: blacklistMap } = useQuery({
+    queryKey: ["blacklist-emails-gespraeche", activeBrandingId, data?.items?.length],
+    enabled: ready && !!activeBrandingId && !!data?.items?.length,
+    queryFn: async () => {
+      const emails = Array.from(
+        new Set(
+          (data?.items ?? [])
+            .map((it: any) => (it.applications?.email ? String(it.applications.email).toLowerCase() : null))
+            .filter((e): e is string => !!e)
+        )
+      );
+      const map: Record<string, string[]> = {};
+      const CHUNK = 100;
+      for (let i = 0; i < emails.length; i += CHUNK) {
+        const chunk = emails.slice(i, i + CHUNK);
+        const { data: rows, error } = await supabase
+          .from("applications")
+          .select("email, branding_id, brandings(company_name)")
+          .in("email", chunk)
+          .neq("branding_id", activeBrandingId!);
+        if (error) throw error;
+        for (const row of (rows ?? []) as any[]) {
+          const key = String(row.email ?? "").toLowerCase();
+          if (!key) continue;
+          const name = row.brandings?.company_name || "Anderes Branding";
+          if (!map[key]) map[key] = [];
+          if (!map[key].includes(name)) map[key].push(name);
+        }
+      }
+      return map;
+    },
+  });
 
   // Anzahl der konfigurierten Slots pro Uhrzeit (gilt brandingweit, Slot-1-Zeile)
   const { data: slotsPerTime } = useQuery({
@@ -722,7 +754,18 @@ export default function AdminBewerbungsgespraeche() {
                       </TableCell>
 
                       <TableCell className="font-medium">
-                        {item.applications?.first_name} {item.applications?.last_name}
+                        <span className="inline-flex items-center gap-1.5 flex-wrap">
+                          {item.applications?.first_name} {item.applications?.last_name}
+                          {item.applications?.email && (blacklistMap?.[String(item.applications.email).toLowerCase()]?.length ?? 0) > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] px-1.5 py-0"
+                              title={`Bereits vorhanden bei: ${blacklistMap![String(item.applications.email).toLowerCase()].join(", ")}`}
+                            >
+                              Blacklist
+                            </Badge>
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {item.applications?.phone ? (
