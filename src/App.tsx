@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import MitarbeiterFaq from "./pages/mitarbeiter/MitarbeiterFaq";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -130,6 +131,7 @@ const AuthenticatedRoutes = () => (
         <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
         <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
         <Route path="meine-daten" element={<MeineDaten />} />
+        <Route path="faq" element={<MitarbeiterFaq />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
