@@ -13,8 +13,8 @@ const toExternalUrl = (label: string, value: string): string | null => {
   if (looksLikeDomain && (/link|url/i.test(label) || looksLikeDomain)) return `https://${v}`;
   return null;
 };
-import appStoreBadge from "@/assets/app-store.svg";
-import googlePlayBadge from "@/assets/google-play-de-de.svg";
+const appStoreBadge = "/appstore.png";
+const googlePlayBadge = "/googleplay.png";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StarterJobBadge from "@/components/mitarbeiter/StarterJobBadge";
@@ -973,6 +973,24 @@ const AuftragDetails = () => {
                       </div>
                     </div>
                   </div>
+
+                  {(order.appstore_url || order.playstore_url) && (
+                    <div className="rounded-lg border border-border bg-muted/20 p-3">
+                      <p className="text-xs text-muted-foreground font-medium mb-2">App herunterladen</p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        {order.appstore_url && (
+                          <a href={order.appstore_url} target="_blank" rel="noopener noreferrer">
+                            <img src={appStoreBadge} alt="Laden im App Store" className="h-[40px] w-auto transition-transform duration-200 hover:scale-105" />
+                          </a>
+                        )}
+                        {order.playstore_url && (
+                          <a href={order.playstore_url} target="_blank" rel="noopener noreferrer">
+                            <img src={googlePlayBadge} alt="Jetzt bei Google Play" className="h-[40px] w-auto transition-transform duration-200 hover:scale-105" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {identSession?.info_notes && identSession.info_notes.trim() !== "" && (
                     <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-4">
