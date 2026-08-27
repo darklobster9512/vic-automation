@@ -70,11 +70,11 @@ export function AiSuggestionBar({ contractId, messages, onAccept }: AiSuggestion
     }
   };
 
-  // Don't show if last message is not from user, or dismissed
+  // Nur anzeigen, wenn die neueste Nachricht vom Mitarbeiter stammt
   if (!lastUserMsg || dismissed) return null;
-  // Don't show if the last message in the chat is from admin (already answered)
-  const lastMsg = messages[messages.length - 1];
-  if (lastMsg?.sender_role === "admin") return null;
+  if (lastMsgOverall?.sender_role !== "user") return null;
+  if (!loading && !suggestion && !error) return null;
+
 
   if (error) {
     return (
