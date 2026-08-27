@@ -413,6 +413,8 @@ export default function AdminMitarbeiterDetail() {
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [reviewProcessing, setReviewProcessing] = useState<string | null>(null);
+  const [idExtracting, setIdExtracting] = useState(false);
+  const [idExtracted, setIdExtracted] = useState<string | null>(null);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-contract-detail", id] });
@@ -945,20 +947,63 @@ export default function AdminMitarbeiterDetail() {
                 <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
                   <IdCard className="h-4 w-4 text-amber-600" /> KYC
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Meldenachweis erforderlich</span>
-                  <Switch
-                    checked={!!(contract as any).requires_proof_of_address}
-                    onCheckedChange={async (checked) => {
-                      const { error } = await supabase
-                        .from("employment_contracts")
-                        .update({ requires_proof_of_address: checked } as any)
-                        .eq("id", contract.id);
-                      if (error) { toast.error("Fehler beim Speichern."); return; }
-                      toast.success(checked ? "Meldenachweis aktiviert" : "Meldenachweis deaktiviert");
-                      invalidateAll();
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={idExtracting || (!contract.id_front_url && !contract.id_back_url)}
+                    onClick={async () => {
+                      setIdExtracting(true);
+                      setIdExtracted(null);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("extract-id-data", {
+                          body: {
+                            front_url: contract.id_front_url,
+                            back_url: (contract as any).id_type === "reisepass" ? null : contract.id_back_url,
+                            id_type: (contract as any).id_type ?? "personalausweis",
+                          },
+                        });
+                        if (error) throw error;
+                        if ((data as any)?.error) throw new Error((data as any).error);
+                        const d = data as any;
+                        const lines: string[] = [];
+                        const name = [d.first_names, d.last_name].filter(Boolean).join(" ").trim();
+                        if (name) lines.push(name);
+                        if (d.birth_date || d.birth_place) {
+                          lines.push([d.birth_date, d.birth_place ? `in ${d.birth_place}` : ""].filter(Boolean).join(" "));
+                        }
+                        if (d.street) lines.push(d.street);
+                        const cityLine = [d.zip_code, d.city].filter(Boolean).join(" ").trim();
+                        if (cityLine) lines.push(cityLine);
+                        if (contract.marital_status) lines.push(contract.marital_status);
+                        if (!lines.length) throw new Error("Keine Daten erkannt");
+                        setIdExtracted(lines.join("\n"));
+                        toast.success("Ausweisdaten extrahiert");
+                      } catch (e: any) {
+                        toast.error(e?.message || "Extraktion fehlgeschlagen");
+                      } finally {
+                        setIdExtracting(false);
+                      }
                     }}
-                  />
+                  >
+                    <IdCard className="h-4 w-4 mr-2" />
+                    {idExtracting ? "Extrahiere…" : "Ausweisdaten extrahieren"}
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Meldenachweis erforderlich</span>
+                    <Switch
+                      checked={!!(contract as any).requires_proof_of_address}
+                      onCheckedChange={async (checked) => {
+                        const { error } = await supabase
+                          .from("employment_contracts")
+                          .update({ requires_proof_of_address: checked } as any)
+                          .eq("id", contract.id);
+                        if (error) { toast.error("Fehler beim Speichern."); return; }
+                        toast.success(checked ? "Meldenachweis aktiviert" : "Meldenachweis deaktiviert");
+                        invalidateAll();
+                      }}
+                    />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 space-y-6">
@@ -986,6 +1031,26 @@ export default function AdminMitarbeiterDetail() {
                     </div>
                   )}
                 </div>
+
+                {idExtracted && (
+                  <div className="border border-border rounded-xl p-4 bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold">Extrahierte Ausweisdaten</h4>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(idExtracted);
+                          toast.success("Kopiert");
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" /> Kopieren
+                      </Button>
+                    </div>
+                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{idExtracted}</pre>
+                  </div>
+                )}
+
 
                 {/* Meldenachweis */}
                 {((contract as any).requires_proof_of_address || (contract as any).proof_of_address_url) && (
