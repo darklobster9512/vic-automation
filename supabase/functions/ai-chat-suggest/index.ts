@@ -27,13 +27,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Load last 20 messages of active chat
-    const { data: activeMessages } = await supabase
+    // Kompletter Chatverlauf (gekappt auf die letzten 200 Nachrichten)
+    const { data: allMessages } = await supabase
       .from("chat_messages")
       .select("content, sender_role, created_at")
       .eq("contract_id", contract_id)
-      .order("created_at", { ascending: true })
-      .limit(20);
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    const activeMessages = (allMessages ?? []).slice().reverse();
 
     // Load last 100 admin messages from ALL chats as reference for tone/style
     const { data: referenceMessages } = await supabase
@@ -44,25 +46,27 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    const chatHistory = (activeMessages ?? [])
+    const chatHistory = activeMessages
       .map((m) => `${m.sender_role === "admin" ? "Admin" : m.sender_role === "user" ? "Mitarbeiter" : "System"}: ${m.content}`)
       .join("\n");
+
+    const lastUserMessage = [...activeMessages].reverse().find((m) => m.sender_role === "user")?.content ?? "";
 
     const referenceExamples = (referenceMessages ?? [])
       .slice(0, 50)
       .map((m) => m.content)
       .join("\n---\n");
 
-    const systemPrompt = `Du bist ein KI-Assistent, der dem Admin hilft, professionelle Antworten auf Mitarbeiter-Nachrichten zu formulieren.
+    const systemPrompt = `Du bist ein KI-Assistent, der dem Admin hilft, Antworten auf Mitarbeiter-Nachrichten im Livechat zu formulieren.
 
-Deine Aufgabe:
-- Analysiere den aktuellen Chatverlauf und schlage EINE passende Antwort vor
-- Die Antwort soll professionell, freundlich und auf Deutsch sein
-- Halte die Antwort kurz und prägnant (max 2-3 Sätze)
-- Orientiere dich am Kommunikationsstil der bisherigen Admin-Antworten aus anderen Chats
-- Antworte NUR mit dem Vorschlagstext, ohne Erklärung oder Formatierung
+Wichtigste Regeln:
+- Sprich den Mitarbeiter IMMER mit "du" an (duzen). Niemals siezen, auch wenn die Referenzbeispiele siezen.
+- Keine förmlichen Floskeln wie "Sehr geehrte/r" oder "Mit freundlichen Grüßen".
+- Berücksichtige den KOMPLETTEN Chatverlauf als Kontext, antworte aber gezielt auf die LETZTE Nachricht des Mitarbeiters.
+- Antworte auf Deutsch, freundlich, hilfsbereit und kurz (max. 2-3 Sätze).
+- Gib NUR den reinen Antworttext aus – keine Erklärung, keine Anführungszeichen, keine Formatierung.
 
-Referenz-Antworten aus anderen Chats (so schreibt der Admin normalerweise):
+Referenz-Antworten aus anderen Chats (nur als Stil-Orientierung, NICHT für die Anrede):
 ${referenceExamples || "(Keine Referenzen verfügbar)"}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -75,10 +79,14 @@ ${referenceExamples || "(Keine Referenzen verfügbar)"}`;
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Hier ist der aktuelle Chatverlauf:\n\n${chatHistory}\n\nSchlage eine passende Admin-Antwort vor.` },
+          {
+            role: "user",
+            content: `Kompletter Chatverlauf:\n\n${chatHistory}\n\nDie neueste Nachricht des Mitarbeiters lautet:\n"${lastUserMessage}"\n\nSchlage genau eine passende Admin-Antwort darauf vor (duzen!).`,
+          },
         ],
       }),
     });
+
 
     if (!response.ok) {
       if (response.status === 429) {
