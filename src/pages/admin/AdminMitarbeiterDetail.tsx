@@ -1032,6 +1032,26 @@ export default function AdminMitarbeiterDetail() {
                   )}
                 </div>
 
+                {idExtracted && (
+                  <div className="border border-border rounded-xl p-4 bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold">Extrahierte Ausweisdaten</h4>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(idExtracted);
+                          toast.success("Kopiert");
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" /> Kopieren
+                      </Button>
+                    </div>
+                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{idExtracted}</pre>
+                  </div>
+                )}
+
+
                 {/* Meldenachweis */}
                 {((contract as any).requires_proof_of_address || (contract as any).proof_of_address_url) && (
                   <div className="border-t border-border pt-4">
