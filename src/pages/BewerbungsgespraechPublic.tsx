@@ -38,6 +38,8 @@ export default function BewerbungsgespraechPublic() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [citizenship, setCitizenship] = useState<"ja" | "nein" | null>(null);
+  const citizenshipRequired = location.pathname === "/bewerbungsgespraech/buchen";
 
   useEffect(() => {
     const fetchBranding = async () => {
