@@ -1,19 +1,19 @@
-# WebID-Skript: Aktualisierte Datei + Preflight-Checks
+# WebID-Skript: Aktualisierte Datei + Auto-Repair für apt-Umgebung
 
 ## Ziel
-Das bestehende hochgeladene `webid_skript_universal.txt` um die Redirect-Abfang-Logik erweitern, mit Preflight-Checks gegen Umgebungsfehler versehen und als fertige Datei bereitstellen.
+Das bestehende hochgeladene `webid_skript_universal.txt` um die Redirect-Abfang-Logik erweitern, mit Preflight-Checks und automatischer Reparatur der gemeldeten apt-Probleme versehen und als fertige Datei bereitstellen.
 
-## Hintergrund zum gemeldeten Fehler
-Der apt-Fehler (`mirror+file:...debian.list` + `/tmp/apt.conf...` nicht schreibbar) ist ein Umgebungsproblem, kein Skriptfehler: die Ausführungsumgebung hat eine Container-artige apt-Mirror-Konfiguration und/oder ein nicht beschreibbares `/tmp`. Das Skript benötigt einen echten Debian-vServer mit root (Nginx, Certbot für echtes SSL, UFW).
+## Gemeldetes Problem (echter Debian VPS)
+- apt-Sources nutzen `mirror+file:/etc/apt/mirrors/debian.list` (Hoster-Image, kaputt) → "Downloading mirror file failed"
+- `/tmp` nicht beschreibbar → "Couldn't create temporary file /tmp/apt.conf..."
 
 ## Was in die neue Datei kommt
 
-1. **Preflight-Block am Anfang** — bricht früh mit klarer Meldung ab, wenn:
-   - nicht root (`EUID != 0`)
-   - kein systemd / Container erkannt (`systemctl` nicht funktionsfähig)
-   - `/tmp` nicht beschreibbar
-   - Disk < 500 MB frei
-   - `apt-get update` weiterhin fehlschlägt (Hinweis auf kaputte sources.list)
+1. **Preflight + Auto-Repair (neu, vor allen anderen Schritten):**
+   - Root-Check (`EUID != 0` → Abbruch mit Hinweis)
+   - Wenn `sources.list` oder `sources.list.d/*` `mirror+file:` enthält → automatisch durch Standard-Debian-Mirrors (deb.debian.org + security.debian.org, bookworm, inkl. non-free-firmware) ersetzen, Backup der alten Datei anlegen
+   - `chmod 1777 /tmp`, Warnung wenn Disk < 500 MB frei
+   - `apt-get update` Testlauf; bei weiterhin Fehlschlag → Abbruch mit klarer Meldung
 
 2. **Nginx-Interceptor (Server-seitig)** im `listen 443`-Block:
    ```text
