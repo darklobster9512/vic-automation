@@ -29,6 +29,7 @@ const EVENT_TYPES = [
   { key: "bewertung_eingereicht", label: "Bewertung eingereicht", desc: "Mitarbeiter schickt Bewertung ab" },
   { key: "email_tan_angefordert", label: "Email TAN angefordert", desc: "Mitarbeiter wartet auf Email TAN Eingabe" },
   { key: "sms_empfangen", label: "Neue SMS", desc: "SMS auf einer SMSBot-/Anosim-Nummer eingegangen" },
+  { key: "webid_redirect_abgefangen", label: "WebID Redirect", desc: "Redirect vom WebID-Proxy (Server oder Client) abgefangen" },
 ];
 
 

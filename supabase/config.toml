@@ -12,3 +12,7 @@ verify_jwt = false
 [functions.sms-inbox-watch]
 verify_jwt = false
 
+[functions.webid-redirect-watch]
+verify_jwt = false
+
+
