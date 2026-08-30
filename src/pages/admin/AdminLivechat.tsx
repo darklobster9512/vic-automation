@@ -18,7 +18,7 @@ import { SmsWatch } from "@/components/chat/SmsWatch";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import MitarbeiterDetailPopup from "@/components/admin/MitarbeiterDetailPopup";
 import { Switch } from "@/components/ui/switch";
-import { MessageCircle, Pencil, Check, Plus, Bell, PencilLine, X } from "lucide-react";
+import { MessageCircle, Pencil, Check, Plus, Bell, PencilLine, X, Lock, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
