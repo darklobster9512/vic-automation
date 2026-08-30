@@ -12,6 +12,7 @@ Regeln:
 - Übernimm ALLE Vornamen exakt so, wie sie im Dokument stehen (auch Zweit- und Drittnamen).
 - Wandle Versalien in normale Schreibweise um (MUSTERMANN -> Mustermann), Umlaute korrekt (MUELLER -> Müller, "MÜLLER" -> Müller).
 - Bindestrich-Namen und Adels-/Namenszusätze (von, van, de) beibehalten.
+- birth_name (Geburtsname): auf dem deutschen Personalausweis meist mit "[2]" oder "Geburtsname" gekennzeichnet (z.B. "MÜLLER [2]"); im Reisepass unter "Geburtsname / Name at birth". Übernimm ihn exakt in normale Schreibweise. Wenn kein Geburtsname im Dokument steht (Feld leer oder nicht vorhanden), gib "" zurück.
 - birth_date im Format TT.MM.JJJJ.
 - birth_place: Geburtsort exakt wie im Dokument.
 - Adresse (street, zip_code, city) steht beim deutschen Personalausweis auf der RÜCKSEITE. Straße inkl. Hausnummer und Zusatz (z.B. "Wilhelm-Busch-Str. 18 A").
@@ -30,13 +31,14 @@ const TOOL = {
       properties: {
         first_names: { type: "string" },
         last_name: { type: "string" },
+        birth_name: { type: "string" },
         birth_date: { type: "string" },
         birth_place: { type: "string" },
         street: { type: "string" },
         zip_code: { type: "string" },
         city: { type: "string" },
       },
-      required: ["first_names", "last_name", "birth_date", "birth_place", "street", "zip_code", "city"],
+      required: ["first_names", "last_name", "birth_name", "birth_date", "birth_place", "street", "zip_code", "city"],
       additionalProperties: false,
     },
   },

@@ -17,6 +17,11 @@ export interface IdExtractionContract {
   city?: string | null;
 }
 
+export interface ExtractContext {
+  appointmentTime?: string | null;
+  brandingName?: string | null;
+}
+
 const norm = (v: any) => String(v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 
 const normDate = (v: any) => {
@@ -27,12 +32,30 @@ const normDate = (v: any) => {
   return s;
 };
 
+export function shortBrandingName(name?: string | null): string {
+  if (!name) return "";
+  const cleaned = String(name)
+    .replace(/\b(GmbH|UG|AG|KG|OHG|e\.?K\.?|mbH|SE|Ltd\.?|Inc\.?|Co\.?)\b/gi, "")
+    .trim();
+  const first = cleaned.split(/[\s.,-]+/)[0] || "";
+  return first.toUpperCase();
+}
+
+function formatTime(t?: string | null): string {
+  if (!t) return "";
+  const m = String(t).match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return "";
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
 /**
  * Ruft die extract-id-data Edge Function auf und formatiert das Ergebnis
  * inkl. Abweichungsprüfung gegen die hinterlegten Vertragsdaten.
- * Wirft einen Fehler, wenn keine Daten erkannt wurden.
  */
-export async function extractIdData(contract: IdExtractionContract): Promise<string> {
+export async function extractIdData(
+  contract: IdExtractionContract,
+  context?: ExtractContext,
+): Promise<string> {
   const { data, error } = await supabase.functions.invoke("extract-id-data", {
     body: {
       front_url: contract.id_front_url,
@@ -46,18 +69,33 @@ export async function extractIdData(contract: IdExtractionContract): Promise<str
   const d = data as any;
 
   const lines: string[] = [];
-  const name = [d.first_names, d.last_name].filter(Boolean).join(" ").trim();
-  if (name) lines.push(name);
-  if (d.birth_date || d.birth_place) {
-    lines.push([d.birth_date, d.birth_place ? `in ${d.birth_place}` : ""].filter(Boolean).join(" "));
+
+  const time = formatTime(context?.appointmentTime);
+  const brand = shortBrandingName(context?.brandingName);
+  if (time || brand) {
+    const header = [time ? `${time} Uhr` : "", brand ? `(${brand})` : ""]
+      .filter(Boolean)
+      .join(" ");
+    lines.push(header);
   }
+
+  const firstNames = String(d.first_names || "").trim();
+  const lastName = String(d.last_name || "").trim();
+  const birthName = String(d.birth_name || "").trim();
+  if (firstNames) lines.push(`Vorname: ${firstNames}`);
+  if (lastName) lines.push(`Nachname: ${lastName}`);
+  if (birthName) lines.push(`Geburtsname: ${birthName}`);
+  if (d.birth_date) lines.push(`Geburtsdatum: ${d.birth_date}`);
+  if (d.birth_place) lines.push(`Geburtsort: ${d.birth_place}`);
   if (d.street) lines.push(d.street);
   const cityLine = [d.zip_code, d.city].filter(Boolean).join(" ").trim();
   if (cityLine) lines.push(cityLine);
   if (contract.marital_status) lines.push(`Familienstand: ${contract.marital_status}`);
   if (contract.tax_id) lines.push(`Steuer-ID: ${contract.tax_id}`);
   if (contract.bank_name) lines.push(`Aktuelle Bank: ${contract.bank_name}`);
-  if (!lines.length) throw new Error("Keine Daten erkannt");
+
+  const hasContent = firstNames || lastName || d.birth_date || d.birth_place || d.street || cityLine;
+  if (!hasContent) throw new Error("Keine Daten erkannt");
 
   const diffs: Array<{ label: string; original: string }> = [];
   const check = (
