@@ -961,6 +961,7 @@ export default function AdminMitarbeiterDetail() {
                             front_url: contract.id_front_url,
                             back_url: (contract as any).id_type === "reisepass" ? null : contract.id_back_url,
                             id_type: (contract as any).id_type ?? "personalausweis",
+                            proof_of_address_url: (contract as any).proof_of_address_url ?? null,
                           },
                         });
                         if (error) throw error;
