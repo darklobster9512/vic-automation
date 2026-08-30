@@ -1562,6 +1562,7 @@ export type Database = {
           estimated_hours: string | null
           id: string
           is_placeholder: boolean
+          is_starred: boolean
           is_starter_job: boolean
           is_videochat: boolean
           order_number: string | null
@@ -1584,6 +1585,7 @@ export type Database = {
           estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
+          is_starred?: boolean
           is_starter_job?: boolean
           is_videochat?: boolean
           order_number?: string | null
@@ -1606,6 +1608,7 @@ export type Database = {
           estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
+          is_starred?: boolean
           is_starter_job?: boolean
           is_videochat?: boolean
           order_number?: string | null
