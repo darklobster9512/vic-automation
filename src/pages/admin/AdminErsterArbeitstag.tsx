@@ -535,6 +535,17 @@ export default function AdminErsterArbeitstag() {
             }))}
         />
       )}
+
+      {bulkImportDay && (
+        <BulkPrepImportDialog
+          open={!!bulkImportDay}
+          onOpenChange={(v) => { if (!v) setBulkImportDay(null); }}
+          dayLabel={dayLabel(bulkImportDay)}
+          dayItems={filteredItems.filter((r) => r.item.appointment_date === bulkImportDay)}
+          brandingId={activeBrandingId ?? null}
+          existingPreps={prepMap as Record<string, PrepRow>}
+        />
+      )}
     </>
   );
 }
