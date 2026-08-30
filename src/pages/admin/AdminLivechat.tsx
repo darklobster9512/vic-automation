@@ -555,39 +555,17 @@ export default function AdminLivechat() {
               <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
             )}
           </div>
-          {active && <SmsWatch contractId={active.contract_id} onTanCodeExtracted={(code) => { setQuickSmsCode(code); setExternalChatValue(code); }} />}
           <div className="flex items-center gap-2">
-            {active && contractData.phone && (
-              <div className="flex items-center gap-1">
-                <Input
-                  value={quickSmsCode}
-                  onChange={(e) => setQuickSmsCode(e.target.value)}
-                  placeholder="Code"
-                  className="h-9 w-20 text-sm"
-                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
-                />
-                <Button
-                  variant="default"
-                  size="icon"
-                  className="h-9 w-9"
-                  disabled={!quickSmsCode.trim() || quickSmsSending}
-                  onClick={handleQuickSms}
-                  title="Ident-Code per SMS senden"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
             {active && (
               <Button
-                variant="outline"
+                variant={contractData.is_suspended ? "destructive" : "outline"}
                 size="sm"
                 className="h-9 gap-1.5"
-                onClick={handleOpenOrderDialog}
-                title="Auftrag zuweisen"
+                onClick={() => setSuspendDialogOpen(true)}
+                title={contractData.is_suspended ? "Benutzerkonto entsperren" : "Benutzerkonto sperren"}
               >
-                <Plus className="h-4 w-4" />
-                Auftrag
+                {contractData.is_suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {contractData.is_suspended ? "Entsperren" : "Sperren"}
               </Button>
             )}
             {active && contractData.phone && (
