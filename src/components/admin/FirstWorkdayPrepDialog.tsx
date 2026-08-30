@@ -356,10 +356,19 @@ export default function FirstWorkdayPrepDialog({
                             onSelect={() => handleOrderSelect(o.id)}
                           >
                             <Check className={`mr-2 h-4 w-4 ${orderId === o.id ? "opacity-100" : "opacity-0"}`} />
-                            <div className="flex flex-col">
-                              <span>{o.order_number ? `#${o.order_number} – ` : ""}{o.title}</span>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="truncate">{o.order_number ? `#${o.order_number} – ` : ""}{o.title}</span>
                               {o.provider && <span className="text-xs text-muted-foreground">{o.provider}</span>}
                             </div>
+                            <button
+                              type="button"
+                              className="ml-2 p-1 rounded hover:bg-accent shrink-0"
+                              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStar(o.id, !!o.is_starred); }}
+                              aria-label={o.is_starred ? "Favorit entfernen" : "Als Favorit markieren"}
+                            >
+                              <Star className={`h-4 w-4 ${o.is_starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                            </button>
                           </CommandItem>
                         ))}
                       </CommandGroup>
