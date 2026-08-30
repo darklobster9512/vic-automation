@@ -180,8 +180,9 @@ export default function FirstWorkdayPrepDialog({
     queryFn: async () => {
       let q = supabase
         .from("orders")
-        .select("id, title, provider, order_number, order_type")
+        .select("id, title, provider, order_number, order_type, is_starred")
         .eq("order_type", "bankdrop")
+        .order("is_starred", { ascending: false })
         .order("title");
       if (brandingId) q = q.eq("branding_id", brandingId);
       const { data, error } = await q;
@@ -189,6 +190,18 @@ export default function FirstWorkdayPrepDialog({
       return data ?? [];
     },
   });
+
+  const toggleStar = async (orderId: string, currentStarred: boolean) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ is_starred: !currentStarred } as any)
+      .eq("id", orderId);
+    if (error) {
+      toast.error("Konnte Favorit nicht ändern: " + error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["bankdrop-orders", brandingId] });
+  };
 
   const { data: infoTemplates } = useIdentInfoTemplates(brandingId);
   const { phoneEntries, smsbotRentals, resolveDisplayNumber, phoneDisplayMap } = usePhonePicker(brandingId);
