@@ -256,6 +256,7 @@ export default function AdminErsterArbeitstag() {
   const [prepTarget, setPrepTarget] = useState<ResolvedItem | null>(null);
   const [startTarget, setStartTarget] = useState<{ prep: PrepRow; name: string } | null>(null);
   const [extractDay, setExtractDay] = useState<string | null>(null);
+  const [bulkImportDay, setBulkImportDay] = useState<string | null>(null);
 
   return (
     <>
