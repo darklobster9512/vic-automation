@@ -12,6 +12,7 @@ interface SendEmailParams {
   branding_id?: string | null;
   event_type: string;
   metadata?: Record<string, unknown>;
+  bypass_queue?: boolean;
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
