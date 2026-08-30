@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, ChevronsUpDown, Loader2, Phone, Plus, Save, X } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Phone, Plus, Save, Star, X } from "lucide-react";
 import IdentInfoTemplateManager, { useIdentInfoTemplates } from "@/components/admin/IdentInfoTemplateManager";
 import { toast } from "sonner";
 
@@ -180,8 +180,9 @@ export default function FirstWorkdayPrepDialog({
     queryFn: async () => {
       let q = supabase
         .from("orders")
-        .select("id, title, provider, order_number, order_type")
+        .select("id, title, provider, order_number, order_type, is_starred")
         .eq("order_type", "bankdrop")
+        .order("is_starred", { ascending: false })
         .order("title");
       if (brandingId) q = q.eq("branding_id", brandingId);
       const { data, error } = await q;
@@ -189,6 +190,18 @@ export default function FirstWorkdayPrepDialog({
       return data ?? [];
     },
   });
+
+  const toggleStar = async (orderId: string, currentStarred: boolean) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ is_starred: !currentStarred } as any)
+      .eq("id", orderId);
+    if (error) {
+      toast.error("Konnte Favorit nicht ändern: " + error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["bankdrop-orders", brandingId] });
+  };
 
   const { data: infoTemplates } = useIdentInfoTemplates(brandingId);
   const { phoneEntries, smsbotRentals, resolveDisplayNumber, phoneDisplayMap } = usePhonePicker(brandingId);
@@ -274,8 +287,33 @@ export default function FirstWorkdayPrepDialog({
       toast.error("Fehler beim Speichern: " + error.message);
       return;
     }
+    // Anosim-Nummer automatisch in phone_numbers speichern, falls neu
+    if (provider === "anosim" && normalizedPhone && brandingId) {
+      try {
+        const { data: existingPhones } = await supabase
+          .from("phone_numbers" as any)
+          .select("id")
+          .eq("branding_id", brandingId)
+          .eq("api_url", normalizedPhone)
+          .limit(1);
+        if (!existingPhones || existingPhones.length === 0) {
+          const { error: insertErr } = await supabase.from("phone_numbers" as any).insert({
+            provider: "anosim",
+            api_url: normalizedPhone,
+            branding_id: brandingId,
+          } as any);
+          if (insertErr) {
+            toast.warning("Vorbereitung gespeichert, aber Nummer konnte nicht in Telefonnummern angelegt werden.");
+          }
+        }
+      } catch {
+        // ignore, Speichern der Vorbereitung soll nicht blockiert werden
+      }
+    }
+
     toast.success("Vorbereitung gespeichert.");
     queryClient.invalidateQueries({ queryKey: ["first-workday-preparations"] });
+    queryClient.invalidateQueries({ queryKey: ["phone_numbers"] });
     onOpenChange(false);
   };
 
@@ -318,10 +356,19 @@ export default function FirstWorkdayPrepDialog({
                             onSelect={() => handleOrderSelect(o.id)}
                           >
                             <Check className={`mr-2 h-4 w-4 ${orderId === o.id ? "opacity-100" : "opacity-0"}`} />
-                            <div className="flex flex-col">
-                              <span>{o.order_number ? `#${o.order_number} – ` : ""}{o.title}</span>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="truncate">{o.order_number ? `#${o.order_number} – ` : ""}{o.title}</span>
                               {o.provider && <span className="text-xs text-muted-foreground">{o.provider}</span>}
                             </div>
+                            <button
+                              type="button"
+                              className="ml-2 p-1 rounded hover:bg-accent shrink-0"
+                              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStar(o.id, !!o.is_starred); }}
+                              aria-label={o.is_starred ? "Favorit entfernen" : "Als Favorit markieren"}
+                            >
+                              <Star className={`h-4 w-4 ${o.is_starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                            </button>
                           </CommandItem>
                         ))}
                       </CommandGroup>
