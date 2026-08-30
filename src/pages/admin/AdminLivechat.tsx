@@ -324,51 +324,6 @@ export default function AdminLivechat() {
   };
 
 
-  const loadAvailableOrders = useCallback(async () => {
-    if (!active) return;
-    setOrderLoading(true);
-    const { data: existing } = await supabase
-      .from("order_assignments")
-      .select("order_id")
-      .eq("contract_id", active.contract_id);
-    const assignedIds = (existing ?? []).map((e: any) => e.order_id);
-
-    let orderQuery = supabase
-      .from("orders")
-      .select("id, title, order_number, reward, is_placeholder")
-      .order("created_at", { ascending: false });
-
-    if (activeBrandingId) {
-      orderQuery = orderQuery.eq("branding_id", activeBrandingId);
-    }
-
-    const { data: allOrders } = await orderQuery;
-
-    setAvailableOrders((allOrders ?? []).filter((o: any) => !assignedIds.includes(o.id)));
-    setOrderLoading(false);
-  }, [active?.contract_id]);
-
-  const handleOpenOrderDialog = () => {
-    loadAvailableOrders();
-    setOrderDialogOpen(true);
-  };
-
-  const handleAssignOrder = async (order: any) => {
-    if (!active) return;
-    const text = `📋 Neuer Auftrag: ${order.title} (${order.order_number}) – Prämie: ${order.reward}${order.reward.includes("€") ? "" : " €"}`;
-    const metadata = {
-      type: "order_offer",
-      order_id: order.id,
-      order_title: order.title,
-      order_number: order.order_number,
-      reward: order.reward,
-      is_placeholder: order.is_placeholder,
-    };
-    await sendMessage(text, "system", null, metadata);
-    setOrderDialogOpen(false);
-    toast.success("Auftragsangebot gesendet");
-  };
-
   const handleSendNotifySms = async () => {
     if (!contractData.phone || !notifySmsText.trim()) return;
     setNotifySmsSending(true);
