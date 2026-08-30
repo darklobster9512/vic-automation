@@ -520,6 +520,8 @@ export default function AdminErsterArbeitstag() {
             .map((r) => ({
               name: `${r.firstName} ${r.lastName}`.trim() || "Unbekannt",
               contract: r.item.employment_contracts ?? null,
+              appointmentTime: r.item.appointment_time,
+              brandingName: r.brandingName,
             }))}
         />
       )}
