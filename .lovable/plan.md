@@ -16,10 +16,14 @@ Alles andere (Adresse, Steuer-ID, Passwort, Familienstand, +49-Nummer usw.) wird
 
 ## Matching Freitext → Termin
 
+Wichtig: Der Name im `=== Name ===`-Header entspricht dem Namen des Arbeitstag-Termins (aus Vertrag/Bewerbung) — die aus Perso-Daten extrahierten Zeilen (Vorname/Nachname/Geburtsname) enthalten oft Zweitnamen und werden fürs Matching **nicht** herangezogen. Bewerber lassen im Header oft Zweitnamen weg, daher token-basiertes Matching statt exaktem String-Vergleich:
+
 Für den aktuellen Tagesabschnitt:
 
-1. Primär über den Namen (case-insensitive, Umlaute normalisiert, Reihenfolge egal).
-2. Sekundär über die `@web.de`-E-Mail gegen Vertrags-/Profil-/Bewerber-E-Mail.
+1. Beide Namen normalisieren (kleingeschrieben, Umlaute `ä→ae, ö→oe, ü→ue, ß→ss`, Satzzeichen weg), dann in Tokens splitten.
+2. Match, wenn der Header alle Tokens des Termin-Namens enthält **oder** der Termin-Name alle Tokens des Headers enthält (Containment in eine Richtung) — so matchen "Katrin Grit Barthel" ↔ "Katrin Barthel".
+3. Fallback: `@web.de`-E-Mail gegen Vertrags-/Profil-/Bewerber-E-Mail.
+4. Mehrdeutige Matches (ein Block passt zu mehreren Terminen) werden in der Vorschau als Konflikt markiert und nicht auto-gewählt.
 
 Nicht gematchte Blöcke und nicht gematchte Termine werden in der Vorschau eigens gelistet.
 
