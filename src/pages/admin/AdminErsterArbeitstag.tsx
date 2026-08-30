@@ -509,6 +509,20 @@ export default function AdminErsterArbeitstag() {
           employeeName={startTarget.name}
         />
       )}
+
+      {extractDay && (
+        <ExtractDayIdsDialog
+          open={!!extractDay}
+          onOpenChange={(v) => { if (!v) setExtractDay(null); }}
+          dayLabel={dayLabel(extractDay)}
+          entries={filteredItems
+            .filter((r) => r.item.appointment_date === extractDay)
+            .map((r) => ({
+              name: `${r.firstName} ${r.lastName}`.trim() || "Unbekannt",
+              contract: r.item.employment_contracts ?? null,
+            }))}
+        />
+      )}
     </>
   );
 }
