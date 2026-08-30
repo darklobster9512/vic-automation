@@ -676,43 +676,34 @@ export default function AdminLivechat() {
         )}
       </div>
 
-      {/* Order Assignment Dialog */}
-      <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
-        <DialogContent className="max-w-md">
+      {/* Sperr-Bestätigung */}
+      <Dialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Auftrag zuweisen
+              {contractData.is_suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {contractData.is_suspended ? "Benutzerkonto entsperren?" : "Benutzerkonto sperren?"}
             </DialogTitle>
           </DialogHeader>
-          <div className="max-h-[400px] overflow-y-auto space-y-2 py-2">
-            {orderLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : availableOrders.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Keine verfügbaren Aufträge</p>
-            ) : (
-              availableOrders.map((order) => (
-                <button
-                  key={order.id}
-                  onClick={() => handleAssignOrder(order)}
-                  className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors space-y-1"
-                >
-                  <p className="text-sm font-medium text-foreground">{order.title}</p>
-                  <p className="text-xs text-muted-foreground">{order.order_number} · Prämie: {order.reward}{order.reward.includes("€") ? "" : " €"}</p>
-                  {!order.is_placeholder && (
-                    <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Termin wird automatisch gebucht</span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
+          <p className="text-sm text-muted-foreground py-2">
+            {contractData.is_suspended
+              ? `${contractData.first_name ?? ""} ${contractData.last_name ?? ""} erhält wieder vollen Zugriff auf das Mitarbeiter-Portal.`
+              : `${contractData.first_name ?? ""} ${contractData.last_name ?? ""} kann sich anschließend nicht mehr im Mitarbeiter-Portal anmelden.`}
+          </p>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => setSuspendDialogOpen(false)}>Abbrechen</Button>
+            <Button
+              variant={contractData.is_suspended ? "default" : "destructive"}
+              onClick={handleToggleSuspend}
+              disabled={suspendBusy}
+            >
+              {suspendBusy ? "Wird gespeichert..." : contractData.is_suspended ? "Entsperren" : "Sperren"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
 
       {/* Notify SMS Dialog */}
       <Dialog open={notifySmsDialogOpen} onOpenChange={setNotifySmsDialogOpen}>
