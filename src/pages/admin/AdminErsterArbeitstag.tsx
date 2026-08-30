@@ -9,10 +9,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle, ClipboardList, Play, IdCard } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle, ClipboardList, Play, IdCard, FileText } from "lucide-react";
 import FirstWorkdayPrepDialog, { useFirstWorkdayPreparations, type PrepRow } from "@/components/admin/FirstWorkdayPrepDialog";
 import FirstWorkdayStartDialog from "@/components/admin/FirstWorkdayStartDialog";
 import ExtractDayIdsDialog from "@/components/admin/ExtractDayIdsDialog";
+import BulkPrepImportDialog from "@/components/admin/BulkPrepImportDialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -255,6 +256,7 @@ export default function AdminErsterArbeitstag() {
   const [prepTarget, setPrepTarget] = useState<ResolvedItem | null>(null);
   const [startTarget, setStartTarget] = useState<{ prep: PrepRow; name: string } | null>(null);
   const [extractDay, setExtractDay] = useState<string | null>(null);
+  const [bulkImportDay, setBulkImportDay] = useState<string | null>(null);
 
   return (
     <>
@@ -328,6 +330,14 @@ export default function AdminErsterArbeitstag() {
                             >
                               <IdCard className="h-3 w-3" />
                               Ausweisdaten extrahieren
+                            </button>
+                            <button
+                              type="button"
+                              className="ml-3 inline-flex items-center gap-1 normal-case font-normal tracking-normal text-muted-foreground/80 hover:text-primary transition-colors"
+                              onClick={() => setBulkImportDay(r.item.appointment_date)}
+                            >
+                              <FileText className="h-3 w-3" />
+                              Vorbereitung importieren
                             </button>
                           </div>
                         </TableCell>
@@ -523,6 +533,17 @@ export default function AdminErsterArbeitstag() {
               appointmentTime: r.item.appointment_time,
               brandingName: r.brandingName,
             }))}
+        />
+      )}
+
+      {bulkImportDay && (
+        <BulkPrepImportDialog
+          open={!!bulkImportDay}
+          onOpenChange={(v) => { if (!v) setBulkImportDay(null); }}
+          dayLabel={dayLabel(bulkImportDay)}
+          dayItems={filteredItems.filter((r) => r.item.appointment_date === bulkImportDay)}
+          brandingId={activeBrandingId ?? null}
+          existingPreps={prepMap as Record<string, PrepRow>}
         />
       )}
     </>
