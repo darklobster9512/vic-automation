@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Du liest deutsche Ausweisdokumente (Personalausweis Vorder-/Rückseite oder Reisepass) aus Bildern/PDFs aus.
+const SYSTEM_PROMPT = `Du liest deutsche Ausweisdokumente (Personalausweis Vorder-/Rückseite oder Reisepass) und optional einen Meldenachweis (Meldebescheinigung, Wohnsitzbestätigung) aus Bildern/PDFs aus.
 Gib IMMER das Tool "extract_id" zurück.
 Regeln:
 - Übernimm ALLE Vornamen exakt so, wie sie im Dokument stehen (auch Zweit- und Drittnamen).
@@ -15,7 +15,9 @@ Regeln:
 - birth_date im Format TT.MM.JJJJ.
 - birth_place: Geburtsort exakt wie im Dokument.
 - Adresse (street, zip_code, city) steht beim deutschen Personalausweis auf der RÜCKSEITE. Straße inkl. Hausnummer und Zusatz (z.B. "Wilhelm-Busch-Str. 18 A").
-- Reisepässe enthalten keine Adresse -> leer lassen.
+- Reisepässe enthalten keine Adresse.
+- WICHTIG: Wenn ein Meldenachweis vorhanden ist, übernimm street, zip_code und city IMMER aus dem Meldenachweis (überschreibt eventuelle Adresse aus dem Ausweis). Name, Geburtsdatum und Geburtsort bleiben aus dem Ausweisdokument.
+- Wenn keine Adresse verfügbar ist (Reisepass ohne Meldenachweis), gib die Adressfelder leer zurück.
 - Wenn ein Wert nicht lesbar ist, gib "" zurück. Erfinde niemals Werte.`;
 
 const TOOL = {
