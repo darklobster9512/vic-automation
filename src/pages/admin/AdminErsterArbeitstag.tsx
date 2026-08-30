@@ -331,6 +331,14 @@ export default function AdminErsterArbeitstag() {
                               <IdCard className="h-3 w-3" />
                               Ausweisdaten extrahieren
                             </button>
+                            <button
+                              type="button"
+                              className="ml-3 inline-flex items-center gap-1 normal-case font-normal tracking-normal text-muted-foreground/80 hover:text-primary transition-colors"
+                              onClick={() => setBulkImportDay(r.item.appointment_date)}
+                            >
+                              <FileText className="h-3 w-3" />
+                              Vorbereitung importieren
+                            </button>
                           </div>
                         </TableCell>
                       </TableRow>
