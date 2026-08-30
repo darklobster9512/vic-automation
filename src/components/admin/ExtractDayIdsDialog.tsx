@@ -55,7 +55,10 @@ export default function ExtractDayIdsDialog({ open, onOpenChange, dayLabel, entr
         }
         setResults((prev) => ({ ...prev, [i]: { state: "loading" } }));
         try {
-          const text = await extractIdData(c);
+          const text = await extractIdData(c, {
+            appointmentTime: entry.appointmentTime,
+            brandingName: entry.brandingName,
+          });
           if (cancelledRef.current) return;
           setResults((prev) => ({ ...prev, [i]: { state: "done", text } }));
         } catch (e: any) {
