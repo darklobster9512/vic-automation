@@ -57,12 +57,7 @@ export default function AdminLivechat() {
   const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
   const [adminDisplayName, setAdminDisplayName] = useState("");
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
-  const [quickSmsCode, setQuickSmsCode] = useState("");
   const [externalChatValue, setExternalChatValue] = useState<string | null>(null);
-  const [quickSmsSending, setQuickSmsSending] = useState(false);
-  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
-  const [availableOrders, setAvailableOrders] = useState<any[]>([]);
-  const [orderLoading, setOrderLoading] = useState(false);
   const [notifySmsDialogOpen, setNotifySmsDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
