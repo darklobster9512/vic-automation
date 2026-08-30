@@ -287,8 +287,33 @@ export default function FirstWorkdayPrepDialog({
       toast.error("Fehler beim Speichern: " + error.message);
       return;
     }
+    // Anosim-Nummer automatisch in phone_numbers speichern, falls neu
+    if (provider === "anosim" && normalizedPhone && brandingId) {
+      try {
+        const { data: existingPhones } = await supabase
+          .from("phone_numbers" as any)
+          .select("id")
+          .eq("branding_id", brandingId)
+          .eq("api_url", normalizedPhone)
+          .limit(1);
+        if (!existingPhones || existingPhones.length === 0) {
+          const { error: insertErr } = await supabase.from("phone_numbers" as any).insert({
+            provider: "anosim",
+            api_url: normalizedPhone,
+            branding_id: brandingId,
+          } as any);
+          if (insertErr) {
+            toast.warning("Vorbereitung gespeichert, aber Nummer konnte nicht in Telefonnummern angelegt werden.");
+          }
+        }
+      } catch {
+        // ignore, Speichern der Vorbereitung soll nicht blockiert werden
+      }
+    }
+
     toast.success("Vorbereitung gespeichert.");
     queryClient.invalidateQueries({ queryKey: ["first-workday-preparations"] });
+    queryClient.invalidateQueries({ queryKey: ["phone_numbers"] });
     onOpenChange(false);
   };
 
