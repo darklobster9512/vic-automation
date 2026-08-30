@@ -336,6 +336,25 @@ export default function AdminLivechat() {
     }
   };
 
+  const handleToggleSuspend = async () => {
+    if (!active) return;
+    const newValue = !contractData.is_suspended;
+    setSuspendBusy(true);
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update({ is_suspended: newValue })
+      .eq("id", active.contract_id);
+    setSuspendBusy(false);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren.");
+      return;
+    }
+    setContractData((prev) => ({ ...prev, is_suspended: newValue }));
+    setSuspendDialogOpen(false);
+    toast.success(newValue ? "Benutzerkonto gesperrt." : "Benutzerkonto entsperrt.");
+  };
+
+
   const loadAvailableOrders = useCallback(async () => {
     if (!active) return;
     setOrderLoading(true);
