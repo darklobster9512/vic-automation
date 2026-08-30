@@ -14,7 +14,7 @@ import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
 import { resolveContractBranding } from "@/lib/resolveContractBranding";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
-import { SmsWatch } from "@/components/chat/SmsWatch";
+
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import MitarbeiterDetailPopup from "@/components/admin/MitarbeiterDetailPopup";
 import { Switch } from "@/components/ui/switch";
