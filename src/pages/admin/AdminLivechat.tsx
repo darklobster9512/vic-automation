@@ -304,37 +304,6 @@ export default function AdminLivechat() {
     sendTyping(draft);
   };
 
-  const handleQuickSms = async () => {
-    if (!contractData.phone || !quickSmsCode.trim()) return;
-    setQuickSmsSending(true);
-    const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
-    const smsFullText = `Ihr Ident-Code lautet: ${quickSmsCode.trim()}.`;
-    let smsSender: string | undefined;
-    let smsBrandingId: string | null = null;
-    if (active) {
-      const brandingId = await resolveContractBranding(active.contract_id);
-      smsBrandingId = brandingId;
-      if (brandingId) {
-        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
-        smsSender = (branding as any)?.sms_sender_name || undefined;
-      }
-    }
-    const success = await sendSms({
-      to: contractData.phone,
-      text: smsFullText,
-      event_type: "manuell",
-      recipient_name: name,
-      from: smsSender,
-      branding_id: smsBrandingId,
-    });
-    setQuickSmsSending(false);
-    if (success) {
-      toast.success("SMS gesendet!");
-      setQuickSmsCode("");
-    } else {
-      toast.error("SMS-Versand fehlgeschlagen");
-    }
-  };
 
   const handleToggleSuspend = async () => {
     if (!active) return;
