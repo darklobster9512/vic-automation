@@ -97,7 +97,9 @@ export default function AdminAnhaenge() {
         if (a.created_at > g.latest_created_at) g.latest_created_at = a.created_at;
       }
 
-      return Array.from(map.values());
+      return Array.from(map.values()).sort(
+        (a, b) => new Date(b.latest_created_at).getTime() - new Date(a.latest_created_at).getTime()
+      );
     },
   });
 
