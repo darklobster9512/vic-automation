@@ -961,6 +961,7 @@ export default function AdminMitarbeiterDetail() {
                             front_url: contract.id_front_url,
                             back_url: (contract as any).id_type === "reisepass" ? null : contract.id_back_url,
                             id_type: (contract as any).id_type ?? "personalausweis",
+                            proof_of_address_url: (contract as any).proof_of_address_url ?? null,
                           },
                         });
                         if (error) throw error;
@@ -979,7 +980,47 @@ export default function AdminMitarbeiterDetail() {
                         if (contract.tax_id) lines.push(`Steuer-ID: ${contract.tax_id}`);
                         if (contract.bank_name) lines.push(`Aktuelle Bank: ${contract.bank_name}`);
                         if (!lines.length) throw new Error("Keine Daten erkannt");
-                        const extractedText = lines.join("\n");
+
+                        // Abweichungsprüfung zu hinterlegten Bewerberdaten
+                        const norm = (v: any) =>
+                          String(v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+                        const normDate = (v: any) => {
+                          const s = String(v ?? "").trim();
+                          if (!s) return "";
+                          // ISO YYYY-MM-DD → TT.MM.JJJJ
+                          const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                          if (iso) return `${iso[3]}.${iso[2]}.${iso[1]}`;
+                          return s;
+                        };
+                        const c: any = contract;
+                        const diffs: Array<{ label: string; original: string }> = [];
+                        const check = (
+                          label: string,
+                          extracted: string,
+                          original: any,
+                          normalizer: (v: any) => string = norm,
+                        ) => {
+                          const ex = normalizer(extracted);
+                          const or = normalizer(original);
+                          if (!ex || !or) return;
+                          if (ex !== or) {
+                            diffs.push({ label, original: String(original).trim() });
+                          }
+                        };
+                        check("Vorname", d.first_names, c.first_name);
+                        check("Nachname", d.last_name, c.last_name);
+                        check("Geburtsdatum", d.birth_date, c.birth_date, normDate);
+                        check("Geburtsort", d.birth_place, c.birth_place);
+                        check("Straße", d.street, c.street);
+                        check("PLZ", d.zip_code, c.zip_code);
+                        check("Ort", d.city, c.city);
+
+                        let extractedText = lines.join("\n");
+                        if (diffs.length) {
+                          extractedText +=
+                            "\n\n⚠️ Abweichungen zu hinterlegten Bewerberdaten:\n" +
+                            diffs.map((x) => `${x.label}: ${x.original}`).join("\n");
+                        }
                         setIdExtracted(extractedText);
                         navigator.clipboard.writeText(extractedText);
                         toast.success("Ausweisdaten extrahiert und kopiert");
