@@ -14,11 +14,11 @@ import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
 import { resolveContractBranding } from "@/lib/resolveContractBranding";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
-import { SmsWatch } from "@/components/chat/SmsWatch";
+
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import MitarbeiterDetailPopup from "@/components/admin/MitarbeiterDetailPopup";
 import { Switch } from "@/components/ui/switch";
-import { MessageCircle, Pencil, Check, Plus, Bell, PencilLine, X } from "lucide-react";
+import { MessageCircle, Pencil, Check, Bell, PencilLine, X, Lock, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,18 +49,15 @@ export default function AdminLivechat() {
   const [newChatLoading, setNewChatLoading] = useState(false);
   const [allContracts, setAllContracts] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
 
-  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null }>({});
+  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null; is_suspended?: boolean | null }>({});
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [suspendBusy, setSuspendBusy] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
   const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
   const [adminDisplayName, setAdminDisplayName] = useState("");
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
-  const [quickSmsCode, setQuickSmsCode] = useState("");
   const [externalChatValue, setExternalChatValue] = useState<string | null>(null);
-  const [quickSmsSending, setQuickSmsSending] = useState(false);
-  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
-  const [availableOrders, setAvailableOrders] = useState<any[]>([]);
-  const [orderLoading, setOrderLoading] = useState(false);
   const [notifySmsDialogOpen, setNotifySmsDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
@@ -245,7 +242,7 @@ export default function AdminLivechat() {
     if (!active) return;
     supabase
       .from("employment_contracts")
-      .select("first_name, last_name, phone, user_id, employment_type")
+      .select("first_name, last_name, phone, user_id, employment_type, is_suspended")
       .eq("id", active.contract_id)
       .maybeSingle()
       .then(({ data }: any) => {
@@ -302,82 +299,25 @@ export default function AdminLivechat() {
     sendTyping(draft);
   };
 
-  const handleQuickSms = async () => {
-    if (!contractData.phone || !quickSmsCode.trim()) return;
-    setQuickSmsSending(true);
-    const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
-    const smsFullText = `Ihr Ident-Code lautet: ${quickSmsCode.trim()}.`;
-    let smsSender: string | undefined;
-    let smsBrandingId: string | null = null;
-    if (active) {
-      const brandingId = await resolveContractBranding(active.contract_id);
-      smsBrandingId = brandingId;
-      if (brandingId) {
-        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
-        smsSender = (branding as any)?.sms_sender_name || undefined;
-      }
-    }
-    const success = await sendSms({
-      to: contractData.phone,
-      text: smsFullText,
-      event_type: "manuell",
-      recipient_name: name,
-      from: smsSender,
-      branding_id: smsBrandingId,
-    });
-    setQuickSmsSending(false);
-    if (success) {
-      toast.success("SMS gesendet!");
-      setQuickSmsCode("");
-    } else {
-      toast.error("SMS-Versand fehlgeschlagen");
-    }
-  };
 
-  const loadAvailableOrders = useCallback(async () => {
+  const handleToggleSuspend = async () => {
     if (!active) return;
-    setOrderLoading(true);
-    const { data: existing } = await supabase
-      .from("order_assignments")
-      .select("order_id")
-      .eq("contract_id", active.contract_id);
-    const assignedIds = (existing ?? []).map((e: any) => e.order_id);
-
-    let orderQuery = supabase
-      .from("orders")
-      .select("id, title, order_number, reward, is_placeholder")
-      .order("created_at", { ascending: false });
-
-    if (activeBrandingId) {
-      orderQuery = orderQuery.eq("branding_id", activeBrandingId);
+    const newValue = !contractData.is_suspended;
+    setSuspendBusy(true);
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update({ is_suspended: newValue })
+      .eq("id", active.contract_id);
+    setSuspendBusy(false);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren.");
+      return;
     }
-
-    const { data: allOrders } = await orderQuery;
-
-    setAvailableOrders((allOrders ?? []).filter((o: any) => !assignedIds.includes(o.id)));
-    setOrderLoading(false);
-  }, [active?.contract_id]);
-
-  const handleOpenOrderDialog = () => {
-    loadAvailableOrders();
-    setOrderDialogOpen(true);
+    setContractData((prev) => ({ ...prev, is_suspended: newValue }));
+    setSuspendDialogOpen(false);
+    toast.success(newValue ? "Benutzerkonto gesperrt." : "Benutzerkonto entsperrt.");
   };
 
-  const handleAssignOrder = async (order: any) => {
-    if (!active) return;
-    const text = `📋 Neuer Auftrag: ${order.title} (${order.order_number}) – Prämie: ${order.reward}${order.reward.includes("€") ? "" : " €"}`;
-    const metadata = {
-      type: "order_offer",
-      order_id: order.id,
-      order_title: order.title,
-      order_number: order.order_number,
-      reward: order.reward,
-      is_placeholder: order.is_placeholder,
-    };
-    await sendMessage(text, "system", null, metadata);
-    setOrderDialogOpen(false);
-    toast.success("Auftragsangebot gesendet");
-  };
 
   const handleSendNotifySms = async () => {
     if (!contractData.phone || !notifySmsText.trim()) return;
@@ -534,39 +474,17 @@ export default function AdminLivechat() {
               <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
             )}
           </div>
-          {active && <SmsWatch contractId={active.contract_id} onTanCodeExtracted={(code) => { setQuickSmsCode(code); setExternalChatValue(code); }} />}
           <div className="flex items-center gap-2">
-            {active && contractData.phone && (
-              <div className="flex items-center gap-1">
-                <Input
-                  value={quickSmsCode}
-                  onChange={(e) => setQuickSmsCode(e.target.value)}
-                  placeholder="Code"
-                  className="h-9 w-20 text-sm"
-                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
-                />
-                <Button
-                  variant="default"
-                  size="icon"
-                  className="h-9 w-9"
-                  disabled={!quickSmsCode.trim() || quickSmsSending}
-                  onClick={handleQuickSms}
-                  title="Ident-Code per SMS senden"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
             {active && (
               <Button
-                variant="outline"
+                variant={contractData.is_suspended ? "destructive" : "outline"}
                 size="sm"
                 className="h-9 gap-1.5"
-                onClick={handleOpenOrderDialog}
-                title="Auftrag zuweisen"
+                onClick={() => setSuspendDialogOpen(true)}
+                title={contractData.is_suspended ? "Benutzerkonto entsperren" : "Benutzerkonto sperren"}
               >
-                <Plus className="h-4 w-4" />
-                Auftrag
+                {contractData.is_suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {contractData.is_suspended ? "Entsperren" : "Sperren"}
               </Button>
             )}
             {active && contractData.phone && (
@@ -676,43 +594,34 @@ export default function AdminLivechat() {
         )}
       </div>
 
-      {/* Order Assignment Dialog */}
-      <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
-        <DialogContent className="max-w-md">
+      {/* Sperr-Bestätigung */}
+      <Dialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Auftrag zuweisen
+              {contractData.is_suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {contractData.is_suspended ? "Benutzerkonto entsperren?" : "Benutzerkonto sperren?"}
             </DialogTitle>
           </DialogHeader>
-          <div className="max-h-[400px] overflow-y-auto space-y-2 py-2">
-            {orderLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : availableOrders.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Keine verfügbaren Aufträge</p>
-            ) : (
-              availableOrders.map((order) => (
-                <button
-                  key={order.id}
-                  onClick={() => handleAssignOrder(order)}
-                  className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors space-y-1"
-                >
-                  <p className="text-sm font-medium text-foreground">{order.title}</p>
-                  <p className="text-xs text-muted-foreground">{order.order_number} · Prämie: {order.reward}{order.reward.includes("€") ? "" : " €"}</p>
-                  {!order.is_placeholder && (
-                    <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Termin wird automatisch gebucht</span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
+          <p className="text-sm text-muted-foreground py-2">
+            {contractData.is_suspended
+              ? `${contractData.first_name ?? ""} ${contractData.last_name ?? ""} erhält wieder vollen Zugriff auf das Mitarbeiter-Portal.`
+              : `${contractData.first_name ?? ""} ${contractData.last_name ?? ""} kann sich anschließend nicht mehr im Mitarbeiter-Portal anmelden.`}
+          </p>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => setSuspendDialogOpen(false)}>Abbrechen</Button>
+            <Button
+              variant={contractData.is_suspended ? "default" : "destructive"}
+              onClick={handleToggleSuspend}
+              disabled={suspendBusy}
+            >
+              {suspendBusy ? "Wird gespeichert..." : contractData.is_suspended ? "Entsperren" : "Sperren"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
 
       {/* Notify SMS Dialog */}
       <Dialog open={notifySmsDialogOpen} onOpenChange={setNotifySmsDialogOpen}>
