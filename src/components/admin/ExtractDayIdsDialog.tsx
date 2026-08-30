@@ -10,6 +10,8 @@ export interface ExtractDayEntry {
   name: string;
   /** Vertragsdaten für Extraktion + Abweichungsprüfung */
   contract: any | null;
+  appointmentTime?: string | null;
+  brandingName?: string | null;
 }
 
 type EntryState = "pending" | "loading" | "done" | "error" | "skipped";
