@@ -74,7 +74,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { front_url, back_url, id_type } = await req.json();
+    const { front_url, back_url, id_type, proof_of_address_url } = await req.json();
     if (!front_url && !back_url) {
       return new Response(JSON.stringify({ error: "Kein Ausweisdokument vorhanden" }), {
         status: 400,
@@ -98,6 +98,13 @@ serve(async (req) => {
     ];
     if (front_url) content.push(await buildBlock(front_url, "vorderseite"));
     if (back_url) content.push(await buildBlock(back_url, "rueckseite"));
+    if (proof_of_address_url) {
+      content.push({
+        type: "text",
+        text: "Das folgende Dokument ist der MELDENACHWEIS. Nimm street, zip_code und city ausschließlich aus diesem Dokument.",
+      });
+      content.push(await buildBlock(proof_of_address_url, "meldenachweis"));
+    }
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
