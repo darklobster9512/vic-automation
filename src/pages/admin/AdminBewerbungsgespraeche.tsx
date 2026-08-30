@@ -387,6 +387,7 @@ export default function AdminBewerbungsgespraeche() {
         branding_id: brandingId,
         event_type: "panel_link",
         metadata: { appointment_id: item.id, application_id: item.application_id },
+        bypass_queue: true,
       });
       toast.success(`Panel-Link an ${app.email} gesendet`);
     } catch (e: any) {
