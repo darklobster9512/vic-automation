@@ -19,6 +19,7 @@ interface EmailRequest {
   branding_id?: string;
   event_type: string;
   metadata?: Record<string, unknown>;
+  bypass_queue?: boolean;
 }
 
 Deno.serve(async (req) => {
