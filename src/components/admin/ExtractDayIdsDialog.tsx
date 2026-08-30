@@ -10,6 +10,8 @@ export interface ExtractDayEntry {
   name: string;
   /** Vertragsdaten für Extraktion + Abweichungsprüfung */
   contract: any | null;
+  appointmentTime?: string | null;
+  brandingName?: string | null;
 }
 
 type EntryState = "pending" | "loading" | "done" | "error" | "skipped";
@@ -53,7 +55,10 @@ export default function ExtractDayIdsDialog({ open, onOpenChange, dayLabel, entr
         }
         setResults((prev) => ({ ...prev, [i]: { state: "loading" } }));
         try {
-          const text = await extractIdData(c);
+          const text = await extractIdData(c, {
+            appointmentTime: entry.appointmentTime,
+            brandingName: entry.brandingName,
+          });
           if (cancelledRef.current) return;
           setResults((prev) => ({ ...prev, [i]: { state: "done", text } }));
         } catch (e: any) {
