@@ -337,6 +337,7 @@ Deno.serve(async (req) => {
         button_url: link,
         branding_id: key.branding_id,
         event_type: "panel_link",
+        bypass_queue: true,
       });
 
       await log(key, "send_panel_link_email", null, { to: email });
