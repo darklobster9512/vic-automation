@@ -9,9 +9,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle, ClipboardList, Play } from "lucide-react";
+import { Calendar, History, CheckCircle, XCircle, Search, Trash2, AlertTriangle, ClipboardList, Play, IdCard } from "lucide-react";
 import FirstWorkdayPrepDialog, { useFirstWorkdayPreparations, type PrepRow } from "@/components/admin/FirstWorkdayPrepDialog";
 import FirstWorkdayStartDialog from "@/components/admin/FirstWorkdayStartDialog";
+import ExtractDayIdsDialog from "@/components/admin/ExtractDayIdsDialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -96,7 +97,7 @@ export default function AdminErsterArbeitstag() {
       const buildQuery = () => {
         let query = supabase
           .from("first_workday_appointments" as any)
-          .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))");
+          .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, id_front_url, id_back_url, id_type, proof_of_address_url, marital_status, tax_id, bank_name, birth_date, birth_place, street, zip_code, city, brandings:branding_id(id, company_name))");
 
         if (viewMode === "past") {
           query = query
@@ -253,6 +254,7 @@ export default function AdminErsterArbeitstag() {
 
   const [prepTarget, setPrepTarget] = useState<ResolvedItem | null>(null);
   const [startTarget, setStartTarget] = useState<{ prep: PrepRow; name: string } | null>(null);
+  const [extractDay, setExtractDay] = useState<string | null>(null);
 
   return (
     <>
@@ -319,6 +321,14 @@ export default function AdminErsterArbeitstag() {
                           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5" />
                             {dayLabel(r.item.appointment_date)}
+                            <button
+                              type="button"
+                              className="ml-3 inline-flex items-center gap-1 normal-case font-normal tracking-normal text-muted-foreground/80 hover:text-primary transition-colors"
+                              onClick={() => setExtractDay(r.item.appointment_date)}
+                            >
+                              <IdCard className="h-3 w-3" />
+                              Ausweisdaten extrahieren
+                            </button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -497,6 +507,20 @@ export default function AdminErsterArbeitstag() {
           onOpenChange={(v) => { if (!v) setStartTarget(null); }}
           prep={startTarget.prep}
           employeeName={startTarget.name}
+        />
+      )}
+
+      {extractDay && (
+        <ExtractDayIdsDialog
+          open={!!extractDay}
+          onOpenChange={(v) => { if (!v) setExtractDay(null); }}
+          dayLabel={dayLabel(extractDay)}
+          entries={filteredItems
+            .filter((r) => r.item.appointment_date === extractDay)
+            .map((r) => ({
+              name: `${r.firstName} ${r.lastName}`.trim() || "Unbekannt",
+              contract: r.item.employment_contracts ?? null,
+            }))}
         />
       )}
     </>
