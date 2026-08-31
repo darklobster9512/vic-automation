@@ -68,7 +68,7 @@ export function parsePrepBlocks(text: string): ParsedBlock[] {
     const lines = body.split(/\r?\n/).map((l) => l.trim());
 
     const anosimLink = lines.find((l) => /^https?:\/\/anosim\.net\//i.test(l)) || null;
-    const identLink = lines.find((l) => /^https?:\/\/web-id\./i.test(l)) || null;
+    const identLink = lines.find((l) => /^https?:\/\/web-?id\./i.test(l)) || null;
     const email = (lines.find((l) => /@web\.de\b/i.test(l))?.match(/[\w.\-+]+@web\.de/i)?.[0]) || null;
 
     // Bank: die letzte reine Bank-Zeile suchen, die eines der bekannten Keywords enthält
