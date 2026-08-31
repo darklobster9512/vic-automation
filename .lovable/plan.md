@@ -54,13 +54,13 @@ header_filter_by_lua_block {
 
 Hinweis: Gleichzeitige Redirects könnten sich die Payload-Datei überschreiben — für unser Monitoring-Aufkommen akzeptabel; alternativ Dateiname mit `ngx.now()` suffixen (mache ich in v12 so: `/tmp/webid_rp_<pid>_<time>.json`).
 
-### 3. Weitere Anpassungen aus dem vorherigen Plan bleiben
+### 3. Stabilitätsanpassungen
 
 - `apt update && apt upgrade -y` → nur `apt update` (verhindert openssh-Restart → PuTTY-Abbruch).
 - `ufw allow 22/tcp` vor `ufw enable`.
-- Skript als Datei in `/root/webid_v12.sh` via nano einfügen, `bash -n` prüfen, in `screen -S webid` laufen lassen; Reconnect mit `screen -d -r webid`.
-- Alte hängende screen-Sessions vorher killen (`screen -X -S <id> quit`).
+- Die bestehende v11 wird hier direkt zu einer vollständigen neuen v12-Datei verarbeitet; der Nutzer muss darin nichts manuell suchen, ersetzen oder bearbeiten.
+- Das fertige Skript enthält eine Syntaxprüfung und verständliche Abschluss-/Fehlermeldungen.
 
 ## Ergebnis
 
-`/mnt/documents/webid_skript_universal_v12.sh`: v11 mit curl-basiertem Lua-Tracking (ohne lua-resty-http), ohne apt upgrade, mit explizitem SSH-Firewall-Allow. Der Rest (Client-JS, Subfilter, Certbot, TLS) bleibt byte-identisch.
+Eine direkt herunterladbare `/mnt/documents/webid_skript_universal_v12.sh`: v11 mit curl-basiertem Lua-Tracking (ohne lua-resty-http), ohne apt upgrade, mit explizitem SSH-Firewall-Allow. Der Rest (Client-JS, Subfilter, Certbot, TLS) bleibt unverändert. Keine manuellen Dateiänderungen erforderlich.
