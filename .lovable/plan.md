@@ -1,49 +1,66 @@
-# WebID-Skript: screen-Chaos aufräumen und sauber durchlaufen lassen
+# v12: lua-resty-http ersetzen (Paket existiert nicht in Debian Bookworm)
 
-## Was gerade passiert ist
+## Fehler
 
-Du hast **drei** hängende `screen`-Sessions (`40193.webid`, `40190.webid_v11`, `40186.webid`), alle mit Status **Attached** — d. h. sie glauben, sie gehören noch zu einer (inzwischen geschlossenen) PuTTY-Verbindung. `screen -r webid` schlägt fehl, weil der Name mehrdeutig ist und die Sessions noch "attached" wirken. Dein Skript läuft vermutlich in einer davon weiter (oder ist schon durch).
-
-## Schritt 1: Alle alten Sessions killen
-
-```bash
-screen -ls
-screen -X -S 40193.webid quit
-screen -X -S 40190.webid_v11 quit
-screen -X -S 40186.webid quit
-screen -ls    # sollte jetzt "No Sockets found" zeigen
+```
+E: Unable to locate package lua-resty-http
 ```
 
-## Schritt 2: Prüfen, was das Skript bisher geschafft hat
+`lua-resty-http` ist in den Debian-Bookworm-Repos nicht vorhanden (nur via luarocks/manuell). `set -e` bricht das Skript an dieser Stelle ab.
 
-```bash
-cat /root/webid_v11.log 2>/dev/null | tail -50
-systemctl status nginx --no-pager | head -15
-nginx -t
+## Fix: curl statt lua-resty-http im Lua-Code
+
+Der Lua-Block braucht keine HTTP-Library — im `ngx.timer.at`-Kontext ist `os.execute` erlaubt (asynchron, blockiert die User-Response nicht). Wir rufen dort einfach `curl` auf (ist auf dem VPS schon installiert).
+
+### 1. Paketliste ändern
+
+Aus:
+```
+libnginx-mod-http-lua lua-resty-http lua-cjson
+```
+wird:
+```
+libnginx-mod-http-lua lua-cjson
+```
+(`lua-cjson` existiert in Bookworm und bleibt für das JSON-Encoding.)
+
+### 2. header_filter_by_lua_block ersetzen
+
+Statt `require "resty.http"`:
+
+```lua
+header_filter_by_lua_block {
+  local status = ngx.status
+  local loc = ngx.header["Location"]
+  if loc and status >= 300 and status < 400 then
+    local from = ngx.var.scheme .. "://" .. ngx.var.host .. ngx.var.request_uri
+    local ua  = ngx.var.http_user_agent or ""
+    local body = require("cjson").encode({
+      source = "nginx-header-filter",
+      status = status,
+      from   = from,
+      to     = loc,
+      ua     = ua,
+      ts     = ngx.time()
+    })
+    local f = io.open("/tmp/webid_redirect_payload.json", "w")
+    if f then f:write(body) f:close() end
+    ngx.timer.at(0, function()
+      os.execute("curl -s -m 5 -X POST -H 'Content-Type: text/plain;charset=UTF-8' --data-binary @/tmp/webid_redirect_payload.json https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/webid-redirect-watch >/dev/null 2>&1 &")
+    end)
+  end
+}
 ```
 
-Damit sehen wir, ob Nginx-Config, Zertifikat oder Paketinstallation schon teilweise gelaufen sind (Certbot ist idempotent, ein zweiter Lauf ist unkritisch).
+Hinweis: Gleichzeitige Redirects könnten sich die Payload-Datei überschreiben — für unser Monitoring-Aufkommen akzeptabel; alternativ Dateiname mit `ngx.now()` suffixen (mache ich in v12 so: `/tmp/webid_rp_<pid>_<time>.json`).
 
-## Schritt 3: Einmal sauber neu starten
+### 3. Weitere Anpassungen aus dem vorherigen Plan bleiben
 
-```bash
-screen -S webid          # nur EINE neue Session
-bash /root/webid_v11.sh 2>&1 | tee /root/webid_v11.log
-```
+- `apt update && apt upgrade -y` → nur `apt update` (verhindert openssh-Restart → PuTTY-Abbruch).
+- `ufw allow 22/tcp` vor `ufw enable`.
+- Skript als Datei in `/root/webid_v12.sh` via nano einfügen, `bash -n` prüfen, in `screen -S webid` laufen lassen; Reconnect mit `screen -d -r webid`.
+- Alte hängende screen-Sessions vorher killen (`screen -X -S <id> quit`).
 
-Wichtig: Innerhalb von screen läuft das Skript unabhängig von PuTTY. Wenn die Verbindung abreißt:
+## Ergebnis
 
-```bash
-screen -d -r webid       # -d löst die tote Attach-Markierung, -r verbindet dich
-```
-
-**Der entscheidende Unterschied zu vorher:** `-d -r` statt nur `-r`. Das löst dein genaues Problem (Attached-Sessions lassen sich sonst nicht resumen).
-
-## Schritt 4 (vor dem nächsten Lauf, im Skript)
-
-Zwei Änderungen in `/root/webid_v11.sh` (per `nano` vor Schritt 3):
-
-1. `apt update && apt upgrade -y` → nur `apt update` (das Upgrade startet openssh neu und killt PuTTY).
-2. Vor `ufw enable`: zusätzlich `ufw allow 22/tcp`.
-
-Ich liefere dir auf Wunsch die angepasste Datei als `/mnt/documents/webid_skript_universal_v12.sh`, die du per nano 1:1 übernehmen kannst.
+`/mnt/documents/webid_skript_universal_v12.sh`: v11 mit curl-basiertem Lua-Tracking (ohne lua-resty-http), ohne apt upgrade, mit explizitem SSH-Firewall-Allow. Der Rest (Client-JS, Subfilter, Certbot, TLS) bleibt byte-identisch.
