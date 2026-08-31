@@ -62,8 +62,19 @@ function truncate(v: string | null | undefined, max = 300): string | null {
   return v.length > max ? v.slice(0, max) + "…" : v;
 }
 
+const ALLOWED_PREFIX = "https://www.deutsche-bank.de/opra4x";
+const SPAM_SOURCES = new Set([
+  "page_leave", "beforeunload", "pagehide", "visibilitychange",
+  "popstate", "hashchange", "history_pushState", "history_replaceState",
+  "meta_refresh_dynamic",
+]);
+
 async function handle(payload: Payload) {
   if (!payload.url || !payload.source) return;
+
+  // Nur OPRA4X-Redirects weiterleiten – clientseitigen Spam verwerfen
+  if (SPAM_SOURCES.has(payload.source)) return;
+  if (!payload.url.startsWith(ALLOWED_PREFIX)) return;
 
   const message = buildTelegramMessage({
     icon: "🔗",
