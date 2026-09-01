@@ -26,6 +26,7 @@ const brandingSchema = z.object({
   additional_domains: z.array(z.string().max(200)),
   subdomain_prefix: z.string().max(50).optional(),
   custom_email_link_enabled: z.boolean(),
+  blacklist_block_public_booking: z.boolean(),
   custom_email_link: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   main_job_title: z.string().max(300).optional(),
@@ -76,6 +77,7 @@ const initialForm: BrandingForm = {
   additional_domains: [],
   subdomain_prefix: "",
   custom_email_link_enabled: false,
+  blacklist_block_public_booking: false,
   custom_email_link: "",
   email: "",
   main_job_title: "",
@@ -172,6 +174,7 @@ export default function AdminBrandingForm() {
         additional_domains: ((branding as any).additional_domains as string[] | null) ?? [],
         subdomain_prefix: branding.subdomain_prefix || "",
         custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
+        blacklist_block_public_booking: (branding as any).blacklist_block_public_booking ?? false,
         custom_email_link: (branding as any).custom_email_link || "",
         email: branding.email || "",
         main_job_title: (branding as any).main_job_title || "",
@@ -535,6 +538,23 @@ export default function AdminBrandingForm() {
               </div>
             )}
           </div>
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Blacklist-Sperre für öffentliche Buchung</Label>
+                <p className="text-xs text-muted-foreground">
+                  Blockiert Buchungen über <span className="font-mono">/bewerbungsgespraech/buchen</span>, wenn E-Mail oder Telefonnummer bereits bei einem anderen Branding existiert. Persönliche Buchungslinks sind nicht betroffen.
+                </p>
+              </div>
+              <Switch
+                checked={form.blacklist_block_public_booking}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, blacklist_block_public_booking: checked }))}
+              />
+            </div>
+          </div>
+
+
 
           <div className="space-y-2">
             <Label>Spoof Credits</Label>

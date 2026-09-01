@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowRight, ArrowLeft, Clock, Home, MessageCircle } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Clock, Home, MessageCircle, XCircle } from "lucide-react";
 import { ContactCard } from "@/components/ContactCard";
 import { hexToHSL } from "@/lib/hexToHSL";
 import { buildKarriereLink } from "@/lib/buildKarriereLink";
@@ -38,6 +38,7 @@ export default function BewerbungsgespraechPublic() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const [citizenship, setCitizenship] = useState<"ja" | "nein" | null>(null);
   const citizenshipRequired = location.pathname === "/bewerbungsgespraech/buchen";
 
@@ -125,6 +126,7 @@ export default function BewerbungsgespraechPublic() {
       formData.append("branding_id", branding.id);
       formData.append("auto_accept", "true");
       formData.append("skip_acceptance_email", "true");
+      if (citizenshipRequired) formData.append("public_booking", "true");
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -139,6 +141,10 @@ export default function BewerbungsgespraechPublic() {
 
       const result = await res.json();
       if (!res.ok) {
+        if (result?.code === "blacklisted" || result?.error === "blacklisted") {
+          setRejected(true);
+          return;
+        }
         throw new Error(result.error || "Fehler beim Absenden");
       }
 
@@ -157,6 +163,45 @@ export default function BewerbungsgespraechPublic() {
       </div>
     );
   }
+
+  if (rejected) {
+    const hsl = brandColor !== "#3B82F6" ? hexToHSL(brandColor) : null;
+    return (
+      <div
+        className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center"
+        style={hsl ? ({ "--primary": hsl } as React.CSSProperties) : undefined}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-md w-full mt-8 md:mt-16"
+        >
+          {branding?.logo_url && (
+            <img
+              src={branding.logo_url}
+              alt={branding.company_name || "Logo"}
+              className="h-12 mx-auto object-contain mb-8 drop-shadow-sm"
+            />
+          )}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
+            <div className="h-1.5 bg-destructive" />
+            <div className="p-8 text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+                <XCircle className="h-7 w-7 text-destructive" />
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">Bewerbungsgespräch abgelehnt</h1>
+              <p className="text-sm text-muted-foreground">
+                Ihre Anfrage kann leider nicht berücksichtigt werden, da Sie sich bereits bei zu vielen
+                Unternehmen beworben haben. Eine Terminbuchung ist daher nicht möglich.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
 
   const hslStr = brandColor !== "#3B82F6" ? hexToHSL(brandColor) : null;
 

@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
     const auto_accept = (formData.get("auto_accept") as string)?.trim() === "true";
     const skip_acceptance_email =
       (formData.get("skip_acceptance_email") as string)?.trim() === "true";
+    const public_booking = (formData.get("public_booking") as string)?.trim() === "true";
 
     // Validate required fields
     const missing: string[] = [];
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
     if (branding_id) {
       const { data: branding, error: brandingError } = await supabase
         .from("brandings")
-        .select("id")
+        .select("id, blacklist_block_public_booking")
         .eq("id", branding_id)
         .maybeSingle();
 
@@ -86,7 +87,46 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Blacklist-Sperre: nur für öffentliche Buchungen (/bewerbungsgespraech/buchen)
+      if (public_booking && (branding as any).blacklist_block_public_booking) {
+        const digits = (v: string) => v.replace(/\D/g, "");
+        const phoneKey = phone ? digits(phone).slice(-9) : null;
+
+        let blacklisted = false;
+
+        const { data: emailHits } = await supabase
+          .from("applications")
+          .select("id")
+          .eq("email", email.toLowerCase())
+          .neq("branding_id", branding_id)
+          .limit(1);
+        if (emailHits && emailHits.length > 0) blacklisted = true;
+
+        if (!blacklisted && phoneKey && phoneKey.length >= 6) {
+          const { data: phoneHits } = await supabase
+            .from("applications")
+            .select("phone")
+            .neq("branding_id", branding_id)
+            .not("phone", "is", null)
+            .ilike("phone", `%${phoneKey.slice(-7)}%`)
+            .limit(200);
+          blacklisted = (phoneHits || []).some(
+            (r: any) => r.phone && digits(String(r.phone)).slice(-9) === phoneKey
+          );
+        }
+
+        if (blacklisted) {
+          console.log("Blacklist block for public booking:", email, phone);
+          return new Response(
+            JSON.stringify({ error: "blacklisted", code: "blacklisted" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
     }
+
+
 
     // Upload resume if provided
     let resume_url: string | null = null;

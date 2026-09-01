@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN IF NOT EXISTS blacklist_block_public_booking boolean NOT NULL DEFAULT false;
