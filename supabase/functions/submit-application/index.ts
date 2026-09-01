@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
     const auto_accept = (formData.get("auto_accept") as string)?.trim() === "true";
     const skip_acceptance_email =
       (formData.get("skip_acceptance_email") as string)?.trim() === "true";
+    const public_booking = (formData.get("public_booking") as string)?.trim() === "true";
 
     // Validate required fields
     const missing: string[] = [];
