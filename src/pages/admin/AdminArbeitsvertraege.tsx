@@ -168,6 +168,14 @@ export default function AdminArbeitsvertraege() {
       // 2. Build first workday link directly from contract id
       const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
       const firstWorkdayLink = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${contractId}`);
+      let shortLink = firstWorkdayLink;
+      try {
+        shortLink = await createShortLink(firstWorkdayLink, brandingId || null);
+      } catch (e) {
+        console.error("Shortlink konnte nicht erstellt werden:", e);
+        toast.error("Shortlink konnte nicht erstellt werden – voller Link wird verwendet.");
+      }
+
 
       // 3. Approve the contract
       const { error } = await supabase.rpc("approve_employment_contract", { _contract_id: contractId });
