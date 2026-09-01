@@ -1,30 +1,21 @@
-# Fix: SMS enthält den Text „{link}“ statt eines Links
+# SMS „1. Arbeitstag“ – exakt wie beim Bewerbungsgespräch
 
-## Was geprüft wurde
-- Die SMS-Logs (`sms_logs`, Event `vertrag_genehmigt`, heute 10:10–10:14 Uhr) enthalten alle wörtlich `{link}`, während `{name}` korrekt ersetzt wurde.
-- In `short_links` wurde im gleichen Zeitraum **kein** Eintrag angelegt (letzter Eintrag 09:25 Uhr, ein Bewerbungsgespräch-Link).
-- Im Code gibt es nur eine Stelle, die diese SMS verschickt: `handleApprove` in `src/pages/admin/AdminArbeitsvertraege.tsx` — dort wird der Shortlink erzeugt und `{link}` ersetzt.
+## Befund
+- `sms_logs` (Event `vertrag_genehmigt`, heute 10:10–10:14 Uhr): alle SMS enthalten wörtlich `{link}`, `{name}` wurde korrekt ersetzt.
+- In `short_links` gibt es aus diesem Zeitraum **keinen** neuen Eintrag – der Shortlink wurde also nie erzeugt.
+- Bei den Bewerbungen (`AdminBewerbungen.tsx`) funktioniert es: dort wird `createShortLink(interviewLink, branding_id)` aufgerufen und dann `.replace(/{link}/g, shortLink)` auf den Vorlagentext angewendet.
 
-Fazit: Die Genehmigungen liefen über eine **alte, im Browser/Published-Build gecachte Version** der Seite. Der neue Code wurde nie ausgeführt, deshalb blieb `{link}` stehen. Die Vorlage in der Datenbank war bereits aktualisiert – daher der sichtbare Platzhalter.
+## Umsetzung
+`src/pages/admin/AdminArbeitsvertraege.tsx` (`handleApprove`) wird 1:1 auf das Bewerbungs-Muster gebracht:
 
-## Lösung: Ersetzung serverseitig absichern
-Der Client darf nicht die einzige Instanz sein, die `{link}` auflöst. Die Edge Function ist sofort aktiv, unabhängig vom Browser-Cache.
+1. Direkt nach dem Berechnen von `firstWorkdayLink` (vor E-Mail/SMS) wird der Shortlink erzeugt:
+   `const shortLink = await createShortLink(firstWorkdayLink, brandingId)`
+2. SMS-Text wie bei den Bewerbungen zusammensetzen:
+   `tpl.message.replace(/{name}/g, name).replace(/{link}/g, shortLink)`
+   Fallback ohne Vorlage: `Hallo <Vorname>, Ihr Arbeitsvertrag wurde genehmigt! Termin für den 1. Arbeitstag buchen: <shortLink>`
+3. Kein stiller Catch mehr, der die Shortlink-Erzeugung überspringt – schlägt sie fehl, wird der volle Link eingesetzt und ein Toast/Log erzeugt, damit es sichtbar ist.
+4. Die E-Mail behält den vollständigen Link im Button.
 
-1. **`send-sms` Edge Function erweitert**
-   - Nimmt optional `contract_id` (bzw. `link_target`) entgegen.
-   - Enthält der Text noch `{link}` und ist eine `contract_id` vorhanden: Edge Function baut die Buchungs-URL (`https://<branding-domain>/erster-arbeitstag/<id>`), legt einen Shortlink in `short_links` an und setzt ihn ein.
-   - Bleibt danach immer noch ein unaufgelöster Platzhalter übrig (`{...}`), wird er entfernt statt versendet – nie wieder wörtliches `{link}` in einer SMS.
-
-2. **Client übergibt die Contract-ID**
-   - `AdminArbeitsvertraege.tsx` sendet beim Genehmigen zusätzlich `contract_id` mit; die bestehende clientseitige Shortlink-Erzeugung bleibt als schneller Weg erhalten.
-
-3. **Neu veröffentlichen**
-   - Nach dem Fix muss die App neu publiziert und die Admin-Seite einmal hart neu geladen werden (Strg+Shift+R), damit der aktuelle Build läuft.
-
-## Betroffene Dateien
-- `supabase/functions/send-sms/index.ts`
-- `src/pages/admin/AdminArbeitsvertraege.tsx`
-- `src/lib/sendSms.ts` (Parameter `contract_id`)
-
-## Nachträglich
-Auf Wunsch: den 5 betroffenen Personen (Esraa Yilmaz, Denis Cosic, Nele Dickmann, Isabella Haßler, Ervin Tamas) die SMS mit korrektem Link erneut senden.
+## Danach
+- App neu veröffentlichen und die Admin-Seite einmal hart neu laden (Strg+Shift+R), damit nicht wieder ein alter Build läuft.
+- Optional: den 5 betroffenen Personen (Esraa Yilmaz, Denis Cosic, Nele Dickmann, Isabella Haßler, Ervin Tamas) die SMS mit korrektem Link erneut senden.
