@@ -4,6 +4,7 @@ import { sendSms } from "@/lib/sendSms";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { createShortLink } from "@/lib/createShortLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -227,9 +228,25 @@ export default function AdminArbeitsvertraege() {
           .select("message")
           .eq("event_type", "vertrag_genehmigt")
           .single();
-        const smsText = (tpl as any)?.message
-          ? ((tpl as any).message as string).replace("{name}", contractName)
-          : `Hallo ${contractName}, herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt. Wir freuen uns auf die Zusammenarbeit!`;
+        // Shortlink für die Terminbuchung des 1. Arbeitstags
+        let bookingLink = "";
+        if (firstWorkdayLink) {
+          try {
+            bookingLink = await createShortLink(firstWorkdayLink, brandingId || null);
+          } catch (e) {
+            console.error("Shortlink konnte nicht erstellt werden:", e);
+            bookingLink = firstWorkdayLink;
+          }
+        }
+
+        const rawText = (tpl as any)?.message
+          ? ((tpl as any).message as string)
+          : `Hallo {name}, Ihr Arbeitsvertrag wurde genehmigt! Bitte buchen Sie Ihren Termin fuer den 1. Arbeitstag: {link}`;
+        const smsText = rawText
+          .replace(/\{name\}/g, contractName)
+          .replace(/\{link\}/g, bookingLink)
+          .replace(/\s{2,}/g, " ")
+          .trim();
 
         let senderName: string | undefined;
         if (brandingId) {
