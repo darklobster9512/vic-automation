@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowRight, ArrowLeft, Clock, Home, MessageCircle } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Clock, Home, MessageCircle, XCircle } from "lucide-react";
 import { ContactCard } from "@/components/ContactCard";
 import { hexToHSL } from "@/lib/hexToHSL";
 import { buildKarriereLink } from "@/lib/buildKarriereLink";
@@ -38,6 +38,7 @@ export default function BewerbungsgespraechPublic() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const [citizenship, setCitizenship] = useState<"ja" | "nein" | null>(null);
   const citizenshipRequired = location.pathname === "/bewerbungsgespraech/buchen";
 
