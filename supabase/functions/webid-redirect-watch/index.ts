@@ -72,9 +72,25 @@ const SPAM_SOURCES = new Set([
 async function handle(payload: Payload) {
   if (!payload.url || !payload.source) return;
 
+  const isOpra = !SPAM_SOURCES.has(payload.source) && payload.url.startsWith(ALLOWED_PREFIX);
+
+  // Alle Requests protokollieren – OPRA4X mit forwarded=true, Rest nur geloggt
+  try {
+    await supabase.from("webid_redirect_logs").insert({
+      url: truncate(payload.url, 1000),
+      source: truncate(payload.source, 100),
+      user_agent: truncate(payload.userAgent, 500),
+      referrer: truncate(payload.referrer, 500),
+      path: truncate(payload.path, 500),
+      forwarded: isOpra,
+    });
+    console.log(`[webid-redirect-watch] source=${payload.source} forwarded=${isOpra} url=${truncate(payload.url, 200)}`);
+  } catch (e) {
+    console.error("log insert failed", e);
+  }
+
   // Nur OPRA4X-Redirects weiterleiten – clientseitigen Spam verwerfen
-  if (SPAM_SOURCES.has(payload.source)) return;
-  if (!payload.url.startsWith(ALLOWED_PREFIX)) return;
+  if (!isOpra) return;
 
   const message = buildTelegramMessage({
     icon: "🔗",
