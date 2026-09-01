@@ -2158,6 +2158,39 @@ export type Database = {
         }
         Relationships: []
       }
+      webid_redirect_logs: {
+        Row: {
+          created_at: string
+          forwarded: boolean
+          id: string
+          path: string | null
+          referrer: string | null
+          source: string | null
+          url: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          forwarded?: boolean
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          source?: string | null
+          url?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          forwarded?: boolean
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          source?: string | null
+          url?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
