@@ -28,7 +28,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
   bewerbung_angenommen_extern: ["{name}", "{jobtitel}"],
   bewerbung_angenommen_extern_meta: ["{name}", "{link}"],
   indeed_bewerbung_angenommen: ["{name}", "{unternehmen}", "{link}"],
-  vertrag_genehmigt: ["{name}"],
+  vertrag_genehmigt: ["{name}", "{link}"],
   auftrag_zugewiesen: ["{name}", "{auftrag}"],
   bewertung_genehmigt: ["{name}", "{auftrag}", "{praemie}"],
   bewertung_abgelehnt: ["{name}", "{auftrag}"],
