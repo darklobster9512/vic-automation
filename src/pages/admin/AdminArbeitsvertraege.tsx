@@ -4,6 +4,7 @@ import { sendSms } from "@/lib/sendSms";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { createShortLink } from "@/lib/createShortLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
