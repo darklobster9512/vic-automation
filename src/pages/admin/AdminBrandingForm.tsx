@@ -539,6 +539,23 @@ export default function AdminBrandingForm() {
             )}
           </div>
 
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Blacklist-Sperre für öffentliche Buchung</Label>
+                <p className="text-xs text-muted-foreground">
+                  Blockiert Buchungen über <span className="font-mono">/bewerbungsgespraech/buchen</span>, wenn E-Mail oder Telefonnummer bereits bei einem anderen Branding existiert. Persönliche Buchungslinks sind nicht betroffen.
+                </p>
+              </div>
+              <Switch
+                checked={form.blacklist_block_public_booking}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, blacklist_block_public_booking: checked }))}
+              />
+            </div>
+          </div>
+
+
+
           <div className="space-y-2">
             <Label>Spoof Credits</Label>
             <Input
