@@ -574,6 +574,34 @@ export default function AdminBrandingForm() {
             </div>
           </div>
 
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Meta-Pixel (Buchungsseite)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Lädt das Meta-Pixel nur auf <span className="font-mono">/bewerbungsgespraech/buchen</span>. Persönliche Buchungslinks sind nicht betroffen.
+                </p>
+              </div>
+              <Switch
+                checked={form.meta_pixel_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, meta_pixel_enabled: checked }))}
+              />
+            </div>
+            {form.meta_pixel_enabled && (
+              <div className="space-y-2">
+                <Label>Meta-Pixel ID oder Code</Label>
+                <Textarea
+                  rows={4}
+                  value={form.meta_pixel_id}
+                  onChange={(e) => updateField("meta_pixel_id", e.target.value)}
+                  placeholder="1076768121483815 oder kompletten Meta-Pixel-Code einfügen"
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">Du kannst den kompletten Code einfügen – die Pixel-ID wird automatisch erkannt und gespeichert.</p>
+              </div>
+            )}
+          </div>
+
 
 
           <div className="space-y-2">
