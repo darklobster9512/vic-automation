@@ -149,6 +149,9 @@ export default function BewerbungsgespraechPublic() {
         throw new Error(result.error || "Fehler beim Absenden");
       }
 
+      if (branding.meta_pixel_enabled && branding.meta_pixel_id) {
+        sessionStorage.setItem("public_booking_lead", "1");
+      }
       navigate(`/bewerbungsgespraech/${result.application_id}`);
     } catch (err: any) {
       toast.error(err.message || "Ein Fehler ist aufgetreten.");

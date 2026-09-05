@@ -59,7 +59,7 @@ export default function Bewerbungsgespraech() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id), interview_appointments(id, appointment_date, appointment_time)")
+        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id, meta_pixel_enabled), interview_appointments(id, appointment_date, appointment_time)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -412,7 +412,11 @@ export default function Bewerbungsgespraech() {
       setBooked(true);
       setConfirmOpen(false);
       setIsRebooking(false);
-      trackMetaLead();
+      const fromPublicFlow = sessionStorage.getItem("public_booking_lead") === "1";
+      sessionStorage.removeItem("public_booking_lead");
+      if (fromPublicFlow && (application?.brandings as any)?.meta_pixel_enabled) {
+        trackMetaLead();
+      }
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
