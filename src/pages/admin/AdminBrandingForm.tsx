@@ -117,6 +117,18 @@ const initialForm: BrandingForm = {
   recruiter_image_url: "",
 };
 
+function extractPixelId(raw: string): string | null {
+  const value = (raw || "").trim();
+  if (!value) return null;
+  if (/^\d{5,}$/.test(value)) return value;
+  const init = value.match(/fbq\s*\(\s*['"]init['"]\s*,\s*['"](\d+)['"]/);
+  if (init) return init[1];
+  const trPixel = value.match(/facebook\.com\/tr\?id=(\d+)/);
+  if (trPixel) return trPixel[1];
+  const anyDigits = value.match(/\b(\d{10,})\b/);
+  return anyDigits ? anyDigits[1] : null;
+}
+
 export default function AdminBrandingForm() {
   const { id } = useParams();
   const navigate = useNavigate();
