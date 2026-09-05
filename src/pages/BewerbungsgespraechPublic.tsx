@@ -22,6 +22,7 @@ interface BrandingData {
   recruiter_title: string | null;
   recruiter_image_url: string | null;
   meta_pixel_id: string | null;
+  meta_pixel_enabled: boolean | null;
   domain: string | null;
   custom_email_link_enabled: boolean | null;
   custom_email_link: string | null;
@@ -49,7 +50,7 @@ export default function BewerbungsgespraechPublic() {
       const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
       const norm = (s: string) =>
         s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase().trim();
-      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id, domain, custom_email_link_enabled, custom_email_link";
+      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url, meta_pixel_id, meta_pixel_enabled, domain, custom_email_link_enabled, custom_email_link";
 
       const { data } = await supabase
         .from("brandings")
@@ -207,7 +208,7 @@ export default function BewerbungsgespraechPublic() {
 
   return (
     <>
-      {location.pathname === "/bewerbungsgespraech/buchen" && branding?.meta_pixel_id && (
+      {location.pathname === "/bewerbungsgespraech/buchen" && branding?.meta_pixel_enabled && branding?.meta_pixel_id && (
         <MetaPixel pixelId={branding.meta_pixel_id} />
       )}
       <div

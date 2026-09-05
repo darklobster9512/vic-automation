@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -27,6 +28,8 @@ const brandingSchema = z.object({
   subdomain_prefix: z.string().max(50).optional(),
   custom_email_link_enabled: z.boolean(),
   blacklist_block_public_booking: z.boolean(),
+  meta_pixel_enabled: z.boolean(),
+  meta_pixel_id: z.string().max(2000).optional(),
   custom_email_link: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   main_job_title: z.string().max(300).optional(),
@@ -78,6 +81,8 @@ const initialForm: BrandingForm = {
   subdomain_prefix: "",
   custom_email_link_enabled: false,
   blacklist_block_public_booking: false,
+  meta_pixel_enabled: false,
+  meta_pixel_id: "",
   custom_email_link: "",
   email: "",
   main_job_title: "",
@@ -112,6 +117,18 @@ const initialForm: BrandingForm = {
   recruiter_title: "",
   recruiter_image_url: "",
 };
+
+function extractPixelId(raw: string): string | null {
+  const value = (raw || "").trim();
+  if (!value) return null;
+  if (/^\d{5,}$/.test(value)) return value;
+  const init = value.match(/fbq\s*\(\s*['"]init['"]\s*,\s*['"](\d+)['"]/);
+  if (init) return init[1];
+  const trPixel = value.match(/facebook\.com\/tr\?id=(\d+)/);
+  if (trPixel) return trPixel[1];
+  const anyDigits = value.match(/\b(\d{10,})\b/);
+  return anyDigits ? anyDigits[1] : null;
+}
 
 export default function AdminBrandingForm() {
   const { id } = useParams();
@@ -175,6 +192,8 @@ export default function AdminBrandingForm() {
         subdomain_prefix: branding.subdomain_prefix || "",
         custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
         blacklist_block_public_booking: (branding as any).blacklist_block_public_booking ?? false,
+        meta_pixel_enabled: (branding as any).meta_pixel_enabled ?? false,
+        meta_pixel_id: (branding as any).meta_pixel_id || "",
         custom_email_link: (branding as any).custom_email_link || "",
         email: branding.email || "",
         main_job_title: (branding as any).main_job_title || "",
@@ -221,6 +240,8 @@ export default function AdminBrandingForm() {
           cleaned[key] = value ? parseFloat(value as string) : null;
         } else if (key === "hourly_rate_enabled") {
           cleaned[key] = value;
+        } else if (key === "meta_pixel_id") {
+          cleaned[key] = extractPixelId(value as string);
         } else {
           cleaned[key] = value === "" ? null : (value as string);
         }
@@ -552,6 +573,34 @@ export default function AdminBrandingForm() {
                 onCheckedChange={(checked) => setForm((prev) => ({ ...prev, blacklist_block_public_booking: checked }))}
               />
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Meta-Pixel (Buchungsseite)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Lädt das Meta-Pixel nur auf <span className="font-mono">/bewerbungsgespraech/buchen</span>. Persönliche Buchungslinks sind nicht betroffen.
+                </p>
+              </div>
+              <Switch
+                checked={form.meta_pixel_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, meta_pixel_enabled: checked }))}
+              />
+            </div>
+            {form.meta_pixel_enabled && (
+              <div className="space-y-2">
+                <Label>Meta-Pixel ID oder Code</Label>
+                <Textarea
+                  rows={4}
+                  value={form.meta_pixel_id}
+                  onChange={(e) => updateField("meta_pixel_id", e.target.value)}
+                  placeholder="1076768121483815 oder kompletten Meta-Pixel-Code einfügen"
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">Du kannst den kompletten Code einfügen – die Pixel-ID wird automatisch erkannt und gespeichert.</p>
+              </div>
+            )}
           </div>
 
 

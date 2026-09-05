@@ -251,6 +251,7 @@ export type Database = {
           logo_url: string | null
           main_job_title: string | null
           managing_director: string | null
+          meta_pixel_enabled: boolean
           meta_pixel_id: string | null
           payment_model: string
           phone: string | null
@@ -315,6 +316,7 @@ export type Database = {
           logo_url?: string | null
           main_job_title?: string | null
           managing_director?: string | null
+          meta_pixel_enabled?: boolean
           meta_pixel_id?: string | null
           payment_model?: string
           phone?: string | null
@@ -379,6 +381,7 @@ export type Database = {
           logo_url?: string | null
           main_job_title?: string | null
           managing_director?: string | null
+          meta_pixel_enabled?: boolean
           meta_pixel_id?: string | null
           payment_model?: string
           phone?: string | null
