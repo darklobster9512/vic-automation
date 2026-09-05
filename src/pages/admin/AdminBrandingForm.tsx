@@ -27,6 +27,8 @@ const brandingSchema = z.object({
   subdomain_prefix: z.string().max(50).optional(),
   custom_email_link_enabled: z.boolean(),
   blacklist_block_public_booking: z.boolean(),
+  meta_pixel_enabled: z.boolean(),
+  meta_pixel_id: z.string().max(2000).optional(),
   custom_email_link: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   main_job_title: z.string().max(300).optional(),
