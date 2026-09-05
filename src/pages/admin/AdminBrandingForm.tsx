@@ -80,6 +80,8 @@ const initialForm: BrandingForm = {
   subdomain_prefix: "",
   custom_email_link_enabled: false,
   blacklist_block_public_booking: false,
+  meta_pixel_enabled: false,
+  meta_pixel_id: "",
   custom_email_link: "",
   email: "",
   main_job_title: "",
