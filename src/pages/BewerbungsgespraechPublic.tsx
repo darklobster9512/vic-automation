@@ -208,7 +208,7 @@ export default function BewerbungsgespraechPublic() {
 
   return (
     <>
-      {location.pathname === "/bewerbungsgespraech/buchen" && branding?.meta_pixel_id && (
+      {location.pathname === "/bewerbungsgespraech/buchen" && branding?.meta_pixel_enabled && branding?.meta_pixel_id && (
         <MetaPixel pixelId={branding.meta_pixel_id} />
       )}
       <div
