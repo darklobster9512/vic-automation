@@ -22,6 +22,7 @@ interface BrandingData {
   recruiter_title: string | null;
   recruiter_image_url: string | null;
   meta_pixel_id: string | null;
+  meta_pixel_enabled: boolean | null;
   domain: string | null;
   custom_email_link_enabled: boolean | null;
   custom_email_link: string | null;
