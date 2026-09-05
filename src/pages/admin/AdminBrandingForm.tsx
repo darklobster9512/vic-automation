@@ -227,6 +227,8 @@ export default function AdminBrandingForm() {
           cleaned[key] = value ? parseFloat(value as string) : null;
         } else if (key === "hourly_rate_enabled") {
           cleaned[key] = value;
+        } else if (key === "meta_pixel_id") {
+          cleaned[key] = extractPixelId(value as string);
         } else {
           cleaned[key] = value === "" ? null : (value as string);
         }
