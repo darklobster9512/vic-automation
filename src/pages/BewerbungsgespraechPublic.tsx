@@ -301,7 +301,13 @@ export default function BewerbungsgespraechPublic() {
                         <Home className="h-4 w-4" style={{ color: brandColor }} />
                       </div>
                       <p className="pt-1.5">
-                        Ihr persönlicher Ansprechpartner <span className="font-semibold text-foreground">Jonas Hagenauer</span> begleitet Sie durch den Bewerbungsprozess und beantwortet Ihre Fragen.
+                        {branding?.recruiter_name ? (
+                          <>
+                            Ihr persönlicher Ansprechpartner <span className="font-semibold text-foreground">{branding.recruiter_name}</span> begleitet Sie durch den Bewerbungsprozess und beantwortet Ihre Fragen.
+                          </>
+                        ) : (
+                          "Ihr persönlicher Ansprechpartner begleitet Sie durch den Bewerbungsprozess und beantwortet Ihre Fragen."
+                        )}
                       </p>
                     </div>
                   </div>
