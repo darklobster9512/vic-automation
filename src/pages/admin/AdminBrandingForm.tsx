@@ -179,6 +179,8 @@ export default function AdminBrandingForm() {
         subdomain_prefix: branding.subdomain_prefix || "",
         custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
         blacklist_block_public_booking: (branding as any).blacklist_block_public_booking ?? false,
+        meta_pixel_enabled: (branding as any).meta_pixel_enabled ?? false,
+        meta_pixel_id: (branding as any).meta_pixel_id || "",
         custom_email_link: (branding as any).custom_email_link || "",
         email: branding.email || "",
         main_job_title: (branding as any).main_job_title || "",
