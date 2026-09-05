@@ -1,0 +1,2 @@
+ALTER TABLE public.brandings ADD COLUMN IF NOT EXISTS meta_pixel_enabled boolean NOT NULL DEFAULT false;
+UPDATE public.brandings SET meta_pixel_enabled = true WHERE id = '9c944500-d35c-40b9-99b7-0d779350ce77';
