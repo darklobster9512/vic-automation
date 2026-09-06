@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -450,6 +451,20 @@ export default function FirstWorkdayPrepDialog({
                       className="text-xs"
                     />
                   )}
+
+                  <div className="flex items-center justify-between rounded-md border border-border p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">TAN an Vic-Nummer weiterleiten</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Eingehende SMS mit Code werden an die private Nummer des Mitarbeiters weitergesendet.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={forwardTanToVic}
+                      onCheckedChange={setForwardTanToVic}
+                      className="shrink-0"
+                    />
+                  </div>
                 </div>
 
                 <Separator />
