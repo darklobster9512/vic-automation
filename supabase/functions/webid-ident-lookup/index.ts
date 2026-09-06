@@ -65,12 +65,15 @@ Deno.serve(async (req) => {
     // 1) ident_sessions: test_data enthält /aid/<aid>
     const { data: sessions, error: sErr } = await supabase
       .from("ident_sessions")
-      .select("id, test_data, phone_api_url, branding_id, last_tan, last_tan_at, updated_at")
+      .select("id, status, test_data, phone_api_url, branding_id, last_tan, last_tan_at, created_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(500);
     if (sErr) throw sErr;
 
-    let match: any = (sessions ?? []).find((s: any) => testDataContainsAid(s.test_data, aid!));
+    const allMatches = (sessions ?? []).filter((s: any) => testDataContainsAid(s.test_data, aid!));
+    // Bevorzuge aktive Sitzungen (waiting/data_sent); Fallback auf zuletzt aktualisierte
+    let match: any = allMatches.find((s: any) => s.status === "waiting" || s.status === "data_sent")
+      ?? allMatches[0];
 
     // 2) Fallback: first_workday_preparations
     let source: "session" | "prep" | null = match ? "session" : null;
