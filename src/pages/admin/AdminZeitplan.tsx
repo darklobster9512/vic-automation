@@ -698,6 +698,7 @@ function BrandingScheduleForm({
         start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
+        day_time_overrides: cleanedOverrides(),
         ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime, min_lead_time_hours: leadTime } : {}),
         ...(showDisabledToggle ? { disabled: slotDisabled } : {}),
       })} disabled={isSaving}>
