@@ -490,8 +490,8 @@ function BrandingScheduleForm({
   leadTimeValue,
   showDisabledToggle = false,
 }: {
-  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; disabled?: boolean };
-  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; disabled?: boolean }) => void;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; disabled?: boolean; day_time_overrides?: any };
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; disabled?: boolean; day_time_overrides?: Record<string, { start: string; end: string }> }) => void;
   isSaving: boolean;
   showSlotsPerTime?: boolean;
   slotsPerTimeValue?: number;
@@ -507,11 +507,40 @@ function BrandingScheduleForm({
   const [slotsPerTime, setSlotsPerTime] = useState<number>(slotsPerTimeValue ?? existing?.interview_slots_per_time ?? 1);
   const [leadTime, setLeadTime] = useState<number>(leadTimeValue ?? existing?.min_lead_time_hours ?? 12);
   const [slotDisabled, setSlotDisabled] = useState<boolean>(!!existing?.disabled);
+  const [dayOv, setDayOv] = useState<Record<string, { start?: string; end?: string }>>(() => {
+    const raw = (existing?.day_time_overrides || {}) as Record<string, any>;
+    const out: Record<string, { start?: string; end?: string }> = {};
+    Object.entries(raw).forEach(([k, v]) => {
+      if (v && (v.start || v.end)) out[k] = { start: v.start?.slice(0, 5), end: v.end?.slice(0, 5) };
+    });
+    return out;
+  });
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
   const toggleDay = (day: number) => {
     setDs((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort());
+  };
+
+  const setDayTime = (day: number, field: "start" | "end", value: string) => {
+    setDayOv((prev) => {
+      const next = { ...prev };
+      const entry = { ...(next[String(day)] || {}) };
+      if (!value || value === "reset") delete entry[field];
+      else entry[field] = value;
+      if (!entry.start && !entry.end) delete next[String(day)];
+      else next[String(day)] = entry;
+      return next;
+    });
+  };
+
+  const cleanedOverrides = () => {
+    const out: Record<string, { start: string; end: string }> = {};
+    ds.forEach((day) => {
+      const entry = dayOv[String(day)];
+      if (entry?.start && entry?.end) out[String(day)] = { start: entry.start, end: entry.end };
+    });
+    return out;
   };
 
   return (
