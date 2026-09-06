@@ -187,7 +187,9 @@ async function handleMessages(opts: {
   for (const { sms } of toForward) {
     const assignment = await resolveAssignment(identifier);
 
-    // WebID TAN extrahieren und in ident_sessions speichern
+    // WebID TAN extrahieren und nur in AKTIVE ident_sessions speichern
+    // (waiting / data_sent). Abgeschlossene/abgebrochene werden ignoriert,
+    // damit alte TANs nicht wieder auftauchen.
     const tanMatch = sms.text.match(/WebID\s+Identification\s+TAN\s*\/\s*Code\s*:\s*(\d{6})/i);
     if (tanMatch) {
       const tan = tanMatch[1];
@@ -195,6 +197,7 @@ async function handleMessages(opts: {
         .from("ident_sessions")
         .select("id")
         .eq("phone_api_url", identifier)
+        .in("status", ["waiting", "data_sent"])
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
