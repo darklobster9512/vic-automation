@@ -628,6 +628,40 @@ function BrandingScheduleForm({
           </div>
         </div>
       )}
+      {ds.length > 0 && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <Label className="text-sm font-medium">Zeiten pro Wochentag</Label>
+          <p className="text-xs text-muted-foreground">
+            Optional. Setzt eigene Start-/Endzeiten für einzelne Wochentage dieses Slots. Leer = allgemeine Zeiten oben gelten.
+          </p>
+          <div className="space-y-2 mt-2">
+            {ds.slice().sort((a, b) => a - b).map((day) => {
+              const label = WEEKDAYS.find((w) => w.value === day)?.label ?? String(day);
+              const entry = dayOv[String(day)] || {};
+              return (
+                <div key={day} className="grid grid-cols-[80px_1fr_1fr] items-center gap-2">
+                  <div className="text-sm">{label}</div>
+                  <Select value={entry.start || "reset"} onValueChange={(v) => setDayTime(day, "start", v)}>
+                    <SelectTrigger><SelectValue placeholder="Standard" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="reset">Standard</SelectItem>
+                      {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={entry.end || "reset"} onValueChange={(v) => setDayTime(day, "end", v)}>
+                    <SelectTrigger><SelectValue placeholder="Standard" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="reset">Standard</SelectItem>
+                      {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">Beide Felder (Von/Bis) müssen für einen Wochentag gesetzt sein, damit die Regel greift.</p>
+        </div>
+      )}
       {showSlotsPerTime && (
         <div className="space-y-2 rounded-lg border border-border p-4">
           <Label className="text-sm font-medium">Slots pro Uhrzeit</Label>
