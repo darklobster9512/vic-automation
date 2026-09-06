@@ -20,7 +20,9 @@ Gibt es keine aktive Sitzung, wird die TAN nicht gespeichert (sie gehört zu kei
 - Zusätzliche Sicherheitsgrenze: TANs, die älter als der Sitzungsbeginn sind, werden ignoriert; abgeschlossene Sitzungen liefern immer `tan: null`.
 
 ### 3. Widget (neue Skriptversion `webid_skript_universal_v19.sh`)
+- Das Widget pollt dauerhaft weiter, auch nachdem eine TAN angezeigt wurde. Wird der Vorgang bei WebID neu gestartet und kommt eine neue TAN, ersetzt diese sofort die alte (immer die neueste gewinnt).
 - Liefert die Abfrage keine TAN mehr, wird eine zuvor angezeigte TAN wieder auf „–" mit laufendem Countdown zurückgesetzt (kein Nachleuchten alter TANs).
+- Der Countdown läuft dauerhaft mit, nicht nur bis zur ersten TAN.
 - Grüne Darstellung (#07fb05) und 0-Format der Rufnummer bleiben wie in v18.
 
 ## Nicht betroffen
