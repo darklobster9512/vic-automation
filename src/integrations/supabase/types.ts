@@ -2279,6 +2279,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_tan_forward: {
+        Args: { _session_id: string; _sms_key: string }
+        Returns: boolean
+      }
       contracts_for_branding_ids: {
         Args: { _user_id: string }
         Returns: string[]
@@ -2332,6 +2336,10 @@ export type Database = {
       }
       is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
+      release_tan_forward: {
+        Args: { _session_id: string; _sms_key: string }
+        Returns: undefined
+      }
       resolved_interview_slots_for_branding: {
         Args: { _branding_id: string }
         Returns: {

