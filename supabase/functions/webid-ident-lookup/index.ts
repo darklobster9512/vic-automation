@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     // 1) ident_sessions: test_data enthält /aid/<aid>
     const { data: sessions, error: sErr } = await supabase
       .from("ident_sessions")
-      .select("id, test_data, phone_api_url, last_tan, last_tan_at, updated_at")
+      .select("id, test_data, phone_api_url, branding_id, last_tan, last_tan_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(500);
     if (sErr) throw sErr;
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     if (!match) {
       const { data: preps, error: pErr } = await supabase
         .from("first_workday_preparations")
-        .select("id, test_data, phone_api_url, updated_at, contract_id")
+        .select("id, test_data, phone_api_url, branding_id, updated_at, contract_id")
         .order("updated_at", { ascending: false })
         .limit(500);
       if (pErr) throw pErr;
@@ -93,15 +93,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const td = (match ?? prep).test_data;
+    const record = match ?? prep;
+    const td = record.test_data;
     const email =
       findInTestData(td, /^e[-\s]?mail$|^email$/i) ??
       findInTestData(td, /mail/i);
     const phoneFromTd = findInTestData(td, /telefon|phone|nummer|rufnummer/i);
 
-    // Rufnummer aus phone_api_url via phone_numbers
+    // Rufnummer aus phone_api_url via phone_numbers.label
     let phone = phoneFromTd;
-    const apiUrl = (match ?? prep).phone_api_url as string | null;
+    const apiUrl = record.phone_api_url as string | null;
+    const brandingId = record.branding_id as string | null;
     if (!phone && apiUrl) {
       const { data: pn } = await supabase
         .from("phone_numbers")
@@ -109,6 +111,44 @@ Deno.serve(async (req) => {
         .eq("api_url", apiUrl)
         .maybeSingle();
       if (pn?.label) phone = pn.label as string;
+    }
+
+    // Live-Abruf beim Anbieter, falls immer noch keine Nummer bekannt
+    if (!phone && apiUrl) {
+      try {
+        const isSmsbot = apiUrl.startsWith("smsbot://");
+        const fnName = isSmsbot ? "smsbot-proxy" : "anosim-proxy";
+        const body = isSmsbot
+          ? { rentalId: apiUrl.slice("smsbot://".length), brandingId }
+          : { url: apiUrl };
+        const resp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/${fnName}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify(body),
+        });
+        if (resp.ok) {
+          const data = await resp.json().catch(() => null);
+          const num = data?.number
+            ?? (Array.isArray(data?.rentals)
+              ? data.rentals.find((r: any) => r.rentalId === body.rentalId)?.number
+              : null);
+          if (num) {
+            phone = String(num);
+            // Cache im Label speichern, damit spätere Aufrufe schneller sind
+            try {
+              await supabase
+                .from("phone_numbers")
+                .update({ label: phone })
+                .eq("api_url", apiUrl);
+            } catch (_) { /* ignore */ }
+          }
+        }
+      } catch (e) {
+        console.warn("phone live-lookup failed", e);
+      }
     }
 
     return new Response(
