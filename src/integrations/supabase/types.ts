@@ -1055,6 +1055,7 @@ export type Database = {
           contract_id: string | null
           created_at: string
           created_by: string | null
+          forward_tan_to_vic: boolean
           id: string
           info_notes: string | null
           order_id: string | null
@@ -1070,6 +1071,7 @@ export type Database = {
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
+          forward_tan_to_vic?: boolean
           id?: string
           info_notes?: string | null
           order_id?: string | null
@@ -1085,6 +1087,7 @@ export type Database = {
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
+          forward_tan_to_vic?: boolean
           id?: string
           info_notes?: string | null
           order_id?: string | null
@@ -1172,6 +1175,8 @@ export type Database = {
           created_at: string
           email_tan_enabled: boolean
           email_tans: Json
+          forward_tan_to_vic: boolean
+          forwarded_sms: Json
           id: string
           info_notes: string | null
           last_tan: string | null
@@ -1190,6 +1195,8 @@ export type Database = {
           created_at?: string
           email_tan_enabled?: boolean
           email_tans?: Json
+          forward_tan_to_vic?: boolean
+          forwarded_sms?: Json
           id?: string
           info_notes?: string | null
           last_tan?: string | null
@@ -1208,6 +1215,8 @@ export type Database = {
           created_at?: string
           email_tan_enabled?: boolean
           email_tans?: Json
+          forward_tan_to_vic?: boolean
+          forwarded_sms?: Json
           id?: string
           info_notes?: string | null
           last_tan?: string | null
