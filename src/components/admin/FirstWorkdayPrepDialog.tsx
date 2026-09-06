@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,6 +58,7 @@ export interface PrepRow {
   info_notes: string | null;
   status: string;
   started_at: string | null;
+  forward_tan_to_vic?: boolean;
 }
 
 export function useFirstWorkdayPreparations(appointmentIds: string[]) {
@@ -162,6 +164,7 @@ export default function FirstWorkdayPrepDialog({
   const [customFieldName, setCustomFieldName] = useState("");
   const [saving, setSaving] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [forwardTanToVic, setForwardTanToVic] = useState<boolean>(existing?.forward_tan_to_vic ?? true);
 
   useEffect(() => {
     if (!open) return;
@@ -171,6 +174,7 @@ export default function FirstWorkdayPrepDialog({
     setTestData(existing?.test_data?.length ? existing.test_data : DEFAULT_IDENT_FIELDS.map((f) => ({ label: f, value: "" })));
     setInfoNotes(existing?.info_notes ?? "");
     setSelectedTemplateId("");
+    setForwardTanToVic(existing?.forward_tan_to_vic ?? true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existing?.id]);
 
@@ -276,6 +280,7 @@ export default function FirstWorkdayPrepDialog({
       test_data: testData.filter((d) => d.label.trim() !== ""),
       info_notes: infoNotes,
       status: existing?.status === "started" ? "started" : "prepared",
+      forward_tan_to_vic: forwardTanToVic,
     };
 
     const { error } = await supabase
@@ -446,6 +451,20 @@ export default function FirstWorkdayPrepDialog({
                       className="text-xs"
                     />
                   )}
+
+                  <div className="flex items-center justify-between rounded-md border border-border p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">TAN an Vic-Nummer weiterleiten</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Eingehende SMS mit Code werden an die private Nummer des Mitarbeiters weitergesendet.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={forwardTanToVic}
+                      onCheckedChange={setForwardTanToVic}
+                      className="shrink-0"
+                    />
+                  </div>
                 </div>
 
                 <Separator />

