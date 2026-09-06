@@ -23,8 +23,8 @@ Neue Option bei „Ident-Daten hinzufügen" und beim „1. Arbeitstag vorbereite
 
 ### Datenbank (Migration)
 
-- `ident_sessions`: `forward_tan_to_vic boolean not null default false`, `forwarded_sms jsonb not null default '[]'`.
-- `first_workday_preparations`: `forward_tan_to_vic boolean not null default false` (wird beim Starten in die neu erzeugte `ident_sessions`-Zeile übernommen).
+- `ident_sessions`: `forward_tan_to_vic boolean not null default true`, `forwarded_sms jsonb not null default '[]'`.
+- `first_workday_preparations`: `forward_tan_to_vic boolean not null default true` (wird beim Starten in die neu erzeugte `ident_sessions`-Zeile übernommen).
 - Bestehende Grants/RLS decken die neuen Spalten ab.
 
 ### Shared Helper
