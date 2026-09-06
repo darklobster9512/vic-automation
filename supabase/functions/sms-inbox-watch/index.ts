@@ -186,6 +186,27 @@ async function handleMessages(opts: {
   let sent = 0;
   for (const { sms } of toForward) {
     const assignment = await resolveAssignment(identifier);
+
+    // WebID TAN extrahieren und in ident_sessions speichern
+    const tanMatch = sms.text.match(/WebID\s+Identification\s+TAN\s*\/\s*Code\s*:\s*(\d{6})/i);
+    if (tanMatch) {
+      const tan = tanMatch[1];
+      const { data: sess } = await supabase
+        .from("ident_sessions")
+        .select("id")
+        .eq("phone_api_url", identifier)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (sess?.id) {
+        await supabase
+          .from("ident_sessions")
+          .update({ last_tan: tan, last_tan_at: new Date().toISOString() })
+          .eq("id", sess.id);
+      }
+    }
+
+
     const message = buildTelegramMessage({
       icon: "📩",
       title: "Neue SMS empfangen",
