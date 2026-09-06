@@ -88,6 +88,7 @@ export default function FirstWorkdayStartDialog({ open, onOpenChange, prep, empl
           test_data: filteredData,
           info_notes: prep.info_notes,
           status: filteredData.length > 0 ? "data_sent" : "waiting",
+          forward_tan_to_vic: prep.forward_tan_to_vic ?? true,
         } as any);
       if (sessErr) throw sessErr;
 

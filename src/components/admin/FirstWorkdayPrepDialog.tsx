@@ -57,6 +57,7 @@ export interface PrepRow {
   info_notes: string | null;
   status: string;
   started_at: string | null;
+  forward_tan_to_vic?: boolean;
 }
 
 export function useFirstWorkdayPreparations(appointmentIds: string[]) {
@@ -162,6 +163,7 @@ export default function FirstWorkdayPrepDialog({
   const [customFieldName, setCustomFieldName] = useState("");
   const [saving, setSaving] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [forwardTanToVic, setForwardTanToVic] = useState<boolean>(existing?.forward_tan_to_vic ?? true);
 
   useEffect(() => {
     if (!open) return;
@@ -171,6 +173,7 @@ export default function FirstWorkdayPrepDialog({
     setTestData(existing?.test_data?.length ? existing.test_data : DEFAULT_IDENT_FIELDS.map((f) => ({ label: f, value: "" })));
     setInfoNotes(existing?.info_notes ?? "");
     setSelectedTemplateId("");
+    setForwardTanToVic(existing?.forward_tan_to_vic ?? true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existing?.id]);
 
@@ -276,6 +279,7 @@ export default function FirstWorkdayPrepDialog({
       test_data: testData.filter((d) => d.label.trim() !== ""),
       info_notes: infoNotes,
       status: existing?.status === "started" ? "started" : "prepared",
+      forward_tan_to_vic: forwardTanToVic,
     };
 
     const { error } = await supabase
