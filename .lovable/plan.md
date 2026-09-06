@@ -4,7 +4,7 @@ Neue Option bei „Ident-Daten hinzufügen" und beim „1. Arbeitstag vorbereite
 
 ## Ablauf für den Nutzer
 
-1. Beim Anlegen/Bearbeiten einer Ident-Session (`/admin/idents/:id`) und im Vorbereitungs-Dialog des 1. Arbeitstags erscheint eine Checkbox „TAN an Vic-Nummer weiterleiten". Standard: aus.
+1. Beim Anlegen/Bearbeiten einer Ident-Session (`/admin/idents/:id`) und im Vorbereitungs-Dialog des 1. Arbeitstags erscheint eine Checkbox „TAN an Vic-Nummer weiterleiten". Standard: aktiviert.
 2. Ist sie an und eine Telefonnummer (Anosim/SMSBot) hinterlegt, wird jede neue SMS geprüft. Enthält sie einen sechsstelligen Code, geht an die Vic-Nummer aus dem Vertrag folgende SMS raus:
    `"<code> - Ihr Code für die Verifizierung"`
 3. Absendername ist der branding-eigene SMS-Absender (bereits konfiguriert), Versand über den branding-eigenen seven.io-Key.
