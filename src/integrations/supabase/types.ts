@@ -153,6 +153,7 @@ export type Database = {
           branding_id: string
           created_at: string
           created_by: string | null
+          day_time_overrides: Json
           disabled: boolean
           end_time: string
           id: string
@@ -173,6 +174,7 @@ export type Database = {
           branding_id: string
           created_at?: string
           created_by?: string | null
+          day_time_overrides?: Json
           disabled?: boolean
           end_time?: string
           id?: string
@@ -193,6 +195,7 @@ export type Database = {
           branding_id?: string
           created_at?: string
           created_by?: string | null
+          day_time_overrides?: Json
           disabled?: boolean
           end_time?: string
           id?: string
