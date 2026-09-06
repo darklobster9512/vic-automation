@@ -151,6 +151,14 @@ Deno.serve(async (req) => {
       }
     }
 
+    const normalizePhone = (p: string | null | undefined) => {
+      if (!p) return null;
+      const c = String(p).replace(/[\s\-()\/]/g, "");
+      if (c.startsWith("+49")) return "0" + c.slice(3);
+      if (c.startsWith("0049")) return "0" + c.slice(4);
+      return c;
+    };
+
     return new Response(
       JSON.stringify({
         found: true,
@@ -158,7 +166,8 @@ Deno.serve(async (req) => {
         session_id: match?.id ?? null,
         preparation_id: prep?.id ?? null,
         email: email ?? null,
-        phone: phone ?? null,
+        phone: normalizePhone(phone),
+
         tan: match?.last_tan ?? null,
         tan_at: match?.last_tan_at ?? null,
       }),
