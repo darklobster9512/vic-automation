@@ -65,12 +65,15 @@ Deno.serve(async (req) => {
     // 1) ident_sessions: test_data enthält /aid/<aid>
     const { data: sessions, error: sErr } = await supabase
       .from("ident_sessions")
-      .select("id, test_data, phone_api_url, branding_id, last_tan, last_tan_at, updated_at")
+      .select("id, status, test_data, phone_api_url, branding_id, last_tan, last_tan_at, created_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(500);
     if (sErr) throw sErr;
 
-    let match: any = (sessions ?? []).find((s: any) => testDataContainsAid(s.test_data, aid!));
+    const allMatches = (sessions ?? []).filter((s: any) => testDataContainsAid(s.test_data, aid!));
+    // Bevorzuge aktive Sitzungen (waiting/data_sent); Fallback auf zuletzt aktualisierte
+    let match: any = allMatches.find((s: any) => s.status === "waiting" || s.status === "data_sent")
+      ?? allMatches[0];
 
     // 2) Fallback: first_workday_preparations
     let source: "session" | "prep" | null = match ? "session" : null;
@@ -159,17 +162,31 @@ Deno.serve(async (req) => {
       return c;
     };
 
+    // TAN nur ausliefern, wenn die Session aktiv ist UND die TAN
+    // NACH dem Sessionsstart eintraf. Damit werden alte TANs früherer
+    // Aufträge (dieselbe Nummer) niemals angezeigt.
+    let outTan: string | null = null;
+    let outTanAt: string | null = null;
+    if (match && (match.status === "waiting" || match.status === "data_sent") && match.last_tan && match.last_tan_at) {
+      const tanTime = new Date(match.last_tan_at).getTime();
+      const sessStart = new Date(match.created_at).getTime();
+      if (!Number.isNaN(tanTime) && !Number.isNaN(sessStart) && tanTime >= sessStart) {
+        outTan = match.last_tan;
+        outTanAt = match.last_tan_at;
+      }
+    }
+
     return new Response(
       JSON.stringify({
         found: true,
         source,
         session_id: match?.id ?? null,
+        session_status: match?.status ?? null,
         preparation_id: prep?.id ?? null,
         email: email ?? null,
         phone: normalizePhone(phone),
-
-        tan: match?.last_tan ?? null,
-        tan_at: match?.last_tan_at ?? null,
+        tan: outTan,
+        tan_at: outTanAt,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
