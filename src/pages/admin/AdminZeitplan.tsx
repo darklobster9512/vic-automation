@@ -115,7 +115,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null; disabled?: boolean }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number; min_lead_time_hours?: number; slot_index?: number; lunch_break_enabled?: boolean; lunch_break_start?: string | null; lunch_break_end?: string | null; disabled?: boolean; day_time_overrides?: Record<string, { start: string; end: string }> }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -127,6 +127,9 @@ export default function AdminZeitplan() {
       };
       if (params.disabled !== undefined) {
         upsertData.disabled = params.disabled;
+      }
+      if (params.day_time_overrides !== undefined) {
+        upsertData.day_time_overrides = params.day_time_overrides;
       }
       if (params.weekend_start_time !== undefined) {
         upsertData.weekend_start_time = params.weekend_start_time ? params.weekend_start_time + ":00" : null;
