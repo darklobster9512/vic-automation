@@ -1,12 +1,14 @@
-# Telefonnummer im Demo-Widget als 0-Format anzeigen
+# Telefonnummer im 0-Format + grüne TAN
 
 ## Ziel
-Die angezeigte Telefonnummer soll statt `+4917616149659` als `017616149659` erscheinen.
+1. Gegrabbte Telefonnummer wird mit `0` statt `+49` angezeigt (z. B. `017616149659`).
+2. Sobald die TAN eintrifft, erscheint „TAN: XYZ“ in Grün (#07fb05).
 
 ## Umsetzung
-- In `supabase/functions/webid-ident-lookup/index.ts`: bevor die Nummer zurückgegeben wird, führende `+49` (auch `0049`) durch `0` ersetzen und Leerzeichen/Bindestriche entfernen. Andere Ländervorwahlen bleiben unverändert.
-- Zusätzlich im Widget-JavaScript (BLOCK D) in `/mnt/documents/webid_skript_universal_v17.sh` dieselbe Umwandlung als Absicherung, falls die Function eine alte Antwort liefert.
-- Neue Skriptversion als `webid_skript_universal_v18.sh` bereitstellen.
+- Edge Function `webid-ident-lookup`: Nummer vor der Ausgabe normalisieren — Leerzeichen/Bindestriche entfernen, führendes `+49` bzw. `0049` durch `0` ersetzen. Andere Ländervorwahlen bleiben unverändert.
+- Widget-JavaScript im Skript (BLOCK D): dieselbe Umwandlung als Absicherung direkt vor der Anzeige.
+- Widget-CSS/JS: wenn eine TAN gesetzt wird, bekommt die TAN-Zeile die Farbe `#07fb05` (Label und Wert), solange keine TAN da ist bleibt sie wie bisher.
+- Ausgabe als neue Skriptversion `webid_skript_universal_v18.sh`.
 
 ## Nicht betroffen
-Speicherung in der Datenbank, SMS-Zuordnung, Redirect-Logging und Certbot bleiben unverändert.
+Redirect-Logging, Proxy-Konfiguration, Certbot und Datenbankinhalte bleiben unverändert.
