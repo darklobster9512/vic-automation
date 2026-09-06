@@ -1174,6 +1174,8 @@ export type Database = {
           email_tans: Json
           id: string
           info_notes: string | null
+          last_tan: string | null
+          last_tan_at: string | null
           order_id: string | null
           phone_api_url: string | null
           status: string
@@ -1190,6 +1192,8 @@ export type Database = {
           email_tans?: Json
           id?: string
           info_notes?: string | null
+          last_tan?: string | null
+          last_tan_at?: string | null
           order_id?: string | null
           phone_api_url?: string | null
           status?: string
@@ -1206,6 +1210,8 @@ export type Database = {
           email_tans?: Json
           id?: string
           info_notes?: string | null
+          last_tan?: string | null
+          last_tan_at?: string | null
           order_id?: string | null
           phone_api_url?: string | null
           status?: string
