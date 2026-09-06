@@ -138,6 +138,7 @@ export default function Bewerbungsgespraech() {
       lunchStart: string | null;
       lunchEnd: string | null;
       disabled: boolean;
+      dayOverrides: Record<string, { start?: string; end?: string }>;
     }> = [];
     for (let i = 1; i <= slotsPerTime; i++) {
       const row = list.find((s: any) => s.slot_index === i) ?? primarySetting;
@@ -154,6 +155,7 @@ export default function Bewerbungsgespraech() {
         lunchStart: row.lunch_break_start?.slice(0, 5) || null,
         lunchEnd: row.lunch_break_end?.slice(0, 5) || null,
         disabled: false,
+        dayOverrides: (row as any).day_time_overrides || {},
       });
     }
     if (!result.length) {
@@ -176,8 +178,11 @@ export default function Bewerbungsgespraech() {
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     return lanes.map((l) => {
       if (!l.days.includes(isoDay)) return { slotIndex: l.slotIndex, times: [] };
-      const start = isWeekend && l.weekendStart ? l.weekendStart : l.start;
-      const end = isWeekend && l.weekendEnd ? l.weekendEnd : l.end;
+      const ov = l.dayOverrides?.[String(isoDay)];
+      const ovStart = ov?.start ? String(ov.start).slice(0, 5) : null;
+      const ovEnd = ov?.end ? String(ov.end).slice(0, 5) : null;
+      const start = ovStart ?? (isWeekend && l.weekendStart ? l.weekendStart : l.start);
+      const end = ovEnd ?? (isWeekend && l.weekendEnd ? l.weekendEnd : l.end);
       let times = generateTimeSlots(start, end, scheduleInterval);
       if (l.lunchEnabled && l.lunchStart && l.lunchEnd) {
         times = times.filter((t) => !(t >= l.lunchStart! && t < l.lunchEnd!));
