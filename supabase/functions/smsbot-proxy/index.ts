@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
