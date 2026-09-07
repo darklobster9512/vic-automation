@@ -16,7 +16,8 @@ const DEFAULT_TARGETS: Record<number, number> = { 5: 2, 10: 3, 20: 3, 25: 4 };
 const FALLBACK_TARGET = 4;
 
 function parseHours(title: string): number | null {
-  const m = title.match(/(\d+)\s*Stunden/i);
+  // erkennt "25 Stunden", "25 Std.", "25 Std./Woche", "25h"
+  const m = title.match(/(\d+)\s*(?:stunden|std\.?|h)\b/i) || title.match(/(\d+)\s*std/i);
   return m ? parseInt(m[1], 10) : null;
 }
 
@@ -71,7 +72,7 @@ export default function AdminAuftragsverteilung() {
       const contracts = await fetchAll<any>((from, to) =>
         supabase
           .from("employment_contracts")
-          .select("id, first_name, last_name, email, phone, user_id, branding_id, template_id, desired_start_date, is_suspended, application_id")
+          .select("id, first_name, last_name, email, phone, user_id, branding_id, template_id, employment_type, desired_start_date, is_suspended, application_id")
           .eq("branding_id", brandingId)
           .eq("is_suspended", false)
           .not("template_id", "is", null)
@@ -140,7 +141,11 @@ export default function AdminAuftragsverteilung() {
       (targetRows as any[] | null)?.forEach((r) => { targets[r.hours] = r.orders_per_day; });
 
       const employees = eligible.map((c) => {
-        const hours = templateHours[c.template_id] ?? null;
+        // Stunden aus Vorlagentitel, Fallback: Minijob = 5 Std., sonst Gruppe 0 ("Ohne Angabe")
+        const fromTemplate = templateHours[c.template_id] ?? null;
+        const hours =
+          fromTemplate ??
+          (String(c.employment_type ?? "").toLowerCase().includes("minijob") ? 5 : 0);
         const assigned = assignedByContract[c.id] ?? new Set<string>();
         return {
           id: c.id,
@@ -155,7 +160,7 @@ export default function AdminAuftragsverteilung() {
           todayAssigned: todayCountByContract[c.id] ?? 0,
           availableOrderIds: placeholders.filter((o) => !assigned.has(o.id)).map((o) => o.id),
         };
-      }).filter((e) => e.hours !== null);
+      });
 
       const hoursList = Array.from(new Set(employees.map((e) => e.hours as number))).sort((a, b) => a - b);
 
@@ -264,7 +269,7 @@ export default function AdminAuftragsverteilung() {
           <TabsList>
             {data.hoursList.map((h) => (
               <TabsTrigger key={h} value={String(h)}>
-                {h} Std.
+                {h === 0 ? "Ohne Stundenangabe" : `${h} Std.`}
                 <Badge variant="secondary" className="ml-2 text-[10px]">
                   {data.employees.filter((e) => e.hours === h).length}
                 </Badge>
@@ -358,7 +363,7 @@ export default function AdminAuftragsverteilung() {
                       }))}
                     ordersById={data.ordersById}
                     perDay={perDay}
-                    tabLabel={`${h} Std.`}
+                    tabLabel={h === 0 ? "Ohne Stundenangabe" : `${h} Std.`}
                   />
                 )}
               </TabsContent>
