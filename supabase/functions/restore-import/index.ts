@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
       const oMap = new Map((orders ?? []).map((o: any) => [`${o.title}|${o.branding_id}`, o.id]));
 
       const assignments: any[] = [];
+      const seenAssign = new Set<string>();
       const reviews: any[] = [];
       const errors: string[] = [];
       for (const r of rows) {
@@ -119,6 +120,9 @@ Deno.serve(async (req) => {
           errors.push(`${r.email} | ${r.title}`);
           continue;
         }
+        const akey = `${oid}|${cid}`;
+        if (!seenAssign.has(akey)) {
+        seenAssign.add(akey);
         assignments.push({
           order_id: oid,
           contract_id: cid,
@@ -126,6 +130,7 @@ Deno.serve(async (req) => {
           review_unlocked: true,
           assigned_at: r.date,
         });
+        }
         reviews.push({
           order_id: oid,
           contract_id: cid,
