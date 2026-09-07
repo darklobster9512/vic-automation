@@ -302,8 +302,11 @@ const Bewertung = () => {
               Bewertung: {order.title}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Bitte bewerte jede Frage mit Sternen und einem Kommentar.
+              Bitte bewerte jede Frage mit Sternen und einem Kommentar. Du kannst jederzeit als Entwurf speichern und später weitermachen.
             </p>
+            {draftRestored && (
+              <p className="text-xs text-blue-600 font-medium">Entwurf wiederhergestellt – du kannst dort weitermachen, wo du aufgehört hast.</p>
+            )}
           </CardHeader>
         </Card>
       </motion.div>
