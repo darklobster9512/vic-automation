@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound, Banknote, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound, Banknote, BarChart3, LifeBuoy } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
