@@ -72,7 +72,7 @@ export default function AdminAuftragsverteilung() {
       const contracts = await fetchAll<any>((from, to) =>
         supabase
           .from("employment_contracts")
-          .select("id, first_name, last_name, email, phone, user_id, branding_id, template_id, desired_start_date, is_suspended, application_id")
+          .select("id, first_name, last_name, email, phone, user_id, branding_id, template_id, employment_type, desired_start_date, is_suspended, application_id")
           .eq("branding_id", brandingId)
           .eq("is_suspended", false)
           .not("template_id", "is", null)
