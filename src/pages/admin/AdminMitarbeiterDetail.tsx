@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft, MessageCircle, ClipboardList, CheckCircle, XCircle, Lock, Unlock,
   Star, ChevronDown, Copy, Eye, EyeOff, Pencil, Save, X, User, CreditCard,
   KeyRound, StickyNote, IdCard, ShoppingBag, ImageIcon, Plus, Package,
@@ -41,6 +44,108 @@ import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
 import KycDocumentPreview from "@/components/admin/KycDocumentPreview";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+
+function ContractTemplateRow({
+  contractId,
+  brandingId,
+  templateId,
+  templateTitle,
+  onSaved,
+}: {
+  contractId: string;
+  brandingId: string | null;
+  templateId: string | null;
+  templateTitle: string | null;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState<string>(templateId ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const { data: templates } = useQuery({
+    queryKey: ["contract-templates-for-branding", brandingId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_templates" as any)
+        .select("id, title, employment_type, salary")
+        .eq("branding_id", brandingId!)
+        .eq("is_active", true)
+        .order("salary", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: editing && !!brandingId,
+  });
+
+  const save = async () => {
+    if (!value) return;
+    setSaving(true);
+    const selected = (templates ?? []).find((t: any) => t.id === value);
+    const updates: Record<string, any> = { template_id: value };
+    if (selected?.employment_type) updates.employment_type = selected.employment_type;
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update(updates as any)
+      .eq("id", contractId);
+    setSaving(false);
+    if (error) {
+      toast.error("Fehler beim Speichern.");
+      return;
+    }
+    toast.success("Vertragsform aktualisiert!");
+    setEditing(false);
+    onSaved();
+  };
+
+  return (
+    <div className="flex justify-between items-center gap-3 py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
+      <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0">
+        <FileText className="h-4 w-4 text-blue-500" />
+        Vertragsform
+      </span>
+      {editing ? (
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <Select value={value} onValueChange={setValue}>
+            <SelectTrigger className="h-9 max-w-[320px]">
+              <SelectValue placeholder="Vorlage wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {(templates ?? []).map((t: any) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.title}
+                  {t.salary ? ` — ${Number(t.salary).toLocaleString("de-DE")} €` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="icon" variant="ghost" className="h-8 w-8" disabled={saving || !value} onClick={save}>
+            <Save className="h-4 w-4 text-green-600" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => {
+              setValue(templateId ?? "");
+              setEditing(false);
+            }}
+          >
+            <X className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">
+            {templateTitle ?? "Keine Vorlage zugewiesen"}
+          </span>
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(true)} disabled={!brandingId}>
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
@@ -862,15 +967,13 @@ export default function AdminMitarbeiterDetail() {
                   data={{ ...contract, template_title: (contract as any)?.contract_templates?.title ?? "" }}
                   onSave={saveFields}
                 />
-                {(contract as any)?.contract_templates?.title && (
-                  <div className="flex justify-between items-center py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      Vertragsform
-                    </span>
-                    <span className="text-sm font-medium text-foreground">{(contract as any).contract_templates.title}</span>
-                  </div>
-                )}
+                <ContractTemplateRow
+                  contractId={contract.id}
+                  brandingId={(contract as any).branding_id ?? null}
+                  templateId={(contract as any).template_id ?? null}
+                  templateTitle={(contract as any)?.contract_templates?.title ?? null}
+                  onSaved={invalidateAll}
+                />
                 <EditableDualSection
                   leftTitle="Bankverbindung"
                   leftIcon={<CreditCard className="h-4 w-4 text-green-500" />}
