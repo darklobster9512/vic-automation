@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Star, Send } from "lucide-react";
+import { ArrowLeft, Star, Send, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,6 +69,10 @@ const Bewertung = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<ReviewAnswer[]>([]);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const dirtyRef = useRef(false);
 
   const contractId = contract?.id;
 
@@ -79,21 +83,74 @@ const Bewertung = () => {
     if (order?.id === id) return;
 
     const fetchOrder = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("id, title, review_questions, required_attachments")
-        .eq("id", id)
-        .maybeSingle();
+      const [{ data }, { data: draft }] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("id, title, review_questions, required_attachments")
+          .eq("id", id)
+          .maybeSingle(),
+        supabase
+          .from("order_review_drafts")
+          .select("answers, updated_at")
+          .eq("order_id", id)
+          .eq("contract_id", contractId)
+          .maybeSingle(),
+      ]);
 
       if (!data) { setLoading(false); return; }
       setOrder(data);
 
       const qs = parseQuestions(data.review_questions);
-      setAnswers(qs.map(() => ({ rating: 0, comment: "" })));
+      const saved = Array.isArray(draft?.answers) ? (draft!.answers as any[]) : [];
+      const hasSaved = saved.some((a) => (a?.rating ?? 0) > 0 || String(a?.comment ?? "").trim().length > 0);
+
+      setAnswers(
+        qs.map((_, i) => ({
+          rating: Number(saved[i]?.rating) || 0,
+          comment: typeof saved[i]?.comment === "string" ? saved[i].comment : "",
+        }))
+      );
+
+      if (hasSaved) {
+        setDraftRestored(true);
+        if (draft?.updated_at) setLastSavedAt(new Date(draft.updated_at));
+        toast.info("Entwurf wiederhergestellt.");
+      }
       setLoading(false);
     };
     fetchOrder();
   }, [contractId, id]);
+
+  const saveDraft = async (silent: boolean) => {
+    if (!contractId || !order) return;
+    if (!silent) setSavingDraft(true);
+    const { error } = await supabase
+      .from("order_review_drafts")
+      .upsert(
+        {
+          order_id: order.id,
+          contract_id: contractId,
+          answers: answers as any,
+        },
+        { onConflict: "order_id,contract_id" }
+      );
+    if (!silent) setSavingDraft(false);
+    if (error) {
+      if (!silent) toast.error("Entwurf konnte nicht gespeichert werden.");
+      return;
+    }
+    dirtyRef.current = false;
+    setLastSavedAt(new Date());
+    if (!silent) toast.success("Entwurf gespeichert.");
+  };
+
+  // Autosave (debounced)
+  useEffect(() => {
+    if (!order || !dirtyRef.current || submitting) return;
+    const t = setTimeout(() => { saveDraft(true); }, 2000);
+    return () => clearTimeout(t);
+  }, [answers, order, submitting]);
+
 
   const parseQuestions = (raw: unknown): string[] => {
     if (!raw) return [];
@@ -106,6 +163,7 @@ const Bewertung = () => {
   const questions = order ? parseQuestions(order.review_questions) : [];
 
   const updateAnswer = (idx: number, patch: Partial<ReviewAnswer>) => {
+    dirtyRef.current = true;
     setAnswers((prev) => prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
   };
 
@@ -137,6 +195,15 @@ const Bewertung = () => {
       setSubmitting(false);
       return;
     }
+
+    // Entwurf entfernen
+    await supabase
+      .from("order_review_drafts")
+      .delete()
+      .eq("order_id", order.id)
+      .eq("contract_id", contract.id);
+
+
 
     // Check if required attachments exist
     const reqAtts = Array.isArray(order.required_attachments) ? order.required_attachments : [];
@@ -235,8 +302,11 @@ const Bewertung = () => {
               Bewertung: {order.title}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Bitte bewerte jede Frage mit Sternen und einem Kommentar.
+              Bitte bewerte jede Frage mit Sternen und einem Kommentar. Du kannst jederzeit als Entwurf speichern und später weitermachen.
             </p>
+            {draftRestored && (
+              <p className="text-xs text-blue-600 font-medium">Entwurf wiederhergestellt – du kannst dort weitermachen, wo du aufgehört hast.</p>
+            )}
           </CardHeader>
         </Card>
       </motion.div>
@@ -280,16 +350,34 @@ const Bewertung = () => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 + questions.length * 0.05 }}
+        className="space-y-3"
       >
-        <Button
-          onClick={handleSubmit}
-          disabled={!isValid || submitting}
-          size="lg"
-          className="w-full gap-2"
-        >
-          <Send className="h-4 w-4" />
-          {submitting ? "Wird abgeschickt..." : "Bewertung abschicken"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            variant="outline"
+            onClick={() => saveDraft(false)}
+            disabled={savingDraft || submitting}
+            size="lg"
+            className="gap-2 sm:w-64"
+          >
+            <Save className="h-4 w-4" />
+            {savingDraft ? "Wird gespeichert..." : "Als Entwurf speichern"}
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!isValid || submitting}
+            size="lg"
+            className="flex-1 gap-2"
+          >
+            <Send className="h-4 w-4" />
+            {submitting ? "Wird abgeschickt..." : "Bewertung abschicken"}
+          </Button>
+        </div>
+        {lastSavedAt && (
+          <p className="text-xs text-muted-foreground text-center">
+            Zuletzt gespeichert: {lastSavedAt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        )}
       </motion.div>
     </div>
   );

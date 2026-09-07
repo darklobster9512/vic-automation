@@ -34,6 +34,7 @@ interface Assignment {
   hasReviewSubmitted: boolean;
   estimated_hours: string | null;
   is_starter_job: boolean;
+  hasDraft: boolean;
 }
 
 const truncateText = (text: string, maxLen: number): string => {
@@ -211,8 +212,17 @@ const MitarbeiterAuftraege = () => {
         .eq("contract_id", contract.id)
         .in("order_id", orderIds);
 
+      // Load review drafts (gespeicherte Entwürfe)
+      const { data: drafts } = await supabase
+        .from("order_review_drafts")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
       const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
       const orderIdsWithReview = new Set((reviews ?? []).map(r => r.order_id));
+      const orderIdsWithDraft = new Set((drafts ?? []).map(d => d.order_id));
+
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
 
@@ -253,6 +263,7 @@ const MitarbeiterAuftraege = () => {
               attachmentsSubmitted: allSubmitted && !allApproved,
               hasIdentSession: orderIdsWithSession.has(a.order_id),
               hasReviewSubmitted: orderIdsWithReview.has(a.order_id),
+              hasDraft: orderIdsWithDraft.has(a.order_id) && !orderIdsWithReview.has(a.order_id),
             };
           })
       );
@@ -343,6 +354,11 @@ const MitarbeiterAuftraege = () => {
                       ) : <span />}
                       <div className="flex items-center gap-1.5">
                         {a.is_starter_job && <StarterJobBadge />}
+                        {a.hasDraft && a.status !== "erfolgreich" && (
+                          <Badge variant="outline" className="text-[11px] rounded-full text-blue-600 border-blue-300 bg-blue-50">
+                            Entwurf
+                          </Badge>
+                        )}
                         {a.hasReviewSubmitted && a.attachmentsPending && a.status !== "erfolgreich" && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                             <Paperclip className="h-3 w-3 mr-1" />

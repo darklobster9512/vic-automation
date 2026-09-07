@@ -1528,6 +1528,48 @@ export type Database = {
           },
         ]
       }
+      order_review_drafts: {
+        Row: {
+          answers: Json
+          contract_id: string
+          created_at: string
+          id: string
+          order_id: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          contract_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          contract_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_review_drafts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_review_drafts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_reviews: {
         Row: {
           comment: string
