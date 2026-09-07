@@ -143,6 +143,23 @@ export default function AdminTickets() {
     refresh();
   };
 
+  const quickToggleClosed = async (t: EnrichedTicket) => {
+    const closing = t.status !== "geschlossen";
+    const { error } = await supabase
+      .from("support_tickets")
+      .update({
+        status: closing ? "geschlossen" : "offen",
+        closed_at: closing ? new Date().toISOString() : null,
+      })
+      .eq("id", t.id);
+    if (error) {
+      toast.error("Aktion fehlgeschlagen.");
+      return;
+    }
+    toast.success(closing ? `Ticket ${t.ticket_number} geschlossen.` : `Ticket ${t.ticket_number} wieder geöffnet.`);
+    refresh();
+  };
+
   if (selected) {
     return (
       <TicketDetailPanel
