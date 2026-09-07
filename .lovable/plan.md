@@ -1,21 +1,21 @@
-# Fix: /mitarbeiter/support zeigt 404
+# Support-Ticket auf eigenen Seiten statt Popup
 
-## Befund
-Der Code ist bereits korrekt:
-- `src/App.tsx` Zeile 137: `<Route path="support" element={<MitarbeiterSupport />} />` ist sauber unter der `/mitarbeiter`-Route verschachtelt.
-- `src/App.tsx` Zeile 29: Import von `MitarbeiterSupport` vorhanden.
-- `src/pages/mitarbeiter/MitarbeiterSupport.tsx` existiert mit Default-Export.
+## Was sich ändert
 
-Die 404-Seite im Preview kommt daher nicht vom Code, sondern vom Dev-Server: In den Logs steht, dass der Vite-Prozess per SIGTERM beendet wurde. Das Preview läuft sehr wahrscheinlich noch mit einem veralteten Build, in dem die neue Route (beim Ticket-System hinzugefügt) noch nicht enthalten ist — deshalb fängt die Catch-all-Route (`*` → NotFound) die URL ab.
+- `/mitarbeiter/support` bleibt die Übersicht mit der Ticket-Liste. Der Button "Neues Ticket" öffnet kein Fenster mehr, sondern führt auf eine eigene Seite.
+- `/mitarbeiter/support/neu` ist eine vollwertige Seite zum Erstellen: Betreff, Kategorie, Priorität, Beschreibung, mehrere Bilder/PDFs. Oben ein "Zurück"-Link, unten "Ticket erstellen" und "Abbrechen".
+- Nach dem Erstellen landet man direkt im neuen Ticket.
+- `/mitarbeiter/support/:id` zeigt das Ticket als eigene Seite: Verlauf, Anhänge, Antwortfeld, Schließen/Wiederöffnen — ebenfalls mit "Zurück zur Übersicht".
 
-## Umsetzung
-1. Dev-Server neu starten, damit der aktuelle Code mit der `support`-Route geladen wird.
-2. Preview neu laden und `/mitarbeiter/support` prüfen: Die Support-Seite muss statt der 404-Seite erscheinen.
-3. Falls danach immer noch 404: erneut prüfen (z. B. Browser-Cache/Hard-Reload).
+Damit ist jeder Schritt eine echte Seite, die man verlinken, teilen und mit dem Zurück-Knopf des Browsers bedienen kann.
 
-## Nebenbei (optional, klein)
-Die Konsole zeigt zwei harmlose React-Warnungen (fehlendes `forwardRef` bei `AnimatePresence` in `ChatWidget` und bei `NotFound`). Diese verursachen nicht das 404, können aber bei Bedarf mit `React.forwardRef` bereinigt werden.
+## Technische Umsetzung
 
-## Technische Details
-- Kein Code-Fix an der Route nötig — nur Neustart/Verifizierung.
-- Betroffene Dateien: keine (Code bereits korrekt).
+- Neue Routen in `src/App.tsx` unter dem Mitarbeiter-Layout: `support/neu` und `support/:id`.
+- `src/pages/mitarbeiter/MitarbeiterSupport.tsx` behält nur die Liste; `selectedId`/`createOpen`-State und die Dialoge entfallen, Klicks navigieren per `useNavigate`.
+- Neue Datei `src/pages/mitarbeiter/MitarbeiterSupportNeu.tsx`: übernimmt die Logik aus `CreateTicketDialog` (Insert mit `ticket_number: ""`, Erstnachricht, Anhänge über `uploadTicketAttachment`, Telegram `ticket_neu`), danach `navigate(/mitarbeiter/support/<id>)`.
+- Neue Datei `src/pages/mitarbeiter/MitarbeiterSupportDetail.tsx`: übernimmt `TicketDetail`, liest `id` per `useParams`, lädt das Ticket selbst (statt per Prop), setzt `unread_for_user=false`, Antworten mit Telegram `ticket_antwort`.
+- Beide neuen Seiten nutzen wie bisher `useOutletContext<{ contract, branding }>()` und die Hooks aus `src/hooks/useSupportTickets.ts`.
+- Unbekanntes/fremdes Ticket: Hinweis plus Link zurück zur Übersicht.
+- Styling bleibt im bestehenden hellen Mitarbeiter-Look (weiße Cards, `rounded-2xl`).
+- Abschluss: `npx tsgo --noEmit`.
