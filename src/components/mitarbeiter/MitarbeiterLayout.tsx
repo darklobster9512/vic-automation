@@ -79,7 +79,7 @@ export default function MitarbeiterLayout() {
 
       // Load branding from profile.branding_id
       let resolvedBranding: BrandingData | null = null;
-      const brandingId = profileResult.data?.branding_id;
+      const brandingId = profileResult.data?.branding_id ?? resolvedContract?.branding_id ?? null;
 
       if (brandingId) {
         const { data: brandingData } = await supabase
