@@ -263,7 +263,8 @@ const MitarbeiterAuftraege = () => {
               attachmentsSubmitted: allSubmitted && !allApproved,
               hasIdentSession: orderIdsWithSession.has(a.order_id),
               hasReviewSubmitted: orderIdsWithReview.has(a.order_id),
-            };
+              hasDraft: orderIdsWithDraft.has(a.order_id) && !orderIdsWithReview.has(a.order_id),
+
           })
       );
       setLoading(false);
