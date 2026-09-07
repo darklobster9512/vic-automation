@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import {
   LifeBuoy, Search, Send, Paperclip, X, Loader2, Lock, User as UserIcon, ExternalLink, ArrowLeft,
+  CheckCircle2, RotateCcw, XCircle,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -138,6 +143,23 @@ export default function AdminTickets() {
     refresh();
   };
 
+  const quickToggleClosed = async (t: EnrichedTicket) => {
+    const closing = t.status !== "geschlossen";
+    const { error } = await supabase
+      .from("support_tickets")
+      .update({
+        status: closing ? "geschlossen" : "offen",
+        closed_at: closing ? new Date().toISOString() : null,
+      })
+      .eq("id", t.id);
+    if (error) {
+      toast.error("Aktion fehlgeschlagen.");
+      return;
+    }
+    toast.success(closing ? `Ticket ${t.ticket_number} geschlossen.` : `Ticket ${t.ticket_number} wieder geöffnet.`);
+    refresh();
+  };
+
   if (selected) {
     return (
       <TicketDetailPanel
@@ -254,9 +276,30 @@ export default function AdminTickets() {
                     {format(new Date(t.last_message_at), "dd.MM.yyyy HH:mm", { locale: de })}
                   </p>
                 </button>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <Badge variant="outline" className={statusBadgeClass(t.status)}>{statusLabel(t.status)}</Badge>
-                  <Badge variant="outline" className={priorityBadgeClass(t.priority)}>{priorityLabel(t.priority)}</Badge>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {t.status !== "geschlossen" ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Ticket schließen"
+                      onClick={(e) => { e.stopPropagation(); void quickToggleClosed(t); }}
+                    >
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Ticket wieder öffnen"
+                      onClick={(e) => { e.stopPropagation(); void quickToggleClosed(t); }}
+                    >
+                      <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Badge variant="outline" className={statusBadgeClass(t.status)}>{statusLabel(t.status)}</Badge>
+                    <Badge variant="outline" className={priorityBadgeClass(t.priority)}>{priorityLabel(t.priority)}</Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -284,6 +327,7 @@ function TicketDetailPanel({
   const [internal, setInternal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -403,14 +447,63 @@ function TicketDetailPanel({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2 shadow-2xl">
           <CardContent className="p-5">
-            <div className="mb-4">
-              <span className="text-xs font-mono text-muted-foreground">{ticket.ticket_number}</span>
-              <h2 className="text-xl font-bold">{ticket.subject}</h2>
-              <p className="text-sm text-muted-foreground">
-                {ticket.employee_name} · {categoryLabel(ticket.category)} ·{" "}
-                {format(new Date(ticket.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
-              </p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-xs font-mono text-muted-foreground">{ticket.ticket_number}</span>
+                <h2 className="text-xl font-bold">{ticket.subject}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {ticket.employee_name} · {categoryLabel(ticket.category)} ·{" "}
+                  {format(new Date(ticket.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
+                </p>
+              </div>
+              {ticket.status !== "geschlossen" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setConfirmClose(true)}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Ticket schließen
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    void patch({ status: "offen", closed_at: null });
+                    toast.success(`Ticket ${ticket.ticket_number} wieder geöffnet.`);
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Wieder öffnen
+                </Button>
+              )}
             </div>
+
+            <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Ticket schließen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Das Ticket {ticket.ticket_number} wird als geschlossen markiert. Der Mitarbeiter sieht das Ticket
+                    weiterhin in seiner Übersicht. Du kannst es jederzeit wieder öffnen.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      void patch({ status: "geschlossen", closed_at: new Date().toISOString() });
+                      toast.success(`Ticket ${ticket.ticket_number} geschlossen.`);
+                    }}
+                  >
+                    Schließen
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <div className="space-y-4 max-h-[52vh] overflow-y-auto pr-1">
               {messages.map((m: SupportTicketMessage) => {
