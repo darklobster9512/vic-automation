@@ -328,7 +328,7 @@ function TicketDetailPanel({
     onChanged();
   };
 
-  const patch = async (values: Record<string, unknown>) => {
+  const patch = async (values: Partial<SupportTicket>) => {
     const { error } = await supabase.from("support_tickets").update(values).eq("id", ticket.id);
     if (error) {
       toast.error("Änderung fehlgeschlagen.");
