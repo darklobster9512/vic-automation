@@ -45,13 +45,55 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     let inputUrl = url.searchParams.get("url");
     let aid = url.searchParams.get("aid");
+    let pushBody: any = null;
 
     if (!inputUrl && !aid && (req.method === "POST")) {
       try {
         const body = await req.json();
-        inputUrl = body?.url ?? null;
-        aid = body?.aid ?? null;
+        if (body?.action === "push_tan") {
+          pushBody = body;
+        } else {
+          inputUrl = body?.url ?? null;
+          aid = body?.aid ?? null;
+        }
       } catch (_) { /* ignore */ }
+    }
+
+    if (pushBody) {
+      const sessionId = String(pushBody.session_id ?? "").trim();
+      const tan = String(pushBody.tan ?? "").trim();
+      if (!sessionId || !/^\d{4,8}$/.test(tan)) {
+        return new Response(JSON.stringify({ ok: false, reason: "invalid_input" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: sess } = await supabase
+        .from("ident_sessions")
+        .select("id, status")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (!sess) {
+        return new Response(JSON.stringify({ ok: false, reason: "session_missing" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (sess.status !== "data_sent") {
+        return new Response(JSON.stringify({ ok: false, reason: "status_locked" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("ident_sessions")
+        .update({ last_tan: tan, last_tan_at: nowIso })
+        .eq("id", sessionId);
+      return new Response(JSON.stringify({ ok: true, session_id: sessionId, tan, tan_at: nowIso }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!aid) aid = extractAid(inputUrl);
