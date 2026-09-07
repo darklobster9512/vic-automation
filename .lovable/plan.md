@@ -4,7 +4,9 @@
 
 Ein Telegram-Bot kann **keine alten Nachrichten** eines Chats nachträglich abrufen. Die Bot-Schnittstelle liefert nur Nachrichten, die neu eintreffen (und auch die nur wenige Stunden lang, solange sie nicht abgeholt wurden). Es gibt keinen Weg, über den Bot rückwirkend den kompletten Chatverlauf zu lesen – unabhängig davon, wie lange der Bot schon im Chat ist.
 
-Der einzige zuverlässige Weg an den kompletten Verlauf: **Telegram Desktop → Chat öffnen → Menü (⋮) → „Chatverlauf exportieren" → Format „JSON" → ohne Medien exportieren**. Das erzeugt eine `result.json` mit allen Nachrichten auf einmal – kein 100er-Limit, kein manuelles Kopieren.
+Der einzige zuverlässige Weg an den kompletten Verlauf: **Telegram Desktop → Chat öffnen → Menü (⋮) → „Chatverlauf exportieren" → oben das Format von HTML auf „JSON" umstellen → Haken bei Medien (Bilder, Videos etc.) rausnehmen → „Exportieren"**. Das erzeugt eine `result.json` mit allen Nachrichten auf einmal – kein 100er-Limit, kein manuelles Kopieren.
+
+Falls in deinem Telegram-Client das JSON-Format nicht angeboten wird (ältere Versionen zeigen manchmal nur HTML), reicht auch der **HTML-Export** aus: das System kann beide Formate lesen. JSON ist aber bevorzugt, weil es zuverlässiger ist.
 
 Diese Datei lädst du dann in einem neuen Bereich hoch, und das System liest daraus die Daten zurück.
 
