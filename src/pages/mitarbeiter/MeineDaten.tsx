@@ -36,7 +36,85 @@ interface ContractDetails {
   employment_type: string | null;
 }
 
+const PasswordChangeCard = () => {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [repeat, setRepeat] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reset = () => { setCurrent(""); setNext(""); setRepeat(""); };
+
+  const submit = async () => {
+    if (!current || !next || !repeat) { toast.error("Bitte alle Felder ausfüllen."); return; }
+    if (next !== repeat) { toast.error("Die neuen Passwörter stimmen nicht überein."); return; }
+    if (next.length < 6) { toast.error("Das neue Passwort muss mindestens 6 Zeichen lang sein."); return; }
+    if (next === current) { toast.error("Das neue Passwort muss sich vom aktuellen unterscheiden."); return; }
+
+    setSaving(true);
+    const { data, error } = await supabase.functions.invoke("change-employee-password", {
+      body: { current_password: current, new_password: next },
+    });
+    setSaving(false);
+
+    const errMsg = (data as any)?.error;
+    if (error || errMsg) {
+      toast.error(errMsg || "Passwort konnte nicht geändert werden.");
+      return;
+    }
+    toast.success("Passwort erfolgreich geändert.");
+    reset();
+    setOpen(false);
+  };
+
+  return (
+    <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-primary" />
+          Sicherheit
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-muted-foreground">Ändere hier dein Passwort für den Login.</p>
+          <Button variant="outline" className="rounded-xl" onClick={() => setOpen(true)}>
+            <KeyRound className="h-4 w-4 mr-2" />
+            Passwort ändern
+          </Button>
+        </div>
+
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Passwort ändern</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-current">Aktuelles Passwort</Label>
+                <Input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} maxLength={100} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-new">Neues Passwort</Label>
+                <Input id="pw-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} maxLength={100} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-repeat">Neues Passwort wiederholen</Label>
+                <Input id="pw-repeat" type="password" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} maxLength={100} />
+              </div>
+              <Button className="w-full rounded-xl" onClick={submit} disabled={saving}>
+                {saving ? "Wird geändert..." : "Bestätigen"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+};
+
 const MeineDaten = () => {
+
   const { contract, branding, loading: contextLoading } = useOutletContext<ContextType>();
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
