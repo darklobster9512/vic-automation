@@ -105,6 +105,7 @@ export type Database = {
           created_by: string | null
           end_time: string
           id: string
+          schedule_type: string
           slot_interval_minutes: number
           start_time: string
         }
@@ -115,6 +116,7 @@ export type Database = {
           created_by?: string | null
           end_time?: string
           id?: string
+          schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
         }
@@ -125,6 +127,7 @@ export type Database = {
           created_by?: string | null
           end_time?: string
           id?: string
+          schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
         }
@@ -132,7 +135,7 @@ export type Database = {
           {
             foreignKeyName: "branding_schedule_settings_branding_id_fkey"
             columns: ["branding_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "brandings"
             referencedColumns: ["id"]
           },
@@ -141,6 +144,9 @@ export type Database = {
       brandings: {
         Row: {
           brand_color: string | null
+          chat_avatar_url: string | null
+          chat_display_name: string | null
+          chat_online: boolean
           city: string | null
           company_name: string
           created_at: string
@@ -150,11 +156,19 @@ export type Database = {
           id: string
           logo_url: string | null
           managing_director: string | null
+          payment_model: string
           phone: string | null
           register_court: string | null
           resend_api_key: string | null
           resend_from_email: string | null
           resend_from_name: string | null
+          salary_minijob: number | null
+          salary_teilzeit: number | null
+          salary_vollzeit: number | null
+          signature_font: string | null
+          signature_image_url: string | null
+          signer_name: string | null
+          signer_title: string | null
           sms_sender_name: string | null
           street: string | null
           trade_register: string | null
@@ -163,6 +177,9 @@ export type Database = {
         }
         Insert: {
           brand_color?: string | null
+          chat_avatar_url?: string | null
+          chat_display_name?: string | null
+          chat_online?: boolean
           city?: string | null
           company_name: string
           created_at?: string
@@ -172,11 +189,19 @@ export type Database = {
           id?: string
           logo_url?: string | null
           managing_director?: string | null
+          payment_model?: string
           phone?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
           resend_from_name?: string | null
+          salary_minijob?: number | null
+          salary_teilzeit?: number | null
+          salary_vollzeit?: number | null
+          signature_font?: string | null
+          signature_image_url?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
           sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
@@ -185,6 +210,9 @@ export type Database = {
         }
         Update: {
           brand_color?: string | null
+          chat_avatar_url?: string | null
+          chat_display_name?: string | null
+          chat_online?: boolean
           city?: string | null
           company_name?: string
           created_at?: string
@@ -194,11 +222,19 @@ export type Database = {
           id?: string
           logo_url?: string | null
           managing_director?: string | null
+          payment_model?: string
           phone?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
           resend_from_name?: string | null
+          salary_minijob?: number | null
+          salary_teilzeit?: number | null
+          salary_vollzeit?: number | null
+          signature_font?: string | null
+          signature_image_url?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
           sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
@@ -286,6 +322,53 @@ export type Database = {
           },
         ]
       }
+      contract_templates: {
+        Row: {
+          branding_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          employment_type: string
+          id: string
+          is_active: boolean
+          salary: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          branding_id: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          employment_type: string
+          id?: string
+          is_active?: boolean
+          salary?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          branding_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          employment_type?: string
+          id?: string
+          is_active?: boolean
+          salary?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           branding_id: string | null
@@ -336,14 +419,16 @@ export type Database = {
       employment_contracts: {
         Row: {
           admin_notes: string | null
-          application_id: string
+          application_id: string | null
           balance: number
           bank_name: string | null
           bic: string | null
           birth_date: string | null
           birth_place: string | null
+          branding_id: string | null
           chat_active_at: string | null
           city: string | null
+          contract_dismissed: boolean
           contract_pdf_url: string | null
           created_at: string
           created_by: string | null
@@ -356,11 +441,14 @@ export type Database = {
           id: string
           id_back_url: string | null
           id_front_url: string | null
+          id_type: string | null
           is_suspended: boolean
           last_name: string | null
           marital_status: string | null
           nationality: string | null
           phone: string | null
+          proof_of_address_url: string | null
+          requires_proof_of_address: boolean
           signature_data: string | null
           signed_contract_pdf_url: string | null
           social_security_number: string | null
@@ -369,19 +457,22 @@ export type Database = {
           submitted_at: string | null
           tax_id: string | null
           temp_password: string | null
+          template_id: string | null
           user_id: string | null
           zip_code: string | null
         }
         Insert: {
           admin_notes?: string | null
-          application_id: string
+          application_id?: string | null
           balance?: number
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          branding_id?: string | null
           chat_active_at?: string | null
           city?: string | null
+          contract_dismissed?: boolean
           contract_pdf_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -394,11 +485,14 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          id_type?: string | null
           is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
           phone?: string | null
+          proof_of_address_url?: string | null
+          requires_proof_of_address?: boolean
           signature_data?: string | null
           signed_contract_pdf_url?: string | null
           social_security_number?: string | null
@@ -407,19 +501,22 @@ export type Database = {
           submitted_at?: string | null
           tax_id?: string | null
           temp_password?: string | null
+          template_id?: string | null
           user_id?: string | null
           zip_code?: string | null
         }
         Update: {
           admin_notes?: string | null
-          application_id?: string
+          application_id?: string | null
           balance?: number
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          branding_id?: string | null
           chat_active_at?: string | null
           city?: string | null
+          contract_dismissed?: boolean
           contract_pdf_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -432,11 +529,14 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          id_type?: string | null
           is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
           phone?: string | null
+          proof_of_address_url?: string | null
+          requires_proof_of_address?: boolean
           signature_data?: string | null
           signed_contract_pdf_url?: string | null
           social_security_number?: string | null
@@ -445,6 +545,7 @@ export type Database = {
           submitted_at?: string | null
           tax_id?: string | null
           temp_password?: string | null
+          template_id?: string | null
           user_id?: string | null
           zip_code?: string | null
         }
@@ -454,6 +555,97 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ident_sessions: {
+        Row: {
+          assignment_id: string
+          branding_id: string | null
+          completed_at: string | null
+          contract_id: string
+          created_at: string
+          email_tan_enabled: boolean
+          email_tans: Json
+          id: string
+          order_id: string
+          phone_api_url: string | null
+          status: string
+          test_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          branding_id?: string | null
+          completed_at?: string | null
+          contract_id: string
+          created_at?: string
+          email_tan_enabled?: boolean
+          email_tans?: Json
+          id?: string
+          order_id: string
+          phone_api_url?: string | null
+          status?: string
+          test_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          branding_id?: string | null
+          completed_at?: string | null
+          contract_id?: string
+          created_at?: string
+          email_tan_enabled?: boolean
+          email_tans?: Json
+          id?: string
+          order_id?: string
+          phone_api_url?: string | null
+          status?: string
+          test_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ident_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "order_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ident_sessions_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ident_sessions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ident_sessions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -466,6 +658,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_sent: boolean
           status: string
         }
         Insert: {
@@ -475,6 +668,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Update: {
@@ -484,6 +678,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Relationships: [
@@ -650,6 +845,60 @@ export type Database = {
           },
         ]
       }
+      order_attachments: {
+        Row: {
+          attachment_index: number
+          contract_id: string
+          created_at: string
+          file_name: string | null
+          file_url: string
+          id: string
+          order_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          attachment_index: number
+          contract_id: string
+          created_at?: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+          order_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          attachment_index?: number
+          contract_id?: string
+          created_at?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          order_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_attachments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_attachments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_reviews: {
         Row: {
           comment: string
@@ -704,45 +953,66 @@ export type Database = {
           branding_id: string | null
           created_at: string
           created_by: string | null
+          description: string | null
+          estimated_hours: string | null
           id: string
           is_placeholder: boolean
-          order_number: string
+          is_starter_job: boolean
+          is_videochat: boolean
+          order_number: string | null
+          order_type: string
           playstore_url: string | null
           project_goal: string | null
-          provider: string
+          provider: string | null
+          required_attachments: Json | null
           review_questions: Json | null
           reward: string
           title: string
+          work_steps: Json | null
         }
         Insert: {
           appstore_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
-          order_number: string
+          is_starter_job?: boolean
+          is_videochat?: boolean
+          order_number?: string | null
+          order_type?: string
           playstore_url?: string | null
           project_goal?: string | null
-          provider: string
+          provider?: string | null
+          required_attachments?: Json | null
           review_questions?: Json | null
           reward: string
           title: string
+          work_steps?: Json | null
         }
         Update: {
           appstore_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
-          order_number?: string
+          is_starter_job?: boolean
+          is_videochat?: boolean
+          order_number?: string | null
+          order_type?: string
           playstore_url?: string | null
           project_goal?: string | null
-          provider?: string
+          provider?: string | null
+          required_attachments?: Json | null
           review_questions?: Json | null
           reward?: string
           title?: string
+          work_steps?: Json | null
         }
         Relationships: [
           {
@@ -789,32 +1059,46 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          branding_id: string | null
           created_at: string
           display_name: string | null
           email: string | null
           full_name: string | null
           id: string
           is_chat_online: boolean
+          phone: string | null
         }
         Insert: {
           avatar_url?: string | null
+          branding_id?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           is_chat_online?: boolean
+          phone?: string | null
         }
         Update: {
           avatar_url?: string | null
+          branding_id?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           is_chat_online?: boolean
+          phone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedule_blocked_slots: {
         Row: {
@@ -1103,6 +1387,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_sent: boolean
           status: string
         }
         Insert: {
@@ -1112,6 +1397,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Update: {
@@ -1121,6 +1407,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Relationships: [
@@ -1211,33 +1498,63 @@ export type Database = {
         Returns: boolean
       }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
-      submit_employment_contract: {
-        Args: {
-          _bank_name: string
-          _bic: string
-          _birth_date: string
-          _birth_place: string
-          _city: string
-          _contract_id: string
-          _desired_start_date: string
-          _email: string
-          _employment_type: string
-          _first_name: string
-          _health_insurance: string
-          _iban: string
-          _id_back_url: string
-          _id_front_url: string
-          _last_name: string
-          _marital_status: string
-          _nationality: string
-          _phone: string
-          _social_security_number: string
-          _street: string
-          _tax_id: string
-          _zip_code: string
-        }
-        Returns: undefined
-      }
+      submit_employment_contract:
+        | {
+            Args: {
+              _bank_name: string
+              _bic: string
+              _birth_date: string
+              _birth_place: string
+              _city: string
+              _contract_id: string
+              _desired_start_date: string
+              _email: string
+              _employment_type: string
+              _first_name: string
+              _health_insurance: string
+              _iban: string
+              _id_back_url: string
+              _id_front_url: string
+              _last_name: string
+              _marital_status: string
+              _nationality: string
+              _phone: string
+              _social_security_number: string
+              _street: string
+              _tax_id: string
+              _zip_code: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _bank_name: string
+              _bic: string
+              _birth_date: string
+              _birth_place: string
+              _city: string
+              _contract_id: string
+              _desired_start_date: string
+              _email: string
+              _employment_type: string
+              _first_name: string
+              _health_insurance: string
+              _iban: string
+              _id_back_url: string
+              _id_front_url: string
+              _id_type?: string
+              _last_name: string
+              _marital_status: string
+              _nationality: string
+              _phone: string
+              _proof_of_address_url?: string
+              _social_security_number: string
+              _street: string
+              _tax_id: string
+              _zip_code: string
+            }
+            Returns: undefined
+          }
       update_application_phone: {
         Args: { _application_id: string; _phone: string }
         Returns: undefined
@@ -1263,7 +1580,7 @@ export type Database = {
       user_has_any_branding: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user" | "kunde"
+      app_role: "admin" | "user" | "kunde" | "caller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1391,7 +1708,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "kunde"],
+      app_role: ["admin", "user", "kunde", "caller"],
     },
   },
 } as const
