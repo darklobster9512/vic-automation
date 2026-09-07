@@ -93,18 +93,19 @@ async function sendTelegram(
   supabase: any,
   message: string,
   brandingId: string | null,
-) {
+): Promise<number> {
   const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  if (!botToken) return;
-  const { data: chats } = await supabase
+  if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  const { data: chats, error } = await supabase
     .from("telegram_chats")
     .select("chat_id, branding_ids")
     .contains("events", ["sms_empfangen"]);
-  if (!chats || chats.length === 0) return;
+  if (error) throw new Error(`telegram_chats lookup failed: ${error.message}`);
+  if (!chats || chats.length === 0) return 0;
   const targets = brandingId
     ? chats.filter((c: any) => !c.branding_ids || c.branding_ids.length === 0 || c.branding_ids.includes(brandingId))
     : chats;
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     targets.map((chat: any) =>
       fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
@@ -113,46 +114,48 @@ async function sendTelegram(
       }),
     ),
   );
+  let sent = 0;
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("Telegram sms_empfangen request failed:", result.reason);
+      continue;
+    }
+    if (!result.value.ok) {
+      console.error(`Telegram sms_empfangen failed [${result.value.status}]: ${await result.value.text()}`);
+      continue;
+    }
+    sent++;
+  }
+  return sent;
 }
 
 export async function notifyIncomingSms(opts: NotifyOpts): Promise<number> {
   if (!opts.messages || opts.messages.length === 0) return 0;
   const supabase = serviceClient();
 
-  // Bereits gesehene Hashes für diese Quelle laden (letzte 30 Tage)
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: seenRows } = await supabase
-    .from("sms_inbox_seen")
-    .select("message_hash")
-    .eq("provider", opts.provider)
-    .eq("source_key", opts.sourceKey)
-    .gte("created_at", since)
-    .limit(2000);
-  const seen = new Set<string>((seenRows ?? []).map((r: any) => r.message_hash as string));
-
-  const newRows: Record<string, unknown>[] = [];
   const toForward: IncomingSms[] = [];
 
   for (const sms of opts.messages) {
     const hash = await sha256(`${sms.date}|${sms.sender}|${sms.text}`);
-    if (seen.has(hash)) continue;
-    seen.add(hash);
-    newRows.push({
-      provider: opts.provider,
-      source_key: opts.sourceKey,
-      message_hash: hash,
-      phone_number: opts.phoneNumber || null,
-      branding_id: opts.brandingId,
-      received_at: sms.date,
-    });
-    if (isFresh(sms.date)) toForward.push(sms);
-  }
-
-  if (newRows.length > 0) {
-    const { error } = await supabase
+    const { data: claimed, error } = await supabase
       .from("sms_inbox_seen")
-      .upsert(newRows, { onConflict: "provider,source_key,message_hash", ignoreDuplicates: true });
-    if (error) console.warn("sms_inbox_seen upsert failed:", error.message);
+      .upsert({
+        provider: opts.provider,
+        source_key: opts.sourceKey,
+        message_hash: hash,
+        phone_number: opts.phoneNumber || null,
+        branding_id: opts.brandingId,
+        received_at: sms.date,
+      }, { onConflict: "provider,source_key,message_hash", ignoreDuplicates: true })
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("sms_inbox_seen claim failed:", error.message);
+      continue;
+    }
+    // With ignoreDuplicates, only the caller that inserted the row receives it.
+    // This makes browser polling and the scheduled watcher safe in parallel.
+    if (claimed?.id && isFresh(sms.date)) toForward.push(sms);
   }
 
   if (toForward.length === 0) return 0;
@@ -176,8 +179,7 @@ export async function notifyIncomingSms(opts: NotifyOpts): Promise<number> {
       brandingName: opts.brandingName,
     });
     try {
-      await sendTelegram(supabase, message, opts.brandingId ?? assignment.brandingId);
-      sent++;
+      sent += await sendTelegram(supabase, message, opts.brandingId ?? assignment.brandingId);
     } catch (e) {
       console.error("sendTelegram sms_empfangen failed:", e);
     }
