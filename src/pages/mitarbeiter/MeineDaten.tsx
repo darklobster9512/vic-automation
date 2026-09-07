@@ -404,11 +404,15 @@ const MeineDaten = () => {
       {/* Personal Info */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
         <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-4 flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
               Persönliche Informationen
             </CardTitle>
+            <Button variant="outline" size="sm" className="rounded-xl" onClick={openContact}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Bearbeiten
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -420,6 +424,7 @@ const MeineDaten = () => {
               } />
             </div>
           </CardContent>
+
         </Card>
       </motion.div>
 
