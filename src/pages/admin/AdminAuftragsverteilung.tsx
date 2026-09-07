@@ -363,7 +363,7 @@ export default function AdminAuftragsverteilung() {
                       }))}
                     ordersById={data.ordersById}
                     perDay={perDay}
-                    tabLabel={`${h} Std.`}
+                    tabLabel={h === 0 ? "Ohne Stundenangabe" : `${h} Std.`}
                   />
                 )}
               </TabsContent>
