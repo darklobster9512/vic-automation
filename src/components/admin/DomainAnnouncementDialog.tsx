@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildEmailHtml } from "@/lib/buildEmailHtml";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
-import { createShortLink } from "@/lib/createShortLink";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { toast } from "sonner";
 import { Loader2, Megaphone } from "lucide-react";
@@ -32,7 +31,7 @@ interface Props {
 const EVENT_TYPE = "passwort_zurueckgesetzt_stoerung";
 
 const DEFAULT_SMS =
-  "Hallo {vorname}, wir hatten heute Morgen Wartungsarbeiten und neue Sicherheitsupdates durchgeführt. Dein neues Passwort: {passwort}. Bitte logge dich ein und aendere es unter Meine Daten. Login: {link}";
+  "Hallo {vorname}, wir hatten heute Morgen Wartungsarbeiten und neue Sicherheitsupdates durchgeführt. Dein neues Passwort: {passwort}. Bitte logge dich ein und ändere es unter Meine Daten. Login: {link}";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -160,13 +159,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
     let sms = 0;
     let failed = 0;
 
-    const loginUrl = await buildBrandingUrl(brandingId, "/auth");
-    let shortLink = loginUrl;
-    try {
-      shortLink = await createShortLink(loginUrl, brandingId);
-    } catch {
-      /* Fallback: direkter Link */
-    }
+    const loginUrl = await buildBrandingUrl(brandingId, "");
 
     for (let i = 0; i < recipients.length; i++) {
       const r = recipients[i];
@@ -194,7 +187,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
         const text = smsText
           .replace(/\{vorname\}/g, r.first_name || "")
           .replace(/\{passwort\}/g, r.temp_password)
-          .replace(/\{link\}/g, shortLink);
+          .replace(/\{link\}/g, loginUrl);
         try {
           await sendSms({
             to: r.phone,
@@ -251,7 +244,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
                 onChange={(e) => setSmsText(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Platzhalter: {"{vorname}"}, {"{passwort}"}, {"{link}"} (Login-Link)
+                Platzhalter: {"{vorname}"}, {"{passwort}"}, {"{link}"} (direkter Panel-Link)
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
