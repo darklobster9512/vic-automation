@@ -11,8 +11,8 @@
         try {
           var h = window.location.hostname;
           if (!h || h === 'localhost') return;
-          var SB_URL = "https://laozvnaupdecerpvwzmh.supabase.co";
-          var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb3p2bmF1cGRlY2VycHZ3em1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzEwNjUsImV4cCI6MjA5NDM0NzA2NX0.uXLnpeKILEDBoC8yCcX1ZL-hdlhFPUl-bVYcoxHKu2Y";
+          var SB_URL = "https://gzgfyuftjvezqjkosntu.supabase.co";
+          var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6Z2Z5dWZ0anZlenFqa29zbnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDg2MTksImV4cCI6MjEwNDMyNDYxOX0.4bgK_e0ODXR1Jr-WXwIViMAtx6Ok7_4omAJOsC0r8BU";
           var parts = h.split(".");
           var domain = parts.length > 2 ? parts.slice(-2).join(".") : h;
           fetch(SB_URL + "/rest/v1/brandings?domain=eq." + encodeURIComponent(domain) + "&select=favicon_url", {
