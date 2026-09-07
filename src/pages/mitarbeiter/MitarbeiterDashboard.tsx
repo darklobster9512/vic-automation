@@ -418,7 +418,7 @@ const MitarbeiterDashboard = () => {
     isHourlyRate
       ? null
       : isFixedSalary
-        ? { label: "Festgehalt", value: `${fixedSalary.toFixed(2)} €`, icon: Euro, detail: employmentType ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) : "Festgehalt" }
+        ? { label: "Festgehalt", value: fixedSalary > 0 ? `${fixedSalary.toFixed(2)} €` : "—", icon: Euro, detail: employmentType ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) : "Festgehalt" }
         : { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
     { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf", href: "/mitarbeiter/auftraege" },
     { label: "Bewertung", value: avgRating > 0 ? avgRating.toFixed(1) : "—", icon: Star, detail: reviewCount > 0 ? `${reviewCount} Bewertung${reviewCount !== 1 ? "en" : ""}` : "Noch keine" },

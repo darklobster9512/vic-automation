@@ -537,7 +537,7 @@ const MeineDaten = () => {
               {isHourlyRate
                 ? <StatCard icon={Euro} label="Voraussichtl. Gehalt" value={estimatedSalary > 0 ? `€${estimatedSalary.toFixed(2)}` : "—"} />
                 : isFixedSalary
-                  ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
+                  ? <StatCard icon={Euro} label="Festgehalt" value={fixedSalary > 0 ? `€${fixedSalary.toFixed(2)}` : "—"} />
                   : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
               }
             </div>
