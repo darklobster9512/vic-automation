@@ -354,6 +354,11 @@ const MitarbeiterAuftraege = () => {
                       ) : <span />}
                       <div className="flex items-center gap-1.5">
                         {a.is_starter_job && <StarterJobBadge />}
+                        {a.hasDraft && a.status !== "erfolgreich" && (
+                          <Badge variant="outline" className="text-[11px] rounded-full text-blue-600 border-blue-300 bg-blue-50">
+                            Entwurf
+                          </Badge>
+                        )}
                         {a.hasReviewSubmitted && a.attachmentsPending && a.status !== "erfolgreich" && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                             <Paperclip className="h-3 w-3 mr-1" />
