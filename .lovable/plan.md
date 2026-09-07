@@ -1,27 +1,22 @@
-# Telegram-Benachrichtigung für eingehende SMS reparieren
+# Telegram-Meldung „Neue SMS" direkt beim SMS-Abruf senden
 
-## Was ich geprüft habe
+## Ausgangslage
 
-- Der Telegram-Chat „SMS" ist korrekt eingerichtet: er hat die Events `sms_empfangen`, `tan_weitergeleitet` und `webid_redirect_abgefangen` und enthält auch das Branding der betroffenen Nummer. An der Konfiguration liegt es also nicht.
-- Die TAN-Weiterleitung von heute 17:39 Uhr ist protokolliert (Versand an +49173759xxxx) — die hat funktioniert.
-- Die Tabelle, in der der SMS-Wächter merkt, welche SMS er schon gesehen hat, ist **komplett leer** — es wurde also noch nie eine einzige SMS von ihm verarbeitet.
-- In der Datenbank ist nur **ein** geplanter Hintergrund-Job aktiv: die stündlichen Termin-Erinnerungen. Der Minuten-Job, der den SMS-Wächter aufruft, fehlt.
+- Der Telegram-Chat „SMS" ist korrekt konfiguriert (Events `sms_empfangen`, `tan_weitergeleitet`, `webid_redirect_abgefangen`, passende Brandings).
+- Die TAN-Weiterleitung von 17:39 Uhr hat funktioniert und wurde auch in Telegram gemeldet.
+- Die „Neue SMS"-Meldung kam nicht.
 
-## Ursache
+## Warum
 
-Es gibt zwei getrennte Wege:
+Die TAN-Weiterleitung hängt direkt an den Proxies `anosim-proxy` / `smsbot-proxy`: sobald ein Vic seine Ident-Seite offen hat, ruft der Browser darüber die Nummer ab, und beide Proxies rufen im selben Moment die TAN-Weiterleitung samt Telegram-Meldung auf. Genau deshalb kam die TAN-Meldung an.
 
-1. **TAN-Weiterleitung** läuft mit, sobald jemand die Ident-Seite offen hat — der Browser fragt die Nummer ab und leitet die TAN weiter samt Telegram-Meldung. Deshalb kam diese Meldung an.
-2. **„Neue SMS"-Meldung** kommt ausschließlich vom serverseitigen Wächter, der jede Minute alle Nummern abfragen soll. Dieser Wächter wird seit dem Neuaufbau der Datenbank **überhaupt nicht mehr aufgerufen**, weil der zugehörige Minuten-Job beim Wiederherstellen verloren gegangen ist.
-
-Zusätzlich fällt auf: der Wächter prüft aktuell nur Nummern, die unter Telefonnummern gespeichert sind. Nummern, die nur direkt in einer Ident-Sitzung hinterlegt wurden, werden gar nicht überwacht — auch nach dem Fix würden dort SMS unbemerkt bleiben.
+Die „Neue SMS"-Meldung dagegen hängt an einer separaten Hintergrund-Funktion (`sms-inbox-watch`), die überhaupt nicht mehr aufgerufen wird. Deshalb kommt nichts an, obwohl die SMS da ist.
 
 ## Lösung
 
-1. Den Minuten-Job wieder anlegen, der den SMS-Wächter jede Minute aufruft (die Funktion selbst macht pro Aufruf mehrere Durchläufe, Verzögerung damit ca. 15 Sekunden).
-2. Den Wächter zusätzlich alle Nummern aus aktiven Ident-Sitzungen abfragen lassen, nicht nur die fest gespeicherten Telefonnummern.
-3. Beim ersten Lauf greift weiterhin die Alt-Bestands-Regel: nur SMS aus der letzten Stunde werden gemeldet, ältere werden still als gesehen markiert. Es gibt also keinen Nachrichten-Schwall.
-4. Danach eine Test-SMS abwarten bzw. die Logs prüfen und bestätigen, dass die Meldung im Chat „SMS" ankommt.
+Genauso wie die TAN-Weiterleitung: die Telegram-Meldung „Neue SMS empfangen" wird direkt in `anosim-proxy` und `smsbot-proxy` ausgelöst, wenn der Browser SMS abruft. Kein Wächter, kein Minuten-Job — die Meldung kommt exakt in dem Moment, in dem auch die TAN-Weiterleitung passiert.
+
+Damit dieselbe SMS nicht mehrfach gemeldet wird (beide Vic-Sitzungen und mehrere Poll-Runden), wird pro SMS ein eindeutiger Schlüssel gespeichert und geprüft — analog zum Mechanismus, den die TAN-Weiterleitung bereits nutzt.
 
 ## Hinweis
 
@@ -29,5 +24,12 @@ Die bereits eingegangene SMS von heute wird nicht rückwirkend gemeldet.
 
 ## Technische Details
 
-- `cron.job`: neuer Eintrag `sms-inbox-watch-minutely` (`* * * * *`) via `pg_cron` + `pg_net` auf `/functions/v1/sms-inbox-watch`, analog zum bestehenden `appointment-reminders-hourly`.
-- `supabase/functions/sms-inbox-watch/index.ts`: `scanOnce()` ergänzt um Nummern aus `ident_sessions.phone_api_url` (Status `waiting`/`data_sent`), dedupliziert gegen die bereits aus `phone_numbers` geladenen URLs, inkl. Normalisierung zwischen `/share/orderbooking?` und `/api/v1/orderbookingshare?`.
+- Neue geteilte Funktion `supabase/functions/_shared/notifyIncomingSms.ts`:
+  - Erwartet `{ provider, sourceKey, phoneNumber, brandingId, brandingName, messages }`.
+  - Lädt Zuweisung (Mitarbeiter/Auftrag) über `ident_sessions.phone_api_url` wie bisher.
+  - Idempotenz über die bestehende Tabelle `sms_inbox_seen` (Hash aus `date|sender|text`, Insert mit `onConflict ignoreDuplicates`).
+  - Sendet an Telegram-Chats, die `sms_empfangen` abonniert haben, mit `buildTelegramMessage` (gleiches Format wie bisher).
+  - Zeitfenster: nur SMS aus der letzten Stunde werden gemeldet; ältere werden still als gesehen markiert (verhindert Nachrichten-Schwall beim ersten Aufruf einer neu belegten Nummer).
+- `supabase/functions/anosim-proxy/index.ts`: nach `fetch` zusätzlich `notifyIncomingSms` aufrufen (Provider `anosim`, `sourceKey` = gespeicherter Share-Identifier, `phoneNumber` aus `data.number`, `brandingId`/`brandingName` per Lookup in `phone_numbers` + `brandings`).
+- `supabase/functions/smsbot-proxy/index.ts`: analog nach dem Rentals-/SMS-Fetch pro Rental `notifyIncomingSms` aufrufen (`sourceKey` = `<brandingId>:<rentalId>`, `phoneNumber` aus Rental-Objekt).
+- `sms-inbox-watch` bleibt bestehen, ist aber nicht mehr erforderlich für die Live-Meldung.
