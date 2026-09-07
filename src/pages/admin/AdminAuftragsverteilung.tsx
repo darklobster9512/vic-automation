@@ -16,7 +16,8 @@ const DEFAULT_TARGETS: Record<number, number> = { 5: 2, 10: 3, 20: 3, 25: 4 };
 const FALLBACK_TARGET = 4;
 
 function parseHours(title: string): number | null {
-  const m = title.match(/(\d+)\s*Stunden/i);
+  // erkennt "25 Stunden", "25 Std.", "25 Std./Woche", "25h"
+  const m = title.match(/(\d+)\s*(?:stunden|std\.?|h)\b/i) || title.match(/(\d+)\s*std/i);
   return m ? parseInt(m[1], 10) : null;
 }
 
