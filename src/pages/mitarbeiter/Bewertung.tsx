@@ -69,6 +69,10 @@ const Bewertung = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<ReviewAnswer[]>([]);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const dirtyRef = useRef(false);
 
   const contractId = contract?.id;
 
@@ -79,21 +83,74 @@ const Bewertung = () => {
     if (order?.id === id) return;
 
     const fetchOrder = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("id, title, review_questions, required_attachments")
-        .eq("id", id)
-        .maybeSingle();
+      const [{ data }, { data: draft }] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("id, title, review_questions, required_attachments")
+          .eq("id", id)
+          .maybeSingle(),
+        supabase
+          .from("order_review_drafts")
+          .select("answers, updated_at")
+          .eq("order_id", id)
+          .eq("contract_id", contractId)
+          .maybeSingle(),
+      ]);
 
       if (!data) { setLoading(false); return; }
       setOrder(data);
 
       const qs = parseQuestions(data.review_questions);
-      setAnswers(qs.map(() => ({ rating: 0, comment: "" })));
+      const saved = Array.isArray(draft?.answers) ? (draft!.answers as any[]) : [];
+      const hasSaved = saved.some((a) => (a?.rating ?? 0) > 0 || String(a?.comment ?? "").trim().length > 0);
+
+      setAnswers(
+        qs.map((_, i) => ({
+          rating: Number(saved[i]?.rating) || 0,
+          comment: typeof saved[i]?.comment === "string" ? saved[i].comment : "",
+        }))
+      );
+
+      if (hasSaved) {
+        setDraftRestored(true);
+        if (draft?.updated_at) setLastSavedAt(new Date(draft.updated_at));
+        toast.info("Entwurf wiederhergestellt.");
+      }
       setLoading(false);
     };
     fetchOrder();
   }, [contractId, id]);
+
+  const saveDraft = async (silent: boolean) => {
+    if (!contractId || !order) return;
+    if (!silent) setSavingDraft(true);
+    const { error } = await supabase
+      .from("order_review_drafts")
+      .upsert(
+        {
+          order_id: order.id,
+          contract_id: contractId,
+          answers: answers as any,
+        },
+        { onConflict: "order_id,contract_id" }
+      );
+    if (!silent) setSavingDraft(false);
+    if (error) {
+      if (!silent) toast.error("Entwurf konnte nicht gespeichert werden.");
+      return;
+    }
+    dirtyRef.current = false;
+    setLastSavedAt(new Date());
+    if (!silent) toast.success("Entwurf gespeichert.");
+  };
+
+  // Autosave (debounced)
+  useEffect(() => {
+    if (!order || !dirtyRef.current || submitting) return;
+    const t = setTimeout(() => { saveDraft(true); }, 2000);
+    return () => clearTimeout(t);
+  }, [answers, order, submitting]);
+
 
   const parseQuestions = (raw: unknown): string[] => {
     if (!raw) return [];
