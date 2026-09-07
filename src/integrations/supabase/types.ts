@@ -45,8 +45,12 @@ export type Database = {
           employment_type: string | null
           first_name: string
           id: string
+          is_external: boolean
           is_indeed: boolean
+          is_meta: boolean
           last_name: string
+          notification_count: number
+          notification_timestamps: Json
           phone: string | null
           resume_url: string | null
           status: string
@@ -62,8 +66,12 @@ export type Database = {
           employment_type?: string | null
           first_name: string
           id?: string
+          is_external?: boolean
           is_indeed?: boolean
+          is_meta?: boolean
           last_name: string
+          notification_count?: number
+          notification_timestamps?: Json
           phone?: string | null
           resume_url?: string | null
           status?: string
@@ -79,8 +87,12 @@ export type Database = {
           employment_type?: string | null
           first_name?: string
           id?: string
+          is_external?: boolean
           is_indeed?: boolean
+          is_meta?: boolean
           last_name?: string
+          notification_count?: number
+          notification_timestamps?: Json
           phone?: string | null
           resume_url?: string | null
           status?: string
@@ -90,6 +102,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "applications_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branding_notes: {
+        Row: {
+          author_email: string
+          branding_id: string
+          content: string
+          created_at: string
+          id: string
+          page_context: string
+        }
+        Insert: {
+          author_email: string
+          branding_id: string
+          content: string
+          created_at?: string
+          id?: string
+          page_context: string
+        }
+        Update: {
+          author_email?: string
+          branding_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          page_context?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branding_notes_branding_id_fkey"
             columns: ["branding_id"]
             isOneToOne: false
             referencedRelation: "brandings"
@@ -153,11 +200,21 @@ export type Database = {
           created_by: string | null
           domain: string | null
           email: string | null
+          estimated_salary_minijob: number | null
+          estimated_salary_teilzeit: number | null
+          estimated_salary_vollzeit: number | null
+          favicon_url: string | null
           id: string
           logo_url: string | null
           managing_director: string | null
           payment_model: string
           phone: string | null
+          project_manager_image_url: string | null
+          project_manager_name: string | null
+          project_manager_title: string | null
+          recruiter_image_url: string | null
+          recruiter_name: string | null
+          recruiter_title: string | null
           register_court: string | null
           resend_api_key: string | null
           resend_from_email: string | null
@@ -170,6 +227,7 @@ export type Database = {
           signer_name: string | null
           signer_title: string | null
           sms_sender_name: string | null
+          spoof_credits: number | null
           street: string | null
           trade_register: string | null
           vat_id: string | null
@@ -186,11 +244,21 @@ export type Database = {
           created_by?: string | null
           domain?: string | null
           email?: string | null
+          estimated_salary_minijob?: number | null
+          estimated_salary_teilzeit?: number | null
+          estimated_salary_vollzeit?: number | null
+          favicon_url?: string | null
           id?: string
           logo_url?: string | null
           managing_director?: string | null
           payment_model?: string
           phone?: string | null
+          project_manager_image_url?: string | null
+          project_manager_name?: string | null
+          project_manager_title?: string | null
+          recruiter_image_url?: string | null
+          recruiter_name?: string | null
+          recruiter_title?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
@@ -203,6 +271,7 @@ export type Database = {
           signer_name?: string | null
           signer_title?: string | null
           sms_sender_name?: string | null
+          spoof_credits?: number | null
           street?: string | null
           trade_register?: string | null
           vat_id?: string | null
@@ -219,11 +288,21 @@ export type Database = {
           created_by?: string | null
           domain?: string | null
           email?: string | null
+          estimated_salary_minijob?: number | null
+          estimated_salary_teilzeit?: number | null
+          estimated_salary_vollzeit?: number | null
+          favicon_url?: string | null
           id?: string
           logo_url?: string | null
           managing_director?: string | null
           payment_model?: string
           phone?: string | null
+          project_manager_image_url?: string | null
+          project_manager_name?: string | null
+          project_manager_title?: string | null
+          recruiter_image_url?: string | null
+          recruiter_name?: string | null
+          recruiter_title?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
@@ -236,6 +315,7 @@ export type Database = {
           signer_name?: string | null
           signer_title?: string | null
           sms_sender_name?: string | null
+          spoof_credits?: number | null
           street?: string | null
           trade_register?: string | null
           vat_id?: string | null
@@ -253,6 +333,7 @@ export type Database = {
           id: string
           metadata: Json | null
           read: boolean
+          read_at: string | null
           sender_role: string
         }
         Insert: {
@@ -264,6 +345,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           read?: boolean
+          read_at?: string | null
           sender_role: string
         }
         Update: {
@@ -275,6 +357,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           read?: boolean
+          read_at?: string | null
           sender_role?: string
         }
         Relationships: [
@@ -573,9 +656,98 @@ export type Database = {
           },
         ]
       }
+      first_workday_appointments: {
+        Row: {
+          application_id: string | null
+          appointment_date: string
+          appointment_time: string
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          reminder_sent: boolean
+          status: string
+        }
+        Insert: {
+          application_id?: string | null
+          appointment_date: string
+          appointment_time: string
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reminder_sent?: boolean
+          status?: string
+        }
+        Update: {
+          application_id?: string | null
+          appointment_date?: string
+          appointment_time?: string
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reminder_sent?: boolean
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_workday_appointments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_appointments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      first_workday_blocked_slots: {
+        Row: {
+          blocked_date: string
+          blocked_time: string
+          branding_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          blocked_time: string
+          branding_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          blocked_time?: string
+          branding_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_workday_blocked_slots_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ident_sessions: {
         Row: {
-          assignment_id: string
+          assignment_id: string | null
           branding_id: string | null
           completed_at: string | null
           contract_id: string
@@ -583,14 +755,15 @@ export type Database = {
           email_tan_enabled: boolean
           email_tans: Json
           id: string
-          order_id: string
+          info_notes: string | null
+          order_id: string | null
           phone_api_url: string | null
           status: string
           test_data: Json | null
           updated_at: string
         }
         Insert: {
-          assignment_id: string
+          assignment_id?: string | null
           branding_id?: string | null
           completed_at?: string | null
           contract_id: string
@@ -598,14 +771,15 @@ export type Database = {
           email_tan_enabled?: boolean
           email_tans?: Json
           id?: string
-          order_id: string
+          info_notes?: string | null
+          order_id?: string | null
           phone_api_url?: string | null
           status?: string
           test_data?: Json | null
           updated_at?: string
         }
         Update: {
-          assignment_id?: string
+          assignment_id?: string | null
           branding_id?: string | null
           completed_at?: string | null
           contract_id?: string
@@ -613,7 +787,8 @@ export type Database = {
           email_tan_enabled?: boolean
           email_tans?: Json
           id?: string
-          order_id?: string
+          info_notes?: string | null
+          order_id?: string | null
           phone_api_url?: string | null
           status?: string
           test_data?: Json | null
@@ -658,7 +833,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          probetag_invite_count: number
+          probetag_invite_timestamps: Json
+          reminder_count: number
           reminder_sent: boolean
+          reminder_timestamps: Json
           status: string
         }
         Insert: {
@@ -668,7 +847,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          probetag_invite_count?: number
+          probetag_invite_timestamps?: Json
+          reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
         }
         Update: {
@@ -678,7 +861,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          probetag_invite_count?: number
+          probetag_invite_timestamps?: Json
+          reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
         }
         Relationships: [
@@ -1249,6 +1436,7 @@ export type Database = {
           recipient_name: string | null
           recipient_phone: string
           sender_name: string
+          source: string | null
           template_id: string | null
         }
         Insert: {
@@ -1260,6 +1448,7 @@ export type Database = {
           recipient_name?: string | null
           recipient_phone: string
           sender_name: string
+          source?: string | null
           template_id?: string | null
         }
         Update: {
@@ -1271,6 +1460,7 @@ export type Database = {
           recipient_name?: string | null
           recipient_phone?: string
           sender_name?: string
+          source?: string | null
           template_id?: string | null
         }
         Relationships: [
@@ -1387,8 +1577,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_count: number
           reminder_sent: boolean
+          reminder_timestamps: Json
           status: string
+          success_notification_count: number | null
+          success_notification_timestamps: Json | null
         }
         Insert: {
           application_id: string
@@ -1397,8 +1591,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
+          success_notification_count?: number | null
+          success_notification_timestamps?: Json | null
         }
         Update: {
           application_id?: string
@@ -1407,8 +1605,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
+          success_notification_count?: number | null
+          success_notification_timestamps?: Json | null
         }
         Relationships: [
           {
@@ -1486,9 +1688,22 @@ export type Database = {
         Returns: undefined
       }
       apps_for_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      book_first_workday_public: {
+        Args: {
+          _appointment_date: string
+          _appointment_time: string
+          _contract_id: string
+          _phone?: string
+        }
+        Returns: string
+      }
       contracts_for_branding_ids: {
         Args: { _user_id: string }
         Returns: string[]
+      }
+      decrement_spoof_credits: {
+        Args: { _branding_id: string }
+        Returns: undefined
       }
       has_role: {
         Args: {
@@ -1497,6 +1712,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
       submit_employment_contract:
         | {
@@ -1561,6 +1777,14 @@ export type Database = {
       }
       update_application_status: {
         Args: { _application_id: string; _status: string }
+        Returns: undefined
+      }
+      update_contract_phone_public: {
+        Args: { _contract_id: string; _phone: string }
+        Returns: undefined
+      }
+      update_first_workday_status: {
+        Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
       update_interview_status: {
