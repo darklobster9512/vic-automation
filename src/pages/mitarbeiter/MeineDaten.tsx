@@ -130,6 +130,89 @@ const MeineDaten = () => {
   const [brandingSig, setBrandingSig] = useState<any>(null);
   const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string; desired_start_date?: string; first_workday_date?: string } | null>(null);
   const [templateSalary, setTemplateSalary] = useState<number | null>(null);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [form, setForm] = useState({ phone: "", street: "", zip_code: "", city: "", iban: "", bic: "", bank_name: "" });
+
+  const openContact = () => {
+    setForm({
+      phone: contractDetails?.phone || "",
+      street: contractDetails?.street || "",
+      zip_code: contractDetails?.zip_code || "",
+      city: contractDetails?.city || "",
+      iban: contractDetails?.iban || "",
+      bic: contractDetails?.bic || "",
+      bank_name: contractDetails?.bank_name || "",
+    });
+    setContactOpen(true);
+  };
+
+  const openBank = () => {
+    setForm({
+      phone: contractDetails?.phone || "",
+      street: contractDetails?.street || "",
+      zip_code: contractDetails?.zip_code || "",
+      city: contractDetails?.city || "",
+      iban: contractDetails?.iban || "",
+      bic: contractDetails?.bic || "",
+      bank_name: contractDetails?.bank_name || "",
+    });
+    setBankOpen(true);
+  };
+
+  const saveDetails = async (mode: "contact" | "bank") => {
+    const phone = form.phone.trim();
+    const street = form.street.trim();
+    const zip = form.zip_code.trim();
+    const city = form.city.trim();
+    const iban = form.iban.replace(/\s+/g, "").toUpperCase();
+    const bic = form.bic.trim().toUpperCase();
+    const bankName = form.bank_name.trim();
+
+    if (mode === "contact") {
+      if (!/^\+?[0-9 /-]{6,20}$/.test(phone)) { toast.error("Bitte eine gültige Telefonnummer eingeben."); return; }
+      if (street.length < 3 || street.length > 120) { toast.error("Bitte eine gültige Straße eingeben."); return; }
+      if (!/^[0-9A-Za-z -]{4,10}$/.test(zip)) { toast.error("Bitte eine gültige PLZ eingeben."); return; }
+      if (city.length < 2 || city.length > 80) { toast.error("Bitte einen gültigen Ort eingeben."); return; }
+    } else {
+      if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(iban)) { toast.error("Bitte eine gültige IBAN eingeben."); return; }
+      if (bic && !/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic)) { toast.error("Bitte einen gültigen BIC eingeben."); return; }
+      if (bankName.length > 80) { toast.error("Bankname ist zu lang."); return; }
+    }
+
+    setSavingDetails(true);
+    const { error } = await supabase.rpc("update_own_contract_details" as any, {
+      _phone: phone,
+      _street: street,
+      _zip_code: zip,
+      _city: city,
+      _iban: iban,
+      _bic: bic,
+      _bank_name: bankName,
+    });
+    setSavingDetails(false);
+
+    if (error) {
+      toast.error("Daten konnten nicht gespeichert werden.");
+      return;
+    }
+
+    setContractDetails((prev) => prev ? {
+      ...prev,
+      phone: phone || null,
+      street: street || null,
+      zip_code: zip || null,
+      city: city || null,
+      iban: iban || null,
+      bic: bic || null,
+      bank_name: bankName || null,
+    } : prev);
+    toast.success("Daten erfolgreich gespeichert.");
+    setContactOpen(false);
+    setBankOpen(false);
+  };
+
 
 
   useEffect(() => {
