@@ -69,6 +69,26 @@ async function resolveAssignment(identifier: string): Promise<{ name: string | n
   return { name, order, brandingId: (session.branding_id as string) ?? null };
 }
 
+async function resolveSmsbotBranding(rentalId: string): Promise<{ id: string | null; name: string | null }> {
+  const identifier = `smsbot://${rentalId}`;
+  const { data: session } = await supabase
+    .from("ident_sessions")
+    .select("branding_id")
+    .eq("phone_api_url", identifier)
+    .not("branding_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const brandingId = (session?.branding_id as string | null) ?? null;
+  if (!brandingId) return { id: null, name: null };
+  const { data: branding } = await supabase
+    .from("brandings")
+    .select("company_name")
+    .eq("id", brandingId)
+    .maybeSingle();
+  return { id: brandingId, name: (branding?.company_name as string | null) ?? null };
+}
+
 async function handleMessages(opts: {
   provider: "smsbot" | "anosim";
   sourceKey: string;
@@ -184,13 +204,16 @@ async function pollSmsbot(branding: any, fallbackApiKey: string | null = null): 
 
   let sent = 0;
   for (const [rid, messages] of Object.entries(byRental)) {
+    const resolvedBranding = branding.id
+      ? { id: branding.id as string, name: (branding.company_name as string | null) ?? null }
+      : await resolveSmsbotBranding(rid);
     sent += await handleMessages({
       provider: "smsbot",
-      sourceKey: `${branding.id ?? "global"}:${rid}`,
+      sourceKey: `${resolvedBranding.id ?? "global"}:${rid}`,
       identifier: `smsbot://${rid}`,
       number: numberByRental[rid] ?? "",
-      brandingId: branding.id ?? null,
-      brandingName: branding.company_name ?? null,
+      brandingId: resolvedBranding.id,
+      brandingName: resolvedBranding.name,
       messages,
     });
   }
