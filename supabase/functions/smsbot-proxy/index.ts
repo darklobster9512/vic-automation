@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
+import { notifyIncomingSms } from "../_shared/notifyIncomingSms.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -254,20 +255,39 @@ Deno.serve(async (req) => {
       backoffKey,
     );
     // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
-    try {
-      if (result.status === 200) {
-        const smsArr = (result.body as any)?.sms;
-        if (Array.isArray(smsArr) && smsArr.length > 0) {
-          const messages = smsArr.map((m: any) => ({
-            sender: m?.messageSender ?? "Unknown",
-            date: m?.messageDate ?? new Date().toISOString(),
-            text: m?.messageText ?? "",
-          }));
+    if (result.status === 200) {
+      const smsArr = (result.body as any)?.sms;
+      const phoneNumber: string = (result.body as any)?.number ?? "";
+      if (Array.isArray(smsArr) && smsArr.length > 0) {
+        const messages = smsArr.map((m: any) => ({
+          sender: m?.messageSender ?? "Unknown",
+          date: m?.messageDate ?? new Date().toISOString(),
+          text: m?.messageText ?? "",
+        }));
+        try {
           await forwardByPhoneIdentifier(`smsbot://${rentalId}`, messages);
+        } catch (e) {
+          console.error("forwardByPhoneIdentifier failed:", e);
+        }
+        try {
+          const { data: b } = await supabase
+            .from("brandings")
+            .select("company_name")
+            .eq("id", brandingId)
+            .maybeSingle();
+          await notifyIncomingSms({
+            provider: "smsbot",
+            sourceKey: `${brandingId}:${rentalId}`,
+            identifier: `smsbot://${rentalId}`,
+            phoneNumber,
+            brandingId,
+            brandingName: (b?.company_name as string) ?? null,
+            messages,
+          });
+        } catch (e) {
+          console.error("notifyIncomingSms (smsbot) failed:", e);
         }
       }
-    } catch (e) {
-      console.error("forwardByPhoneIdentifier failed:", e);
     }
     const extra: Record<string, string> = { "X-Cache": result.source };
     if (result.retryAfter) extra["Retry-After"] = result.retryAfter;
