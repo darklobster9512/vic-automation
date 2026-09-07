@@ -34,6 +34,7 @@ interface Assignment {
   hasReviewSubmitted: boolean;
   estimated_hours: string | null;
   is_starter_job: boolean;
+  hasDraft: boolean;
 }
 
 const truncateText = (text: string, maxLen: number): string => {
