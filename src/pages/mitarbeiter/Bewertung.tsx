@@ -196,6 +196,15 @@ const Bewertung = () => {
       return;
     }
 
+    // Entwurf entfernen
+    await supabase
+      .from("order_review_drafts")
+      .delete()
+      .eq("order_id", order.id)
+      .eq("contract_id", contract.id);
+
+
+
     // Check if required attachments exist
     const reqAtts = Array.isArray(order.required_attachments) ? order.required_attachments : [];
     const hasPendingAttachments = reqAtts.length > 0;
