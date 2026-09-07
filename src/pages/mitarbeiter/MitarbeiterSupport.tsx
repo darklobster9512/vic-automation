@@ -234,6 +234,7 @@ function CreateTicketDialog({
       const { data: ticket, error } = await supabase
         .from("support_tickets")
         .insert({
+          ticket_number: "", // wird per Datenbank-Trigger vergeben
           user_id: userId,
           contract_id: contractId,
           branding_id: brandingId,
