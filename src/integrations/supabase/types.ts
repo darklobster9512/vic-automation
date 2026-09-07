@@ -2435,6 +2435,18 @@ export type Database = {
         Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
+      update_own_contract_details: {
+        Args: {
+          _bank_name: string
+          _bic: string
+          _city: string
+          _iban: string
+          _phone: string
+          _street: string
+          _zip_code: string
+        }
+        Returns: undefined
+      }
       update_trial_day_status: {
         Args: { _appointment_id: string; _status: string }
         Returns: undefined
