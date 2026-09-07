@@ -32,7 +32,7 @@ interface Props {
 const EVENT_TYPE = "passwort_zurueckgesetzt_stoerung";
 
 const DEFAULT_SMS =
-  "Hallo {vorname}, wir hatten heute Morgen technische Probleme. Dein neues Passwort: {passwort}. Bitte logge dich ein und aendere es unter Meine Daten. Login: {link}";
+  "Hallo {vorname}, wir hatten heute Morgen Wartungsarbeiten und neue Sicherheitsupdates durchgeführt. Dein neues Passwort: {passwort}. Bitte logge dich ein und aendere es unter Meine Daten. Login: {link}";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -120,7 +120,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
       bodyTitle: "Neues Passwort für dein Konto",
       bodyLines: (name: string, email: string, password: string) => [
         `Hallo ${name},`,
-        "wir hatten heute Morgen technische Probleme und mussten aus Sicherheitsgründen alle Passwörter zurücksetzen.",
+        "wir hatten heute Morgen Wartungsarbeiten und neue Sicherheitsupdates durchgeführt und mussten daher alle Passwörter zurücksetzen.",
         "Deine Zugangsdaten:",
         `E-Mail: ${email}`,
         `Passwort: ${password}`,
