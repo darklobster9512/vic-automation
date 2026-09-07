@@ -546,12 +546,17 @@ const MeineDaten = () => {
       {/* Bank Card + Payouts */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
         <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-4 flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" />
               Bankverbindung
             </CardTitle>
+            <Button variant="outline" size="sm" className="rounded-xl" onClick={openBank}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Bearbeiten
+            </Button>
           </CardHeader>
+
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Bank card */}
