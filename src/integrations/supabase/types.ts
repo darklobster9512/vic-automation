@@ -14,15 +14,37 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_permissions: {
+        Row: {
+          allowed_path: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          allowed_path: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          allowed_path?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           branding_id: string | null
           city: string | null
           created_at: string
-          email: string
-          employment_type: string
+          email: string | null
+          employment_type: string | null
           first_name: string
           id: string
+          is_indeed: boolean
           last_name: string
           phone: string | null
           resume_url: string | null
@@ -34,10 +56,11 @@ export type Database = {
           branding_id?: string | null
           city?: string | null
           created_at?: string
-          email: string
-          employment_type: string
+          email?: string | null
+          employment_type?: string | null
           first_name: string
           id?: string
+          is_indeed?: boolean
           last_name: string
           phone?: string | null
           resume_url?: string | null
@@ -49,10 +72,11 @@ export type Database = {
           branding_id?: string | null
           city?: string | null
           created_at?: string
-          email?: string
-          employment_type?: string
+          email?: string | null
+          employment_type?: string | null
           first_name?: string
           id?: string
+          is_indeed?: boolean
           last_name?: string
           phone?: string | null
           resume_url?: string | null
@@ -70,6 +94,44 @@ export type Database = {
           },
         ]
       }
+      branding_schedule_settings: {
+        Row: {
+          available_days: number[]
+          branding_id: string
+          created_at: string
+          end_time: string
+          id: string
+          slot_interval_minutes: number
+          start_time: string
+        }
+        Insert: {
+          available_days?: number[]
+          branding_id: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Update: {
+          available_days?: number[]
+          branding_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branding_schedule_settings_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: true
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brandings: {
         Row: {
           brand_color: string | null
@@ -81,6 +143,7 @@ export type Database = {
           id: string
           logo_url: string | null
           managing_director: string | null
+          phone: string | null
           register_court: string | null
           resend_api_key: string | null
           resend_from_email: string | null
@@ -101,6 +164,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           managing_director?: string | null
+          phone?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
@@ -121,6 +185,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           managing_director?: string | null
+          phone?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
@@ -140,6 +205,7 @@ export type Database = {
           contract_id: string
           created_at: string
           id: string
+          metadata: Json | null
           read: boolean
           sender_role: string
         }
@@ -149,6 +215,7 @@ export type Database = {
           contract_id: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           read?: boolean
           sender_role: string
         }
@@ -158,6 +225,7 @@ export type Database = {
           contract_id?: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           read?: boolean
           sender_role?: string
         }
@@ -259,6 +327,7 @@ export type Database = {
           id: string
           id_back_url: string | null
           id_front_url: string | null
+          is_suspended: boolean
           last_name: string | null
           marital_status: string | null
           nationality: string | null
@@ -293,6 +362,7 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
@@ -327,6 +397,7 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
@@ -383,6 +454,41 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_appointment_blocked_slots: {
+        Row: {
+          blocked_date: string
+          blocked_time: string
+          branding_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          blocked_time: string
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          blocked_time?: string
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_appointment_blocked_slots_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
             referencedColumns: ["id"]
           },
         ]
@@ -558,6 +664,24 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_numbers: {
+        Row: {
+          api_url: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          api_url: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          api_url?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -579,6 +703,95 @@ export type Database = {
           display_name?: string | null
           full_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      schedule_blocked_slots: {
+        Row: {
+          blocked_date: string
+          blocked_time: string
+          branding_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          blocked_time: string
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          blocked_time?: string
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_blocked_slots_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_settings: {
+        Row: {
+          available_days: number[]
+          created_at: string
+          end_time: string
+          id: string
+          interval_change_date: string | null
+          new_slot_interval_minutes: number | null
+          slot_interval_minutes: number
+          start_time: string
+        }
+        Insert: {
+          available_days?: number[]
+          created_at?: string
+          end_time?: string
+          id?: string
+          interval_change_date?: string | null
+          new_slot_interval_minutes?: number | null
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Update: {
+          available_days?: number[]
+          created_at?: string
+          end_time?: string
+          id?: string
+          interval_change_date?: string | null
+          new_slot_interval_minutes?: number | null
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Relationships: []
+      }
+      short_links: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          target_url: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          target_url: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          target_url?: string
         }
         Relationships: []
       }
@@ -615,6 +828,68 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_spoof_logs: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          recipient_name: string | null
+          recipient_phone: string
+          sender_name: string
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          recipient_name?: string | null
+          recipient_phone: string
+          sender_name: string
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          sender_name?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_spoof_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "sms_spoof_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_spoof_templates: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          message: string
+          sender_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          message: string
+          sender_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          message?: string
+          sender_name?: string
+        }
+        Relationships: []
+      }
       sms_templates: {
         Row: {
           event_type: string
@@ -636,6 +911,33 @@ export type Database = {
           label?: string
           message?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_chats: {
+        Row: {
+          branding_ids: string[]
+          chat_id: string
+          created_at: string
+          events: string[]
+          id: string
+          label: string
+        }
+        Insert: {
+          branding_ids?: string[]
+          chat_id: string
+          created_at?: string
+          events?: string[]
+          id?: string
+          label?: string
+        }
+        Update: {
+          branding_ids?: string[]
+          chat_id?: string
+          created_at?: string
+          events?: string[]
+          id?: string
+          label?: string
         }
         Relationships: []
       }
@@ -714,7 +1016,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "kunde"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -842,7 +1144,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "kunde"],
     },
   },
 } as const
