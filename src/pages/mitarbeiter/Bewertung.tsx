@@ -163,6 +163,7 @@ const Bewertung = () => {
   const questions = order ? parseQuestions(order.review_questions) : [];
 
   const updateAnswer = (idx: number, patch: Partial<ReviewAnswer>) => {
+    dirtyRef.current = true;
     setAnswers((prev) => prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
   };
 
