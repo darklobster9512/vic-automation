@@ -350,16 +350,34 @@ const Bewertung = () => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 + questions.length * 0.05 }}
+        className="space-y-3"
       >
-        <Button
-          onClick={handleSubmit}
-          disabled={!isValid || submitting}
-          size="lg"
-          className="w-full gap-2"
-        >
-          <Send className="h-4 w-4" />
-          {submitting ? "Wird abgeschickt..." : "Bewertung abschicken"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            variant="outline"
+            onClick={() => saveDraft(false)}
+            disabled={savingDraft || submitting}
+            size="lg"
+            className="gap-2 sm:w-64"
+          >
+            <Save className="h-4 w-4" />
+            {savingDraft ? "Wird gespeichert..." : "Als Entwurf speichern"}
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!isValid || submitting}
+            size="lg"
+            className="flex-1 gap-2"
+          >
+            <Send className="h-4 w-4" />
+            {submitting ? "Wird abgeschickt..." : "Bewertung abschicken"}
+          </Button>
+        </div>
+        {lastSavedAt && (
+          <p className="text-xs text-muted-foreground text-center">
+            Zuletzt gespeichert: {lastSavedAt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        )}
       </motion.div>
     </div>
   );
