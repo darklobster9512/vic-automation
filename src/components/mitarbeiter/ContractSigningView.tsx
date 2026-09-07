@@ -93,7 +93,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
       if (!session) throw new Error("Nicht eingeloggt");
 
       const res = await fetch(
-        `https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/sign-contract`,
+        `https://gzgfyuftjvezqjkosntu.supabase.co/functions/v1/sign-contract`,
         {
           method: "POST",
           headers: {

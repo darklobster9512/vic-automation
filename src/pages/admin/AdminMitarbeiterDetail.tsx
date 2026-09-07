@@ -791,7 +791,7 @@ export default function AdminMitarbeiterDetail() {
       }
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/create-employee-account`,
+        `https://gzgfyuftjvezqjkosntu.supabase.co/functions/v1/create-employee-account`,
         {
           method: "POST",
           headers: {
