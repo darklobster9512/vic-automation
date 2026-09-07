@@ -242,6 +242,21 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: ticketsUnreadCount } = useQuery({
+    queryKey: ["badge-tickets-unread", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("support_tickets")
+        .select("*", { count: "exact", head: true })
+        .eq("branding_id", activeBrandingId!)
+        .eq("unread_for_admin", true)
+        .neq("status", "geschlossen");
+      return count ?? 0;
+    },
+    refetchInterval: 15000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
@@ -251,6 +266,7 @@ export function AdminSidebar() {
     "/admin/idents": identWaitingCount ?? 0,
     "/admin/anhaenge": anhaengeEingereichtCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
+    "/admin/tickets": ticketsUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };
 
