@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound, Banknote, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound, Banknote, BarChart3, LifeBuoy } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -66,6 +66,7 @@ const navGroups = [
       { title: "BD Status", url: "/admin/bd-status", icon: Banknote },
       { title: "Idents", url: "/admin/idents", icon: Video },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
+      { title: "Tickets", url: "/admin/tickets", icon: LifeBuoy },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
       { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },
@@ -241,6 +242,21 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: ticketsUnreadCount } = useQuery({
+    queryKey: ["badge-tickets-unread", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("support_tickets")
+        .select("*", { count: "exact", head: true })
+        .eq("branding_id", activeBrandingId!)
+        .eq("unread_for_admin", true)
+        .neq("status", "geschlossen");
+      return count ?? 0;
+    },
+    refetchInterval: 15000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
@@ -250,6 +266,7 @@ export function AdminSidebar() {
     "/admin/idents": identWaitingCount ?? 0,
     "/admin/anhaenge": anhaengeEingereichtCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
+    "/admin/tickets": ticketsUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };
 

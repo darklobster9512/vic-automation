@@ -25,6 +25,8 @@ import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminAnhaengeDetail from "./pages/admin/AdminAnhaengeDetail";
 import AdminLivechat from "./pages/admin/AdminLivechat";
+import AdminTickets from "./pages/admin/AdminTickets";
+import MitarbeiterSupport from "./pages/mitarbeiter/MitarbeiterSupport";
 import AdminLivechatEinstellungen from "./pages/admin/AdminLivechatEinstellungen";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminIdents from "./pages/admin/AdminIdents";
@@ -100,6 +102,7 @@ const AuthenticatedRoutes = () => (
         <Route path="idents" element={<AdminIdents />} />
         <Route path="idents/:id" element={<AdminIdentDetail />} />
         <Route path="livechat" element={<AdminLivechat />} />
+        <Route path="tickets" element={<AdminTickets />} />
         <Route path="livechat-einstellungen" element={<AdminLivechatEinstellungen />} />
         <Route path="bewertungen" element={<AdminBewertungen />} />
         <Route path="emails" element={<AdminEmails />} />
@@ -131,6 +134,7 @@ const AuthenticatedRoutes = () => (
         <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
         <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
         <Route path="meine-daten" element={<MeineDaten />} />
+        <Route path="support" element={<MitarbeiterSupport />} />
         <Route path="faq" element={<MitarbeiterFaq />} />
       </Route>
       <Route path="*" element={<NotFound />} />

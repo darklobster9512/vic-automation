@@ -25,6 +25,8 @@ const EVENT_TYPES = [
   { key: "ident_gestartet", label: "Ident gestartet", desc: "Mitarbeiter startet Video-Identifizierung" },
   { key: "auftragstermin_gebucht", label: "Auftragstermin gebucht", desc: "Mitarbeiter bucht einen Auftragstermin" },
   { key: "erster_arbeitstag_gebucht", label: "Erster Arbeitstag gebucht", desc: "Mitarbeiter bucht den ersten Arbeitstag" },
+  { key: "ticket_neu", label: "Neues Support-Ticket", desc: "Mitarbeiter erstellt ein Support-Ticket" },
+  { key: "ticket_antwort", label: "Ticket-Antwort", desc: "Mitarbeiter antwortet in einem Support-Ticket" },
   { key: "chat_nachricht", label: "Chat-Nachricht", desc: "Mitarbeiter schreibt im Livechat" },
   { key: "bewertung_eingereicht", label: "Bewertung eingereicht", desc: "Mitarbeiter schickt Bewertung ab" },
   { key: "email_tan_angefordert", label: "Email TAN angefordert", desc: "Mitarbeiter wartet auf Email TAN Eingabe" },

@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.support_ticket_before_insert() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.support_ticket_message_after_insert() FROM PUBLIC, anon, authenticated;
