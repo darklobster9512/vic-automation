@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildEmailHtml } from "@/lib/buildEmailHtml";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
-import { createShortLink } from "@/lib/createShortLink";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { toast } from "sonner";
 import { Loader2, Megaphone } from "lucide-react";
@@ -32,7 +31,7 @@ interface Props {
 const EVENT_TYPE = "passwort_zurueckgesetzt_stoerung";
 
 const DEFAULT_SMS =
-  "Hallo {vorname}, wir hatten heute Morgen Wartungsarbeiten und neue Sicherheitsupdates durchgeführt. Dein neues Passwort: {passwort}. Bitte logge dich ein und aendere es unter Meine Daten. Login: {link}";
+  "Hallo {vorname}, wir hatten heute Morgen Wartungsarbeiten und neue Sicherheitsupdates durchgeführt. Dein neues Passwort: {passwort}. Bitte logge dich ein und ändere es unter Meine Daten. Login: {link}";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
