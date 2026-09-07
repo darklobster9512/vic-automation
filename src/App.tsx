@@ -135,6 +135,8 @@ const AuthenticatedRoutes = () => (
         <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
         <Route path="meine-daten" element={<MeineDaten />} />
         <Route path="support" element={<MitarbeiterSupport />} />
+        <Route path="support/neu" element={<MitarbeiterSupportNeu />} />
+        <Route path="support/:id" element={<MitarbeiterSupportDetail />} />
         <Route path="faq" element={<MitarbeiterFaq />} />
       </Route>
       <Route path="*" element={<NotFound />} />
