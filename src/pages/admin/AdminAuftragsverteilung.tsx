@@ -269,7 +269,7 @@ export default function AdminAuftragsverteilung() {
           <TabsList>
             {data.hoursList.map((h) => (
               <TabsTrigger key={h} value={String(h)}>
-                {h} Std.
+                {h === 0 ? "Ohne Stundenangabe" : `${h} Std.`}
                 <Badge variant="secondary" className="ml-2 text-[10px]">
                   {data.employees.filter((e) => e.hours === h).length}
                 </Badge>
