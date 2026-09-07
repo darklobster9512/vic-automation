@@ -1,19 +1,22 @@
-# Störungs-Mails hängen in der Warteschlange
+# E-Mail-Warteschlange abschalten – alles direkt versenden
 
-## Was aktuell passiert
-- SMS gehen direkt raus, deshalb kommen sie an.
-- E-Mails werden über die interne Warteschlange (`email_queue`) verschickt. Aktuell liegen dort **94 Mails auf „pending"** vom heutigen Versand — keine wurde abgearbeitet.
-- In den Laufzeitprotokollen gibt es **keinen einzigen Aufruf** von `process-email-queue`. Deshalb sieht auch Resend nichts: Die Mails verlassen die Datenbank derzeit überhaupt nicht.
-- Bestätigter Grund: Es gibt keinen aktiven Zeitplan, der die Warteschlange leert. Die zuständige Funktion existiert, wird aber von niemandem regelmäßig aufgerufen (nur `send-appointment-reminders` läuft stündlich).
-- Ergebnis: Solange nichts die Warteschlange abarbeitet, bleibt jede neue Störungs-Mail einfach liegen.
+## Ziel
+Keine Zwischenlagerung mehr: Jede E-Mail geht sofort raus, so wie es bei SMS heute schon läuft. Für die 94 Mails, die aktuell in der Warteschlange festhängen, wird der Direktversand nachträglich einmal manuell ausgelöst, damit sie noch heute ankommen.
 
-## Vorschlag zur Behebung
-1. **Sofort**: Warteschlange einmalig manuell abarbeiten, damit die 94 wartenden Störungs-Mails jetzt rausgehen.
-2. **Dauerhaft**: Einen Minutentakt (Cronjob) einrichten, der `process-email-queue` automatisch alle 60 Sekunden aufruft. Damit werden alle künftigen E-Mails wieder zuverlässig zugestellt — nicht nur die Störungs-Info, auch alle anderen automatischen Mails.
-3. Den Störungs-Dialog auf Direktversand umstellen, damit weitere Störungs-Mails nicht erst auf den Minutentakt warten und ein Fehler sofort sichtbar wird.
-4. Danach Queue-Status und Resend-Ergebnis kontrollieren; fehlgeschlagene Datensätze werden mit der konkreten Resend-Fehlermeldung ausgewiesen.
+## Was sich für dich ändert
+- Beim „Störungs-Info senden" (und überall sonst) landet jede E-Mail direkt bei Resend – kein Umweg über die Warteschlange.
+- Fehler siehst du sofort in der Erfolgsmeldung, statt sie in einer stummen Queue zu verlieren.
+- Die 94 wartenden Störungs-Mails werden einmalig nachträglich rausgeschickt.
+
+## Umsetzung
+1. Im E-Mail-Versand (`sendEmail`) und im Störungs-Dialog wird der Direktmodus zum Standard – die Queue-Option wird nicht mehr genutzt.
+2. Die Server-Funktion, die E-Mails annimmt, geht bei jedem Aufruf sofort in den Direktversand; der Queue-Zweig wird entfernt.
+3. Für die 94 wartenden Einträge: ein einmaliger Aufruf, der pro Eintrag die Mail direkt an Resend schickt, den Eintrag als versendet markiert und ins E-Mail-Log schreibt.
+4. Optional (empfohlen): Danach werden Warteschlangen-Tabelle und der (aktuell ohnehin nicht laufende) Warteschlangen-Prozessor stillgelegt, damit nichts mehr versehentlich in die Queue geschrieben wird.
 
 ## Technische Details
-- Migration: `pg_cron`-Job „process-email-queue-minutely" mit `*/1 * * * *`, ruft per `net.http_post` die Edge-Function `process-email-queue` auf (analog zum bestehenden Reminder-Job).
-- Wiederholte manuelle Aufrufe der Function nach Einrichtung, bis die 94 Pending-Einträge vollständig verarbeitet wurden (pro Aufruf werden aktuell fünf E-Mails beansprucht).
-- `bypass_queue: true` wird für neue Sendungen aus `DomainAnnouncementDialog.tsx` gesetzt.
+- `src/lib/sendEmail.ts`: setzt intern immer `bypass_queue: true`.
+- `supabase/functions/send-email/index.ts`: nur noch der Direktpfad, kein `enqueue_email` mehr; `bypass_queue`-Flag wird ignoriert (immer direkt).
+- `src/components/admin/DomainAnnouncementDialog.tsx`: keine Änderung nötig, da `sendEmail` bereits direkt sendet; ggf. explizite `bypass_queue: true` Übergabe entfernen.
+- Nachversand der 94 offenen Einträge: neue Edge-Function `flush-email-queue` (einmalig ausgeführt), die alle `pending`/`sending` Rows aus `email_queue` liest, pro Row `send-email` (Direktmodus) aufruft und danach `status='sent'` setzt. Wird nach Deploy einmal per Tool aufgerufen und danach nicht mehr benötigt.
+- Aufräumen (optional, im selben Schritt): `process-email-queue` löschen; `enqueue_email`-RPC und `email_queue`-Tabelle bleiben zunächst bestehen, werden aber nicht mehr beschrieben (kein Datenverlust, keine Migration-Risiken für andere Stellen).
