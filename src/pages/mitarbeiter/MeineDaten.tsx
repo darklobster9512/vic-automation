@@ -258,6 +258,12 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
+      {/* Passwort ändern */}
+      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
+        <PasswordChangeCard />
+      </motion.div>
+
+
       {/* Arbeitsvertrag */}
       {contract && (contract.status === "genehmigt" || contract.status === "eingereicht" || contract?.signed_contract_pdf_url) && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
