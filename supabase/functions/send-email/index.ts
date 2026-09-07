@@ -27,152 +27,147 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+  let body: EmailRequest;
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    body = await req.json();
+  } catch (err) {
+    return new Response(JSON.stringify({ error: `Invalid JSON: ${String(err)}` }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
-    const body: EmailRequest = await req.json();
-    const {
-      to, recipient_name, subject, body_title, body_lines,
-      button_text, button_url, footer_lines, branding_id, event_type, metadata,
-      bypass_queue,
-    } = body;
+  const {
+    to, recipient_name, subject, body_title, body_lines,
+    button_text, button_url, footer_lines, branding_id, event_type, metadata,
+  } = body;
 
-    if (!to || !subject || !event_type) {
-      return new Response(JSON.stringify({ error: "to, subject und event_type erforderlich" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+  if (!to || !subject || !event_type) {
+    return new Response(JSON.stringify({ error: "to, subject und event_type erforderlich" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
-    // Direktversand ohne Queue (z. B. Panel-Link-Mails)
-    if (bypass_queue) {
-      try {
-        if (!branding_id) throw new Error("branding_id fuer Direktversand erforderlich");
-
-        const { data: branding } = await adminClient
-          .from("brandings")
-          .select("company_name, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url")
-          .eq("id", branding_id)
+  try {
+    // Branding auflösen (direkt oder über contract_id-Metadata)
+    let effectiveBrandingId = branding_id ?? null;
+    if (!effectiveBrandingId && metadata && typeof metadata === "object" && "contract_id" in metadata) {
+      const contractId = (metadata as any).contract_id as string;
+      const { data: contractRow } = await adminClient
+        .from("employment_contracts")
+        .select("branding_id, user_id")
+        .eq("id", contractId)
+        .single();
+      if (contractRow?.user_id) {
+        const { data: profile } = await adminClient
+          .from("profiles")
+          .select("branding_id")
+          .eq("id", contractRow.user_id)
           .single();
-
-        const resendApiKey = branding?.resend_api_key;
-        if (!resendApiKey) throw new Error("Keine Resend-Konfiguration fuer dieses Branding vorhanden");
-
-        const companyName = branding?.company_name || "Unternehmen";
-        const brandColor = branding?.brand_color || "#3B82F6";
-        const fromEmail = branding?.resend_from_email || "noreply@example.com";
-        const fromName = branding?.resend_from_name || companyName;
-        const footerAddress = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()]
-          .filter(Boolean)
-          .join(", ");
-
-        const html = buildEmailHtml({
-          companyName,
-          brandColor,
-          bodyTitle: body_title,
-          bodyLines: Array.isArray(body_lines) ? body_lines : [],
-          buttonText: button_text || undefined,
-          buttonUrl: button_url || undefined,
-          footerLines: Array.isArray(footer_lines) ? footer_lines : undefined,
-          footerAddress,
-          footerDetails: {
-            managingDirector: branding?.managing_director || undefined,
-            phone: branding?.phone || undefined,
-            registerCourt: branding?.register_court || undefined,
-            tradeRegister: branding?.trade_register || undefined,
-            vatId: branding?.vat_id || undefined,
-          },
-          emailLogoEnabled: branding?.email_logo_enabled || false,
-          emailLogoUrl: branding?.email_logo_url || undefined,
-        });
-
-        const resendRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify({
-            from: `${fromName} <${fromEmail}>`,
-            to: [to],
-            subject,
-            html,
-          }),
-        });
-
-        const resendResult = await resendRes.json();
-        if (!resendRes.ok) {
-          throw new Error(resendResult?.message || JSON.stringify(resendResult));
-        }
-
-        await adminClient.from("email_logs").insert({
-          event_type,
-          recipient_email: to,
-          recipient_name: recipient_name ?? null,
-          subject,
-          branding_id,
-          status: "sent",
-          metadata: metadata ?? {},
-        });
-
-        return new Response(JSON.stringify({ success: true, queued: false, direct: true }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch (directErr) {
-        const msg = directErr instanceof Error ? directErr.message : String(directErr);
-        console.error("send-email direct failed:", msg);
-
-        await adminClient.from("email_logs").insert({
-          event_type,
-          recipient_email: to,
-          recipient_name: recipient_name ?? null,
-          subject,
-          branding_id: branding_id ?? null,
-          status: "failed",
-          error_message: msg,
-          metadata: metadata ?? {},
-        });
-
-        return new Response(JSON.stringify({ error: msg }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        effectiveBrandingId = profile?.branding_id ?? contractRow.branding_id ?? null;
+      } else {
+        effectiveBrandingId = contractRow?.branding_id ?? null;
       }
     }
 
+    if (!effectiveBrandingId) throw new Error("Kein Branding fuer diese E-Mail ermittelbar");
 
-    const { data: queueId, error } = await adminClient.rpc("enqueue_email", {
-      _to: to,
-      _recipient_name: recipient_name ?? null,
-      _subject: subject,
-      _body_title: body_title,
-      _body_lines: body_lines ?? [],
-      _button_text: button_text ?? null,
-      _button_url: button_url ?? null,
-      _footer_lines: footer_lines ?? null,
-      _branding_id: branding_id ?? null,
-      _event_type: event_type,
-      _metadata: metadata ?? {},
+    const { data: branding } = await adminClient
+      .from("brandings")
+      .select("company_name, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url")
+      .eq("id", effectiveBrandingId)
+      .single();
+
+    const resendApiKey = branding?.resend_api_key;
+    if (!resendApiKey) throw new Error("Keine Resend-Konfiguration fuer dieses Branding vorhanden");
+
+    const companyName = branding?.company_name || "Unternehmen";
+    const brandColor = branding?.brand_color || "#3B82F6";
+    const fromEmail = branding?.resend_from_email || "noreply@example.com";
+    const fromName = branding?.resend_from_name || companyName;
+    const footerAddress = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()]
+      .filter(Boolean)
+      .join(", ");
+
+    const suppressLogo =
+      event_type === "bewerbung_angenommen" ||
+      event_type === "bewerbung_angenommen_extern_meta" ||
+      event_type === "bewerbung_angenommen_extern";
+
+    const html = buildEmailHtml({
+      companyName,
+      brandColor,
+      bodyTitle: body_title,
+      bodyLines: Array.isArray(body_lines) ? body_lines : [],
+      buttonText: button_text || undefined,
+      buttonUrl: button_url || undefined,
+      footerLines: Array.isArray(footer_lines) ? footer_lines : undefined,
+      footerAddress,
+      footerDetails: {
+        managingDirector: branding?.managing_director || undefined,
+        phone: branding?.phone || undefined,
+        registerCourt: branding?.register_court || undefined,
+        tradeRegister: branding?.trade_register || undefined,
+        vatId: branding?.vat_id || undefined,
+      },
+      emailLogoEnabled: suppressLogo ? false : (branding?.email_logo_enabled || false),
+      emailLogoUrl: suppressLogo ? undefined : (branding?.email_logo_url || undefined),
     });
 
-    if (error) {
-      console.error("enqueue_email error:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+
+    const resendResult = await resendRes.json();
+    if (!resendRes.ok) {
+      throw new Error(resendResult?.message || JSON.stringify(resendResult));
     }
 
-    return new Response(JSON.stringify({ success: true, queued: true, queue_id: queueId }), {
-      status: 202,
+    await adminClient.from("email_logs").insert({
+      event_type,
+      recipient_email: to,
+      recipient_name: recipient_name ?? null,
+      subject,
+      branding_id: effectiveBrandingId,
+      status: "sent",
+      metadata: metadata ?? {},
+    });
+
+    return new Response(JSON.stringify({ success: true, direct: true }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("send-email error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("send-email failed:", msg);
+
+    await adminClient.from("email_logs").insert({
+      event_type,
+      recipient_email: to,
+      recipient_name: recipient_name ?? null,
+      subject,
+      branding_id: branding_id ?? null,
+      status: "failed",
+      error_message: msg,
+      metadata: metadata ?? {},
+    });
+
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
