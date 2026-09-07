@@ -648,6 +648,64 @@ const MeineDaten = () => {
       )}
     </div>
 
+      <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Kontaktdaten bearbeiten</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="md-phone">Telefon</Label>
+              <Input id="md-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} maxLength={20} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="md-street">Straße und Hausnummer</Label>
+              <Input id="md-street" value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} maxLength={120} />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="md-zip">PLZ</Label>
+                <Input id="md-zip" value={form.zip_code} onChange={(e) => setForm({ ...form, zip_code: e.target.value })} maxLength={10} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label htmlFor="md-city">Ort</Label>
+                <Input id="md-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} maxLength={80} />
+              </div>
+            </div>
+            <Button className="w-full rounded-xl" onClick={() => saveDetails("contact")} disabled={savingDetails}>
+              {savingDetails ? "Wird gespeichert..." : "Speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bankOpen} onOpenChange={setBankOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bankverbindung bearbeiten</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="md-iban">IBAN</Label>
+              <Input id="md-iban" value={form.iban} onChange={(e) => setForm({ ...form, iban: e.target.value })} maxLength={40} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="md-bic">BIC (optional)</Label>
+              <Input id="md-bic" value={form.bic} onChange={(e) => setForm({ ...form, bic: e.target.value })} maxLength={11} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="md-bank">Bank (optional)</Label>
+              <Input id="md-bank" value={form.bank_name} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} maxLength={80} />
+            </div>
+            <Button className="w-full rounded-xl" onClick={() => saveDetails("bank")} disabled={savingDetails}>
+              {savingDetails ? "Wird gespeichert..." : "Speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+
       <Dialog open={contractViewOpen} onOpenChange={setContractViewOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
