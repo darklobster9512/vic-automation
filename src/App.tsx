@@ -27,6 +27,8 @@ import AdminAnhaengeDetail from "./pages/admin/AdminAnhaengeDetail";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminTickets from "./pages/admin/AdminTickets";
 import MitarbeiterSupport from "./pages/mitarbeiter/MitarbeiterSupport";
+import MitarbeiterSupportNeu from "./pages/mitarbeiter/MitarbeiterSupportNeu";
+import MitarbeiterSupportDetail from "./pages/mitarbeiter/MitarbeiterSupportDetail";
 import AdminLivechatEinstellungen from "./pages/admin/AdminLivechatEinstellungen";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminIdents from "./pages/admin/AdminIdents";
@@ -135,6 +137,8 @@ const AuthenticatedRoutes = () => (
         <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
         <Route path="meine-daten" element={<MeineDaten />} />
         <Route path="support" element={<MitarbeiterSupport />} />
+        <Route path="support/neu" element={<MitarbeiterSupportNeu />} />
+        <Route path="support/:id" element={<MitarbeiterSupportDetail />} />
         <Route path="faq" element={<MitarbeiterFaq />} />
       </Route>
       <Route path="*" element={<NotFound />} />
