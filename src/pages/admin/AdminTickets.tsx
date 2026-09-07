@@ -327,6 +327,7 @@ function TicketDetailPanel({
   const [internal, setInternal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
