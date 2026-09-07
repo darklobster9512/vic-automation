@@ -159,13 +159,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
     let sms = 0;
     let failed = 0;
 
-    const loginUrl = await buildBrandingUrl(brandingId, "/auth");
-    let shortLink = loginUrl;
-    try {
-      shortLink = await createShortLink(loginUrl, brandingId);
-    } catch {
-      /* Fallback: direkter Link */
-    }
+    const loginUrl = await buildBrandingUrl(brandingId, "");
 
     for (let i = 0; i < recipients.length; i++) {
       const r = recipients[i];
@@ -193,7 +187,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
         const text = smsText
           .replace(/\{vorname\}/g, r.first_name || "")
           .replace(/\{passwort\}/g, r.temp_password)
-          .replace(/\{link\}/g, shortLink);
+          .replace(/\{link\}/g, loginUrl);
         try {
           await sendSms({
             to: r.phone,
@@ -250,7 +244,7 @@ export default function DomainAnnouncementDialog({ brandingId, open, onOpenChang
                 onChange={(e) => setSmsText(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Platzhalter: {"{vorname}"}, {"{passwort}"}, {"{link}"} (Login-Link)
+                Platzhalter: {"{vorname}"}, {"{passwort}"}, {"{link}"} (direkter Panel-Link)
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
