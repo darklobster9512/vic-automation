@@ -862,15 +862,13 @@ export default function AdminMitarbeiterDetail() {
                   data={{ ...contract, template_title: (contract as any)?.contract_templates?.title ?? "" }}
                   onSave={saveFields}
                 />
-                {(contract as any)?.contract_templates?.title && (
-                  <div className="flex justify-between items-center py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      Vertragsform
-                    </span>
-                    <span className="text-sm font-medium text-foreground">{(contract as any).contract_templates.title}</span>
-                  </div>
-                )}
+                <ContractTemplateRow
+                  contractId={contract.id}
+                  brandingId={(contract as any).branding_id ?? null}
+                  templateId={(contract as any).template_id ?? null}
+                  templateTitle={(contract as any)?.contract_templates?.title ?? null}
+                  onSaved={invalidateAll}
+                />
                 <EditableDualSection
                   leftTitle="Bankverbindung"
                   leftIcon={<CreditCard className="h-4 w-4 text-green-500" />}
