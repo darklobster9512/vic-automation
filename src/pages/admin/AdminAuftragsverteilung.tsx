@@ -141,7 +141,11 @@ export default function AdminAuftragsverteilung() {
       (targetRows as any[] | null)?.forEach((r) => { targets[r.hours] = r.orders_per_day; });
 
       const employees = eligible.map((c) => {
-        const hours = templateHours[c.template_id] ?? null;
+        // Stunden aus Vorlagentitel, Fallback: Minijob = 5 Std., sonst Gruppe 0 ("Ohne Angabe")
+        const fromTemplate = templateHours[c.template_id] ?? null;
+        const hours =
+          fromTemplate ??
+          (String(c.employment_type ?? "").toLowerCase().includes("minijob") ? 5 : 0);
         const assigned = assignedByContract[c.id] ?? new Set<string>();
         return {
           id: c.id,
@@ -156,7 +160,7 @@ export default function AdminAuftragsverteilung() {
           todayAssigned: todayCountByContract[c.id] ?? 0,
           availableOrderIds: placeholders.filter((o) => !assigned.has(o.id)).map((o) => o.id),
         };
-      }).filter((e) => e.hours !== null);
+      });
 
       const hoursList = Array.from(new Set(employees.map((e) => e.hours as number))).sort((a, b) => a - b);
 
