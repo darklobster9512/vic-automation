@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _replay_errors: {
-        Row: {
-          at: string | null
-          err: string | null
-          id: number
-          stmt: string | null
-        }
-        Insert: {
-          at?: string | null
-          err?: string | null
-          id?: number
-          stmt?: string | null
-        }
-        Update: {
-          at?: string | null
-          err?: string | null
-          id?: number
-          stmt?: string | null
-        }
-        Relationships: []
-      }
       admin_permissions: {
         Row: {
           allowed_path: string
