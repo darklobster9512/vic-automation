@@ -264,7 +264,7 @@ const MitarbeiterAuftraege = () => {
               hasIdentSession: orderIdsWithSession.has(a.order_id),
               hasReviewSubmitted: orderIdsWithReview.has(a.order_id),
               hasDraft: orderIdsWithDraft.has(a.order_id) && !orderIdsWithReview.has(a.order_id),
-
+            };
           })
       );
       setLoading(false);
