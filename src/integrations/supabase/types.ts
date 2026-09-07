@@ -40,6 +40,7 @@ export type Database = {
           branding_id: string | null
           city: string | null
           created_at: string
+          created_by: string | null
           email: string | null
           employment_type: string | null
           first_name: string
@@ -56,6 +57,7 @@ export type Database = {
           branding_id?: string | null
           city?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           employment_type?: string | null
           first_name: string
@@ -72,6 +74,7 @@ export type Database = {
           branding_id?: string | null
           city?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           employment_type?: string | null
           first_name?: string
@@ -99,6 +102,7 @@ export type Database = {
           available_days: number[]
           branding_id: string
           created_at: string
+          created_by: string | null
           end_time: string
           id: string
           slot_interval_minutes: number
@@ -108,6 +112,7 @@ export type Database = {
           available_days?: number[]
           branding_id: string
           created_at?: string
+          created_by?: string | null
           end_time?: string
           id?: string
           slot_interval_minutes?: number
@@ -117,6 +122,7 @@ export type Database = {
           available_days?: number[]
           branding_id?: string
           created_at?: string
+          created_by?: string | null
           end_time?: string
           id?: string
           slot_interval_minutes?: number
@@ -138,6 +144,7 @@ export type Database = {
           city: string | null
           company_name: string
           created_at: string
+          created_by: string | null
           domain: string | null
           email: string | null
           id: string
@@ -159,6 +166,7 @@ export type Database = {
           city?: string | null
           company_name: string
           created_at?: string
+          created_by?: string | null
           domain?: string | null
           email?: string | null
           id?: string
@@ -180,6 +188,7 @@ export type Database = {
           city?: string | null
           company_name?: string
           created_at?: string
+          created_by?: string | null
           domain?: string | null
           email?: string | null
           id?: string
@@ -204,6 +213,7 @@ export type Database = {
           content: string
           contract_id: string
           created_at: string
+          created_by: string | null
           id: string
           metadata: Json | null
           read: boolean
@@ -214,6 +224,7 @@ export type Database = {
           content: string
           contract_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           metadata?: Json | null
           read?: boolean
@@ -224,6 +235,7 @@ export type Database = {
           content?: string
           contract_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           metadata?: Json | null
           read?: boolean
@@ -243,18 +255,21 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          created_by: string | null
           id: string
           shortcode: string
         }
         Insert: {
           content: string
           created_at?: string
+          created_by?: string | null
           id?: string
           shortcode: string
         }
         Update: {
           content?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           shortcode?: string
         }
@@ -309,15 +324,18 @@ export type Database = {
       }
       employment_contracts: {
         Row: {
+          admin_notes: string | null
           application_id: string
           balance: number
           bank_name: string | null
           bic: string | null
           birth_date: string | null
           birth_place: string | null
+          chat_active_at: string | null
           city: string | null
           contract_pdf_url: string | null
           created_at: string
+          created_by: string | null
           desired_start_date: string | null
           email: string | null
           employment_type: string | null
@@ -344,15 +362,18 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          admin_notes?: string | null
           application_id: string
           balance?: number
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          chat_active_at?: string | null
           city?: string | null
           contract_pdf_url?: string | null
           created_at?: string
+          created_by?: string | null
           desired_start_date?: string | null
           email?: string | null
           employment_type?: string | null
@@ -379,15 +400,18 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          admin_notes?: string | null
           application_id?: string
           balance?: number
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          chat_active_at?: string | null
           city?: string | null
           contract_pdf_url?: string | null
           created_at?: string
+          created_by?: string | null
           desired_start_date?: string | null
           email?: string | null
           employment_type?: string | null
@@ -429,6 +453,7 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at: string
+          created_by: string | null
           id: string
           status: string
         }
@@ -437,6 +462,7 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at?: string
+          created_by?: string | null
           id?: string
           status?: string
         }
@@ -445,6 +471,7 @@ export type Database = {
           appointment_date?: string
           appointment_time?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           status?: string
         }
@@ -458,12 +485,39 @@ export type Database = {
           },
         ]
       }
+      kunde_brandings: {
+        Row: {
+          branding_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          branding_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          branding_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kunde_brandings_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_appointment_blocked_slots: {
         Row: {
           blocked_date: string
           blocked_time: string
           branding_id: string | null
           created_at: string
+          created_by: string | null
           id: string
           reason: string | null
         }
@@ -472,6 +526,7 @@ export type Database = {
           blocked_time: string
           branding_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           reason?: string | null
         }
@@ -480,6 +535,7 @@ export type Database = {
           blocked_time?: string
           branding_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           reason?: string | null
         }
@@ -499,6 +555,7 @@ export type Database = {
           appointment_time: string
           contract_id: string
           created_at: string
+          created_by: string | null
           id: string
           order_id: string
         }
@@ -507,6 +564,7 @@ export type Database = {
           appointment_time: string
           contract_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           order_id: string
         }
@@ -515,6 +573,7 @@ export type Database = {
           appointment_time?: string
           contract_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           order_id?: string
         }
@@ -539,6 +598,7 @@ export type Database = {
         Row: {
           assigned_at: string
           contract_id: string
+          created_by: string | null
           id: string
           order_id: string
           review_unlocked: boolean
@@ -547,6 +607,7 @@ export type Database = {
         Insert: {
           assigned_at?: string
           contract_id: string
+          created_by?: string | null
           id?: string
           order_id: string
           review_unlocked?: boolean
@@ -555,6 +616,7 @@ export type Database = {
         Update: {
           assigned_at?: string
           contract_id?: string
+          created_by?: string | null
           id?: string
           order_id?: string
           review_unlocked?: boolean
@@ -582,6 +644,7 @@ export type Database = {
           comment: string
           contract_id: string
           created_at: string
+          created_by: string | null
           id: string
           order_id: string
           question: string
@@ -591,6 +654,7 @@ export type Database = {
           comment: string
           contract_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           order_id: string
           question: string
@@ -600,6 +664,7 @@ export type Database = {
           comment?: string
           contract_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           order_id?: string
           question?: string
@@ -626,6 +691,7 @@ export type Database = {
         Row: {
           appstore_url: string | null
           created_at: string
+          created_by: string | null
           id: string
           is_placeholder: boolean
           order_number: string
@@ -639,6 +705,7 @@ export type Database = {
         Insert: {
           appstore_url?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           is_placeholder?: boolean
           order_number: string
@@ -652,6 +719,7 @@ export type Database = {
         Update: {
           appstore_url?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           is_placeholder?: boolean
           order_number?: string
@@ -668,16 +736,19 @@ export type Database = {
         Row: {
           api_url: string
           created_at: string
+          created_by: string | null
           id: string
         }
         Insert: {
           api_url: string
           created_at?: string
+          created_by?: string | null
           id?: string
         }
         Update: {
           api_url?: string
           created_at?: string
+          created_by?: string | null
           id?: string
         }
         Relationships: []
@@ -687,22 +758,28 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          email: string | null
           full_name: string | null
           id: string
+          is_chat_online: boolean
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
+          is_chat_online?: boolean
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
+          is_chat_online?: boolean
         }
         Relationships: []
       }
@@ -712,6 +789,7 @@ export type Database = {
           blocked_time: string
           branding_id: string | null
           created_at: string
+          created_by: string | null
           id: string
           reason: string | null
         }
@@ -720,6 +798,7 @@ export type Database = {
           blocked_time: string
           branding_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           reason?: string | null
         }
@@ -728,6 +807,7 @@ export type Database = {
           blocked_time?: string
           branding_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           reason?: string | null
         }
@@ -797,7 +877,9 @@ export type Database = {
       }
       sms_logs: {
         Row: {
+          branding_id: string | null
           created_at: string
+          created_by: string | null
           error_message: string | null
           event_type: string
           id: string
@@ -807,7 +889,9 @@ export type Database = {
           status: string
         }
         Insert: {
+          branding_id?: string | null
           created_at?: string
+          created_by?: string | null
           error_message?: string | null
           event_type: string
           id?: string
@@ -817,7 +901,9 @@ export type Database = {
           status?: string
         }
         Update: {
+          branding_id?: string | null
           created_at?: string
+          created_by?: string | null
           error_message?: string | null
           event_type?: string
           id?: string
@@ -826,11 +912,20 @@ export type Database = {
           recipient_phone?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_spoof_logs: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           message: string
           recipient_name: string | null
@@ -840,6 +935,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           message: string
           recipient_name?: string | null
@@ -849,6 +945,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           message?: string
           recipient_name?: string | null
@@ -869,6 +966,7 @@ export type Database = {
       sms_spoof_templates: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           label: string
           message: string
@@ -876,6 +974,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           label: string
           message: string
@@ -883,6 +982,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           label?: string
           message?: string
@@ -975,6 +1075,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_kunde: { Args: { _user_id: string }; Returns: boolean }
       submit_employment_contract: {
         Args: {
           _bank_name: string
@@ -1014,6 +1115,7 @@ export type Database = {
         Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
+      user_branding_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "user" | "kunde"
