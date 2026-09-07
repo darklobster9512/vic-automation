@@ -66,6 +66,7 @@ const navGroups = [
       { title: "BD Status", url: "/admin/bd-status", icon: Banknote },
       { title: "Idents", url: "/admin/idents", icon: Video },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
+      { title: "Tickets", url: "/admin/tickets", icon: LifeBuoy },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
       { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },

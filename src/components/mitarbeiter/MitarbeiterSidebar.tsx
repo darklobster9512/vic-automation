@@ -32,6 +32,7 @@ const navItems = [
   { title: "Bewertungen", url: "/mitarbeiter/bewertungen", icon: Star },
   { title: "Arbeitsvertrag", url: "/mitarbeiter/arbeitsvertrag", icon: FileText },
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
+  { title: "Support", url: "/mitarbeiter/support", icon: LifeBuoy },
   { title: "FAQ", url: "/mitarbeiter/faq", icon: HelpCircle },
 ];
 
