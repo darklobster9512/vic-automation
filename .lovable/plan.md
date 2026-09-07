@@ -1,49 +1,27 @@
-# Datenwiederherstellung aus Telegram-Benachrichtigungen
+# Brandings ins Panel einfügen
 
-## Wichtige Vorab-Information
+## Ziel
+Neun neue Brandings in der `brandings`-Tabelle anlegen, damit sie im Admin-Panel erscheinen und dort weiter konfiguriert werden können:
 
-Ein Telegram-Bot kann **keine alten Nachrichten** eines Chats nachträglich abrufen. Die Bot-Schnittstelle liefert nur Nachrichten, die neu eintreffen (und auch die nur wenige Stunden lang, solange sie nicht abgeholt wurden). Es gibt keinen Weg, über den Bot rückwirkend den kompletten Chatverlauf zu lesen – unabhängig davon, wie lange der Bot schon im Chat ist.
+1. Codebricks GmbH
+2. Efficient Flow Solutions GmbH
+3. for.tel Solutions GmbH
+4. LIMEX Solutions GmbH
+5. PointView GmbH
+6. Softex Unternehmensberatung & Software GmbH
+7. Topscale GmbH
+8. Vendis Development Services GmbH
+9. Völler IT Solutions GmbH
 
-Der einzige zuverlässige Weg an den kompletten Verlauf: **Telegram Desktop → Chat öffnen → Menü (⋮) → „Chatverlauf exportieren" → oben das Format von HTML auf „JSON" umstellen → Haken bei Medien (Bilder, Videos etc.) rausnehmen → „Exportieren"**. Das erzeugt eine `result.json` mit allen Nachrichten auf einmal – kein 100er-Limit, kein manuelles Kopieren.
+## Vorgehen
+1. **Migration**: `INSERT INTO public.brandings (...)` mit je einem Datensatz pro Unternehmen.
+2. **Befüllte Felder** (Minimal-Satz, damit die Brandings funktionsfähig sind):
+   - `company_name` – wie oben
+   - `subdomain_prefix` – aus dem Namen abgeleitet, z. B. `codebricks`, `efficientflow`, `fortel`, `limex`, `pointview`, `softex`, `vendis`, `voellerit`
+   - `domain` – Platzhalter ableitbar, z. B. `codebricks.de` etc. (später im Panel korrigierbar)
+   - Pflicht-Felder mit Defaults belegen: `payment_model` (`'fixed'`), `chat_online` (`false`), `chat_online_from`/`chat_online_until`, `subdomain_prefix`, `additional_domains` (`{}`), `blacklist_block_public_booking` (`false`), `meta_pixel_enabled` (`false`), `sms_ident_disabled` (`false`), `email_logo_enabled` (`false`), `custom_email_link_enabled` (`false`), `hourly_rate_enabled` (`false`), `email` als Platzhalter
+3. **Keine weiteren Daten**: Zeitpläne, SMS-/Resend-Konfiguration, Aufträge, Vertragsvorlagen etc. bleiben leer und werden im Panel gepflegt (außer du gibst mir die Werte direkt mit).
+4. Danach kurze Verifikation per Read-Query, dass alle 9 Brandings existieren.
 
-Falls in deinem Telegram-Client das JSON-Format nicht angeboten wird (ältere Versionen zeigen manchmal nur HTML), reicht auch der **HTML-Export** aus: das System kann beide Formate lesen. JSON ist aber bevorzugt, weil es zuverlässiger ist.
-
-Diese Datei lädst du dann in einem neuen Bereich hoch, und das System liest daraus die Daten zurück.
-
-## Was gebaut wird
-
-Neuer Admin-Bereich **„Wiederherstellung"** (`/admin/wiederherstellung`), nur für Superadmins sichtbar, mit drei Schritten:
-
-### 1. Hochladen
-Feld zum Hochladen der Telegram-JSON-Datei (auch mehrere Dateien, z. B. mehrere Chats). Die Datei wird im Browser gelesen, es wird nichts dauerhaft gespeichert, bevor du zustimmst.
-
-### 2. Auswerten und Vorschau
-Jede Benachrichtigung wird anhand des bekannten Aufbaus (Titel-Zeile mit Emoji, danach Zeilen wie „Name: …", „E-Mail: …", „Telefon: …", „Termin: …", Firma am Ende) zerlegt. Erkannt werden:
-
-- Bewerbungen (Name, E-Mail, Telefon, Adresse, Anstellungsart, Firma, Zeitpunkt)
-- Bewerbungsgespräch-Termine (Datum, Uhrzeit, Slot, Person, Firma)
-- Probetag- und 1.-Arbeitstag-Termine
-- Arbeitsverträge (eingereicht/genehmigt, enthaltene Personendaten)
-- Bewertungen, Ident-Sitzungen, SMS-/Chat-Ereignisse – soweit im Text vorhanden
-
-Du siehst danach eine Tabelle pro Datentyp: wie viele Einträge erkannt wurden, welche Zeilen unvollständig sind und welche doppelt vorkommen (Doppelte werden über E-Mail bzw. Telefonnummer + Name zusammengeführt, spätere Meldungen ergänzen frühere).
-
-Nicht zuordenbare Nachrichten landen in einer eigenen Liste „nicht erkannt", damit nichts still verloren geht.
-
-### 3. Importieren
-Erst nach deiner Bestätigung werden die Daten geschrieben – wahlweise pro Datentyp einzeln. Vorhandene Datensätze werden nicht überschrieben, sondern übersprungen oder ergänzt. Nach dem Import gibt es ein Protokoll (angelegt / übersprungen / fehlerhaft) zum Herunterladen.
-
-## Grenzen, die du kennen musst
-
-- Wiederhergestellt werden kann nur, was tatsächlich in den Benachrichtigungen stand. Sensible Felder, die nie per Telegram gemeldet wurden (Bankdaten, Sozialversicherungsnummer, Steuer-ID, Ausweisbilder), lassen sich nicht rekonstruieren.
-- Login-Konten und Passwörter der Mitarbeiter lassen sich nicht wiederherstellen; Konten müssten neu angelegt werden (kann als zweiter Schritt automatisiert werden).
-- Hochgeladene Dateien (Ausweise, Anhänge, Verträge) sind endgültig weg.
-- Firmen-Zuordnung erfolgt über den Firmennamen aus der Fußzeile der Nachricht; passt kein Eintrag, wird der Datensatz zur manuellen Zuordnung markiert.
-
-## Technische Umsetzung
-
-- Neue Seite `src/pages/admin/AdminWiederherstellung.tsx` + Route in der Admin-Navigation (Zugriff nur `admin`).
-- Parser `src/lib/telegramRestore.ts`: zerlegt Telegram-Export-JSON (`messages[].text` als String oder Text-Entity-Array), erkennt Ereignistyp am Titel und mappt die Feldzeilen – gespiegelt am Aufbau aus `src/lib/telegramMessage.ts` (Trennlinie `━`, `Label: Wert`, Firma mit 🏢).
-- Import über eine neue Edge Function `restore-import` mit Service-Role: prüft Admin-JWT, nimmt die geparsten Datensätze als JSON entgegen, schreibt in Blöcken (max. 200 pro Anfrage) mit Duplikatprüfung auf `applications` (E-Mail/Telefon), `interview_appointments`, `trial_day_appointments`, `first_workday_appointments`, `employment_contracts`.
-- Zeitstempel der Nachricht wird als `created_at` übernommen, damit die Historie stimmt.
-- Optional zusätzlich: der Bot-Weg (`getUpdates`) als Live-Mitschnitt ab jetzt – bringt für die alten Daten aber nichts und wird daher nicht gebaut, sofern du es nicht ausdrücklich willst.
+## Hinweis
+Die Brandings enthalten zunächst nur Grunddaten. Adressen, Geschäftsführer, HRB, SMS-/E-Mail-Konfiguration, Logos usw. trägst du im Panel nach — oder gib sie mir, dann fülle ich sie direkt.
