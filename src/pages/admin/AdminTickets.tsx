@@ -276,9 +276,30 @@ export default function AdminTickets() {
                     {format(new Date(t.last_message_at), "dd.MM.yyyy HH:mm", { locale: de })}
                   </p>
                 </button>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <Badge variant="outline" className={statusBadgeClass(t.status)}>{statusLabel(t.status)}</Badge>
-                  <Badge variant="outline" className={priorityBadgeClass(t.priority)}>{priorityLabel(t.priority)}</Badge>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {t.status !== "geschlossen" ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Ticket schließen"
+                      onClick={(e) => { e.stopPropagation(); void quickToggleClosed(t); }}
+                    >
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Ticket wieder öffnen"
+                      onClick={(e) => { e.stopPropagation(); void quickToggleClosed(t); }}
+                    >
+                      <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Badge variant="outline" className={statusBadgeClass(t.status)}>{statusLabel(t.status)}</Badge>
+                    <Badge variant="outline" className={priorityBadgeClass(t.priority)}>{priorityLabel(t.priority)}</Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
