@@ -128,6 +128,13 @@ Deno.serve(async (req) => {
       return json({ ok: true, count: rows.length })
     }
 
+    if (action === 'upsert') {
+      const { table, rows, onConflict } = body as { table: string; rows: unknown[]; onConflict: string }
+      const { error } = await admin.from(table).upsert(rows as never, { onConflict, ignoreDuplicates: true })
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true, count: rows.length })
+    }
+
     if (action === 'update') {
       const { table, match, values } = body as { table: string; match: Record<string, unknown>; values: Record<string, unknown> }
       const { error } = await admin.from(table).update(values).match(match)
