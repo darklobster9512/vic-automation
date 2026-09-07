@@ -31,6 +31,7 @@ interface GroupedReview {
   order_title: string;
   order_reward: string;
   order_type: string;
+  is_placeholder: boolean;
   is_starter_job: boolean;
   employee_name: string;
   avg_rating: number;
@@ -161,11 +162,11 @@ const AdminBewertungen = () => {
       const contractIdSet = new Set(contractIds);
 
       // Fetch orders (gechunkt)
-      const orders: { id: string; title: string; reward: string; order_type: string; is_starter_job: boolean }[] = [];
+      const orders: { id: string; title: string; reward: string; order_type: string; is_placeholder: boolean; is_starter_job: boolean }[] = [];
       for (const ids of chunk(orderIds, 100)) {
         const { data, error } = await supabase
           .from("orders")
-          .select("id, title, reward, order_type, is_starter_job")
+          .select("id, title, reward, order_type, is_placeholder, is_starter_job")
           .in("id", ids);
         if (error) throw error;
         orders.push(...((data ?? []) as any));
@@ -210,6 +211,7 @@ const AdminBewertungen = () => {
             order_title: o?.title ?? "Unbekannt",
             order_reward: o?.reward ?? "0€",
             order_type: o?.order_type ?? "",
+            is_placeholder: !!o?.is_placeholder,
             is_starter_job: !!o?.is_starter_job,
             employee_name: contractMap[r.contract_id] ?? "Unbekannt",
             avg_rating: 0,
@@ -580,7 +582,9 @@ const AdminBewertungen = () => {
     .filter((g) => !searchLower || g.employee_name.toLowerCase().includes(searchLower))
     .filter((g) => {
       if (orderTypeFilter === "all") return true;
-      if (orderTypeFilter === "andere") return !["bankdrop", "exchanger", "platzhalter"].includes(g.order_type);
+      const isPlaceholder = g.order_type === "platzhalter" || g.is_placeholder;
+      if (orderTypeFilter === "platzhalter") return isPlaceholder;
+      if (orderTypeFilter === "andere") return !isPlaceholder && !["bankdrop", "exchanger"].includes(g.order_type);
       return g.order_type === orderTypeFilter;
     });
   const pendingReviews = filteredGrouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
@@ -708,15 +712,15 @@ const AdminBewertungen = () => {
         </TabsList>
         <TabsContent value="in-review">
           {(() => {
-            const placeholderReviews = pendingReviews.filter((r) => r.order_type === "platzhalter");
+            const placeholderReviews = pendingReviews.filter((r) => r.order_type === "platzhalter" || r.is_placeholder);
             const starterReviews = pendingReviews.filter((r) => r.is_starter_job);
-            return placeholderReviews.length > 0 || starterReviews.length > 0 ? (
+            return (
               <div className="flex justify-end gap-2 mb-3">
-                {placeholderReviews.length > 0 && (
+                {(
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={processing === "__bulk__"}
+                    disabled={processing === "__bulk__" || placeholderReviews.length === 0}
                     onClick={() => handleApproveAllSilent(placeholderReviews)}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
@@ -735,7 +739,7 @@ const AdminBewertungen = () => {
                   </Button>
                 )}
               </div>
-            ) : null;
+            );
           })()}
 
           {renderTable(pendingReviews, true)}
