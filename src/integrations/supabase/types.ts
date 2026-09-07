@@ -37,6 +37,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          accepted_at: string | null
           branding_id: string | null
           city: string | null
           created_at: string
@@ -58,6 +59,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          accepted_at?: string | null
           branding_id?: string | null
           city?: string | null
           created_at?: string
@@ -79,6 +81,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          accepted_at?: string | null
           branding_id?: string | null
           city?: string | null
           created_at?: string
@@ -150,33 +153,63 @@ export type Database = {
           branding_id: string
           created_at: string
           created_by: string | null
+          day_time_overrides: Json
+          disabled: boolean
           end_time: string
           id: string
+          interview_slots_per_time: number
+          lunch_break_enabled: boolean
+          lunch_break_end: string | null
+          lunch_break_start: string | null
+          min_lead_time_hours: number
           schedule_type: string
+          slot_index: number
           slot_interval_minutes: number
           start_time: string
+          weekend_end_time: string | null
+          weekend_start_time: string | null
         }
         Insert: {
           available_days?: number[]
           branding_id: string
           created_at?: string
           created_by?: string | null
+          day_time_overrides?: Json
+          disabled?: boolean
           end_time?: string
           id?: string
+          interview_slots_per_time?: number
+          lunch_break_enabled?: boolean
+          lunch_break_end?: string | null
+          lunch_break_start?: string | null
+          min_lead_time_hours?: number
           schedule_type?: string
+          slot_index?: number
           slot_interval_minutes?: number
           start_time?: string
+          weekend_end_time?: string | null
+          weekend_start_time?: string | null
         }
         Update: {
           available_days?: number[]
           branding_id?: string
           created_at?: string
           created_by?: string | null
+          day_time_overrides?: Json
+          disabled?: boolean
           end_time?: string
           id?: string
+          interview_slots_per_time?: number
+          lunch_break_enabled?: boolean
+          lunch_break_end?: string | null
+          lunch_break_start?: string | null
+          min_lead_time_hours?: number
           schedule_type?: string
+          slot_index?: number
           slot_interval_minutes?: number
           start_time?: string
+          weekend_end_time?: string | null
+          weekend_start_time?: string | null
         }
         Relationships: [
           {
@@ -190,23 +223,39 @@ export type Database = {
       }
       brandings: {
         Row: {
+          additional_domains: string[]
+          blacklist_block_public_booking: boolean
           brand_color: string | null
           chat_avatar_url: string | null
           chat_display_name: string | null
           chat_online: boolean
+          chat_online_from: string
+          chat_online_until: string
           city: string | null
           company_name: string
           created_at: string
           created_by: string | null
+          custom_email_link: string | null
+          custom_email_link_enabled: boolean
           domain: string | null
+          elitegateway_api_key: string | null
           email: string | null
+          email_logo_enabled: boolean
+          email_logo_url: string | null
           estimated_salary_minijob: number | null
           estimated_salary_teilzeit: number | null
           estimated_salary_vollzeit: number | null
           favicon_url: string | null
+          hourly_rate_enabled: boolean
+          hourly_rate_minijob: number | null
+          hourly_rate_teilzeit: number | null
+          hourly_rate_vollzeit: number | null
           id: string
           logo_url: string | null
+          main_job_title: string | null
           managing_director: string | null
+          meta_pixel_enabled: boolean
+          meta_pixel_id: string | null
           payment_model: string
           phone: string | null
           project_manager_image_url: string | null
@@ -222,35 +271,56 @@ export type Database = {
           salary_minijob: number | null
           salary_teilzeit: number | null
           salary_vollzeit: number | null
+          seven_api_key: string | null
           signature_font: string | null
           signature_image_url: string | null
           signer_name: string | null
           signer_title: string | null
+          sms_ident_disabled: boolean
           sms_sender_name: string | null
+          smsbot_api_key: string | null
+          smsbot_rental_id: string | null
           spoof_credits: number | null
           street: string | null
+          subdomain_prefix: string
           trade_register: string | null
           vat_id: string | null
           zip_code: string | null
         }
         Insert: {
+          additional_domains?: string[]
+          blacklist_block_public_booking?: boolean
           brand_color?: string | null
           chat_avatar_url?: string | null
           chat_display_name?: string | null
           chat_online?: boolean
+          chat_online_from?: string
+          chat_online_until?: string
           city?: string | null
           company_name: string
           created_at?: string
           created_by?: string | null
+          custom_email_link?: string | null
+          custom_email_link_enabled?: boolean
           domain?: string | null
+          elitegateway_api_key?: string | null
           email?: string | null
+          email_logo_enabled?: boolean
+          email_logo_url?: string | null
           estimated_salary_minijob?: number | null
           estimated_salary_teilzeit?: number | null
           estimated_salary_vollzeit?: number | null
           favicon_url?: string | null
+          hourly_rate_enabled?: boolean
+          hourly_rate_minijob?: number | null
+          hourly_rate_teilzeit?: number | null
+          hourly_rate_vollzeit?: number | null
           id?: string
           logo_url?: string | null
+          main_job_title?: string | null
           managing_director?: string | null
+          meta_pixel_enabled?: boolean
+          meta_pixel_id?: string | null
           payment_model?: string
           phone?: string | null
           project_manager_image_url?: string | null
@@ -266,35 +336,56 @@ export type Database = {
           salary_minijob?: number | null
           salary_teilzeit?: number | null
           salary_vollzeit?: number | null
+          seven_api_key?: string | null
           signature_font?: string | null
           signature_image_url?: string | null
           signer_name?: string | null
           signer_title?: string | null
+          sms_ident_disabled?: boolean
           sms_sender_name?: string | null
+          smsbot_api_key?: string | null
+          smsbot_rental_id?: string | null
           spoof_credits?: number | null
           street?: string | null
+          subdomain_prefix?: string
           trade_register?: string | null
           vat_id?: string | null
           zip_code?: string | null
         }
         Update: {
+          additional_domains?: string[]
+          blacklist_block_public_booking?: boolean
           brand_color?: string | null
           chat_avatar_url?: string | null
           chat_display_name?: string | null
           chat_online?: boolean
+          chat_online_from?: string
+          chat_online_until?: string
           city?: string | null
           company_name?: string
           created_at?: string
           created_by?: string | null
+          custom_email_link?: string | null
+          custom_email_link_enabled?: boolean
           domain?: string | null
+          elitegateway_api_key?: string | null
           email?: string | null
+          email_logo_enabled?: boolean
+          email_logo_url?: string | null
           estimated_salary_minijob?: number | null
           estimated_salary_teilzeit?: number | null
           estimated_salary_vollzeit?: number | null
           favicon_url?: string | null
+          hourly_rate_enabled?: boolean
+          hourly_rate_minijob?: number | null
+          hourly_rate_teilzeit?: number | null
+          hourly_rate_vollzeit?: number | null
           id?: string
           logo_url?: string | null
+          main_job_title?: string | null
           managing_director?: string | null
+          meta_pixel_enabled?: boolean
+          meta_pixel_id?: string | null
           payment_model?: string
           phone?: string | null
           project_manager_image_url?: string | null
@@ -310,18 +401,108 @@ export type Database = {
           salary_minijob?: number | null
           salary_teilzeit?: number | null
           salary_vollzeit?: number | null
+          seven_api_key?: string | null
           signature_font?: string | null
           signature_image_url?: string | null
           signer_name?: string | null
           signer_title?: string | null
+          sms_ident_disabled?: boolean
           sms_sender_name?: string | null
+          smsbot_api_key?: string | null
+          smsbot_rental_id?: string | null
           spoof_credits?: number | null
           street?: string | null
+          subdomain_prefix?: string
           trade_register?: string | null
           vat_id?: string | null
           zip_code?: string | null
         }
         Relationships: []
+      }
+      caller_activity_log: {
+        Row: {
+          action: string
+          appointment_id: string | null
+          branding_id: string | null
+          caller_key_id: string | null
+          caller_label: string
+          created_at: string
+          details: Json
+          id: string
+        }
+        Insert: {
+          action: string
+          appointment_id?: string | null
+          branding_id?: string | null
+          caller_key_id?: string | null
+          caller_label: string
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Update: {
+          action?: string
+          appointment_id?: string | null
+          branding_id?: string | null
+          caller_key_id?: string | null
+          caller_label?: string
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caller_activity_log_caller_key_id_fkey"
+            columns: ["caller_key_id"]
+            isOneToOne: false
+            referencedRelation: "caller_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caller_api_keys: {
+        Row: {
+          branding_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          label: string
+          last_used_at: string | null
+          slots: number[]
+          token_hash: string
+        }
+        Insert: {
+          branding_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          last_used_at?: string | null
+          slots?: number[]
+          token_hash: string
+        }
+        Update: {
+          branding_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          slots?: number[]
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caller_api_keys_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_messages: {
         Row: {
@@ -452,6 +633,62 @@ export type Database = {
           },
         ]
       }
+      distribution_targets: {
+        Row: {
+          branding_id: string
+          created_at: string
+          hours: number
+          id: string
+          orders_per_day: number
+          updated_at: string
+        }
+        Insert: {
+          branding_id: string
+          created_at?: string
+          hours: number
+          id?: string
+          orders_per_day?: number
+          updated_at?: string
+        }
+        Update: {
+          branding_id?: string
+          created_at?: string
+          hours?: number
+          id?: string
+          orders_per_day?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribution_targets_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      edge_cache: {
+        Row: {
+          expires_at: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          expires_at: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          expires_at?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           branding_id: string | null
@@ -498,6 +735,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_queue: {
+        Row: {
+          attempts: number
+          body_lines: Json
+          body_title: string
+          branding_id: string | null
+          button_text: string | null
+          button_url: string | null
+          created_at: string
+          event_type: string
+          footer_lines: Json | null
+          id: string
+          last_error: string | null
+          metadata: Json
+          next_attempt_at: string
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          body_lines?: Json
+          body_title: string
+          branding_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string
+          event_type: string
+          footer_lines?: Json | null
+          id?: string
+          last_error?: string | null
+          metadata?: Json
+          next_attempt_at?: string
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          body_lines?: Json
+          body_title?: string
+          branding_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string
+          event_type?: string
+          footer_lines?: Json | null
+          id?: string
+          last_error?: string | null
+          metadata?: Json
+          next_attempt_at?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       employment_contracts: {
         Row: {
@@ -665,6 +968,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_1h_sent: boolean
           reminder_sent: boolean
           status: string
         }
@@ -676,6 +980,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_sent?: boolean
           status?: string
         }
@@ -687,6 +992,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_sent?: boolean
           status?: string
         }
@@ -745,6 +1051,124 @@ export type Database = {
           },
         ]
       }
+      first_workday_preparations: {
+        Row: {
+          appointment_id: string
+          branding_id: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          forward_tan_to_vic: boolean
+          id: string
+          info_notes: string | null
+          order_id: string | null
+          phone_api_url: string | null
+          started_at: string | null
+          status: string
+          test_data: Json
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          branding_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          forward_tan_to_vic?: boolean
+          id?: string
+          info_notes?: string | null
+          order_id?: string | null
+          phone_api_url?: string | null
+          started_at?: string | null
+          status?: string
+          test_data?: Json
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          branding_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          forward_tan_to_vic?: boolean
+          id?: string
+          info_notes?: string | null
+          order_id?: string | null
+          phone_api_url?: string | null
+          started_at?: string | null
+          status?: string
+          test_data?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_workday_preparations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "first_workday_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_preparations_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_preparations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_preparations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ident_info_templates: {
+        Row: {
+          branding_id: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          branding_id?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          branding_id?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ident_info_templates_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ident_sessions: {
         Row: {
           assignment_id: string | null
@@ -754,8 +1178,12 @@ export type Database = {
           created_at: string
           email_tan_enabled: boolean
           email_tans: Json
+          forward_tan_to_vic: boolean
+          forwarded_sms: Json
           id: string
           info_notes: string | null
+          last_tan: string | null
+          last_tan_at: string | null
           order_id: string | null
           phone_api_url: string | null
           status: string
@@ -770,8 +1198,12 @@ export type Database = {
           created_at?: string
           email_tan_enabled?: boolean
           email_tans?: Json
+          forward_tan_to_vic?: boolean
+          forwarded_sms?: Json
           id?: string
           info_notes?: string | null
+          last_tan?: string | null
+          last_tan_at?: string | null
           order_id?: string | null
           phone_api_url?: string | null
           status?: string
@@ -786,8 +1218,12 @@ export type Database = {
           created_at?: string
           email_tan_enabled?: boolean
           email_tans?: Json
+          forward_tan_to_vic?: boolean
+          forwarded_sms?: Json
           id?: string
           info_notes?: string | null
+          last_tan?: string | null
+          last_tan_at?: string | null
           order_id?: string | null
           phone_api_url?: string | null
           status?: string
@@ -835,9 +1271,11 @@ export type Database = {
           id: string
           probetag_invite_count: number
           probetag_invite_timestamps: Json
+          reminder_1h_sent: boolean
           reminder_count: number
           reminder_sent: boolean
           reminder_timestamps: Json
+          slot_index: number | null
           status: string
         }
         Insert: {
@@ -849,9 +1287,11 @@ export type Database = {
           id?: string
           probetag_invite_count?: number
           probetag_invite_timestamps?: Json
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
+          slot_index?: number | null
           status?: string
         }
         Update: {
@@ -863,9 +1303,11 @@ export type Database = {
           id?: string
           probetag_invite_count?: number
           probetag_invite_timestamps?: Json
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
+          slot_index?: number | null
           status?: string
         }
         Relationships: [
@@ -1144,6 +1586,7 @@ export type Database = {
           estimated_hours: string | null
           id: string
           is_placeholder: boolean
+          is_starred: boolean
           is_starter_job: boolean
           is_videochat: boolean
           order_number: string | null
@@ -1166,6 +1609,7 @@ export type Database = {
           estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
+          is_starred?: boolean
           is_starter_job?: boolean
           is_videochat?: boolean
           order_number?: string | null
@@ -1188,6 +1632,7 @@ export type Database = {
           estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
+          is_starred?: boolean
           is_starter_job?: boolean
           is_videochat?: boolean
           order_number?: string | null
@@ -1213,25 +1658,34 @@ export type Database = {
       }
       phone_numbers: {
         Row: {
-          api_url: string
+          api_url: string | null
           branding_id: string | null
           created_at: string
           created_by: string | null
           id: string
+          label: string | null
+          provider: string
+          rental_id: string | null
         }
         Insert: {
-          api_url: string
+          api_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          label?: string | null
+          provider?: string
+          rental_id?: string | null
         }
         Update: {
-          api_url?: string
+          api_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          label?: string | null
+          provider?: string
+          rental_id?: string | null
         }
         Relationships: [
           {
@@ -1296,6 +1750,7 @@ export type Database = {
           created_by: string | null
           id: string
           reason: string | null
+          slot_index: number | null
         }
         Insert: {
           blocked_date: string
@@ -1305,6 +1760,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           reason?: string | null
+          slot_index?: number | null
         }
         Update: {
           blocked_date?: string
@@ -1314,6 +1770,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           reason?: string | null
+          slot_index?: number | null
         }
         Relationships: [
           {
@@ -1378,6 +1835,47 @@ export type Database = {
           target_url?: string
         }
         Relationships: []
+      }
+      sms_inbox_seen: {
+        Row: {
+          branding_id: string | null
+          created_at: string
+          id: string
+          message_hash: string
+          phone_number: string | null
+          provider: string
+          received_at: string | null
+          source_key: string
+        }
+        Insert: {
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          message_hash: string
+          phone_number?: string | null
+          provider: string
+          received_at?: string | null
+          source_key: string
+        }
+        Update: {
+          branding_id?: string | null
+          created_at?: string
+          id?: string
+          message_hash?: string
+          phone_number?: string | null
+          provider?: string
+          received_at?: string | null
+          source_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_inbox_seen_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_logs: {
         Row: {
@@ -1577,6 +2075,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_1h_sent: boolean
           reminder_count: number
           reminder_sent: boolean
           reminder_timestamps: Json
@@ -1591,6 +2090,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
@@ -1605,6 +2105,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
@@ -1678,6 +2179,39 @@ export type Database = {
         }
         Relationships: []
       }
+      webid_redirect_logs: {
+        Row: {
+          created_at: string
+          forwarded: boolean
+          id: string
+          path: string | null
+          referrer: string | null
+          source: string | null
+          url: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          forwarded?: boolean
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          source?: string | null
+          url?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          forwarded?: boolean
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          source?: string | null
+          url?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1697,6 +2231,58 @@ export type Database = {
         }
         Returns: string
       }
+      book_interview_public: {
+        Args: {
+          _application_id: string
+          _appointment_date: string
+          _appointment_time: string
+        }
+        Returns: {
+          appointment_id: string
+          slot_index: number
+        }[]
+      }
+      booked_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+        }[]
+      }
+      claim_email_batch: {
+        Args: { _limit?: number }
+        Returns: {
+          attempts: number
+          body_lines: Json
+          body_title: string
+          branding_id: string | null
+          button_text: string | null
+          button_url: string | null
+          created_at: string
+          event_type: string
+          footer_lines: Json | null
+          id: string
+          last_error: string | null
+          metadata: Json
+          next_attempt_at: string
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_tan_forward: {
+        Args: { _session_id: string; _sms_key: string }
+        Returns: boolean
+      }
       contracts_for_branding_ids: {
         Args: { _user_id: string }
         Returns: string[]
@@ -1705,6 +2291,26 @@ export type Database = {
         Args: { _branding_id: string }
         Returns: undefined
       }
+      enqueue_email: {
+        Args: {
+          _body_lines: Json
+          _body_title: string
+          _branding_id: string
+          _button_text: string
+          _button_url: string
+          _event_type: string
+          _footer_lines: Json
+          _metadata: Json
+          _recipient_name: string
+          _subject: string
+          _to: string
+        }
+        Returns: string
+      }
+      fw_calendar_branding_ids: {
+        Args: { _branding_id: string }
+        Returns: string[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1712,36 +2318,38 @@ export type Database = {
         }
         Returns: boolean
       }
+      interview_booked_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+          slot_index: number
+        }[]
+      }
+      interview_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_id: string
+          slot: number
+          slot_total: number
+        }[]
+      }
       is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
+      release_tan_forward: {
+        Args: { _session_id: string; _sms_key: string }
+        Returns: undefined
+      }
+      resolved_interview_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_id: string
+          appointment_time: string
+          slot_index: number
+        }[]
+      }
       submit_employment_contract:
-        | {
-            Args: {
-              _bank_name: string
-              _bic: string
-              _birth_date: string
-              _birth_place: string
-              _city: string
-              _contract_id: string
-              _desired_start_date: string
-              _email: string
-              _employment_type: string
-              _first_name: string
-              _health_insurance: string
-              _iban: string
-              _id_back_url: string
-              _id_front_url: string
-              _last_name: string
-              _marital_status: string
-              _nationality: string
-              _phone: string
-              _social_security_number: string
-              _street: string
-              _tax_id: string
-              _zip_code: string
-            }
-            Returns: undefined
-          }
         | {
             Args: {
               _bank_name: string
@@ -1771,6 +2379,42 @@ export type Database = {
             }
             Returns: undefined
           }
+        | {
+            Args: {
+              _bank_name: string
+              _bic: string
+              _birth_date: string
+              _city: string
+              _contract_id: string
+              _desired_start_date: string
+              _email: string
+              _employment_type: string
+              _first_name: string
+              _health_insurance: string
+              _iban: string
+              _id_back_url: string
+              _id_front_url: string
+              _last_name: string
+              _marital_status: string
+              _phone: string
+              _social_security_number: string
+              _street: string
+              _tax_id: string
+              _zip_code: string
+            }
+            Returns: undefined
+          }
+      trial_day_booked_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+        }[]
+      }
+      unassign_order: {
+        Args: { _contract_id: string; _order_id: string }
+        Returns: undefined
+      }
       update_application_phone: {
         Args: { _application_id: string; _phone: string }
         Returns: undefined
