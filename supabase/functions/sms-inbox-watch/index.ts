@@ -69,6 +69,26 @@ async function resolveAssignment(identifier: string): Promise<{ name: string | n
   return { name, order, brandingId: (session.branding_id as string) ?? null };
 }
 
+async function resolveSmsbotBranding(rentalId: string): Promise<{ id: string | null; name: string | null }> {
+  const identifier = `smsbot://${rentalId}`;
+  const { data: session } = await supabase
+    .from("ident_sessions")
+    .select("branding_id")
+    .eq("phone_api_url", identifier)
+    .not("branding_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const brandingId = (session?.branding_id as string | null) ?? null;
+  if (!brandingId) return { id: null, name: null };
+  const { data: branding } = await supabase
+    .from("brandings")
+    .select("company_name")
+    .eq("id", brandingId)
+    .maybeSingle();
+  return { id: brandingId, name: (branding?.company_name as string | null) ?? null };
+}
+
 async function handleMessages(opts: {
   provider: "smsbot" | "anosim";
   sourceKey: string;
@@ -136,8 +156,8 @@ async function handleMessages(opts: {
 }
 
 
-async function pollSmsbot(branding: any): Promise<number> {
-  const apiKey = branding.smsbot_api_key as string | null;
+async function pollSmsbot(branding: any, fallbackApiKey: string | null = null): Promise<number> {
+  const apiKey = (branding.smsbot_api_key as string | null) ?? fallbackApiKey;
   if (!apiKey) return 0;
   const headers = { Authorization: `Bearer ${apiKey}`, Accept: "application/json" };
 
@@ -184,13 +204,16 @@ async function pollSmsbot(branding: any): Promise<number> {
 
   let sent = 0;
   for (const [rid, messages] of Object.entries(byRental)) {
+    const resolvedBranding = branding.id
+      ? { id: branding.id as string, name: (branding.company_name as string | null) ?? null }
+      : await resolveSmsbotBranding(rid);
     sent += await handleMessages({
       provider: "smsbot",
-      sourceKey: `${branding.id}:${rid}`,
+      sourceKey: `${resolvedBranding.id ?? "global"}:${rid}`,
       identifier: `smsbot://${rid}`,
       number: numberByRental[rid] ?? "",
-      brandingId: branding.id,
-      brandingName: branding.company_name ?? null,
+      brandingId: resolvedBranding.id,
+      brandingName: resolvedBranding.name,
       messages,
     });
   }
@@ -261,6 +284,20 @@ async function scanOnce(): Promise<number> {
   // SMSBot: one poll per branding with an API key
   for (const b of (brandings ?? []).filter((b: any) => b.smsbot_api_key)) {
     total += await pollSmsbot(b);
+  }
+
+  // Legacy/global SMSBot account: poll it once as a fallback. Assignment and
+  // branding are resolved from the rental's ident session when notifying.
+  const globalSmsbotKey = Deno.env.get("SMSBOT_API_KEY")?.trim() || null;
+  if (globalSmsbotKey) {
+    const configuredKeys = new Set(
+      (brandings ?? [])
+        .map((b: any) => String(b.smsbot_api_key ?? "").trim())
+        .filter(Boolean),
+    );
+    if (!configuredKeys.has(globalSmsbotKey)) {
+      total += await pollSmsbot({ id: null, company_name: null, smsbot_api_key: null }, globalSmsbotKey);
+    }
   }
 
   // Anosim: one poll per stored number
