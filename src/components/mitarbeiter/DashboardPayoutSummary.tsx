@@ -63,8 +63,9 @@ const DashboardPayoutSummary = ({ balance, isFixedSalary, startDate, firstWorkda
                 <Euro className="h-4 w-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">{isFixedSalary ? "Festgehalt" : "Voraussichtlicher Betrag"}</p>
-                <p className="text-lg font-bold text-primary">{balance.toFixed(2)} €</p>
+                <p className="text-xs text-muted-foreground">{balance > 0 ? (isFixedSalary ? "Festgehalt" : "Voraussichtlicher Betrag") : "Noch kein Vertrag zugewiesen"}</p>
+                <p className="text-lg font-bold text-primary">{balance > 0 ? `${balance.toFixed(2)} €` : "–"}</p>
+
               </div>
             </div>
           </div>

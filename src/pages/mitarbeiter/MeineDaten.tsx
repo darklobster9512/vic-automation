@@ -345,6 +345,7 @@ const MeineDaten = () => {
   const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
   
   const getFixedSalary = () => {
+    if (templateSalary && templateSalary > 0) return templateSalary;
     if (!branding) return 0;
     switch (contractDetails.employment_type?.toLowerCase()) {
       case "minijob": return Number(branding.salary_minijob) || 0;
@@ -353,6 +354,7 @@ const MeineDaten = () => {
       default: return 0;
     }
   };
+
 
   const getHourlyRate = () => {
     if (!branding) return 0;
@@ -535,7 +537,7 @@ const MeineDaten = () => {
               {isHourlyRate
                 ? <StatCard icon={Euro} label="Voraussichtl. Gehalt" value={estimatedSalary > 0 ? `€${estimatedSalary.toFixed(2)}` : "—"} />
                 : isFixedSalary
-                  ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
+                  ? <StatCard icon={Euro} label="Festgehalt" value={fixedSalary > 0 ? `€${fixedSalary.toFixed(2)}` : "—"} />
                   : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
               }
             </div>
