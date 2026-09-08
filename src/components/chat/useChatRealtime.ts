@@ -36,6 +36,8 @@ export function useChatRealtime({
   const [loading, setLoading] = useState(true);
   const callbackRef = useRef(onNewMessage);
   callbackRef.current = onNewMessage;
+  const mutedRef = useRef<boolean | null>(null);
+  useEffect(() => { mutedRef.current = null; }, [contractId]);
 
   // Load initial messages
   useEffect(() => {
