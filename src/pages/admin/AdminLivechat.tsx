@@ -18,7 +18,7 @@ import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import MitarbeiterDetailPopup from "@/components/admin/MitarbeiterDetailPopup";
 import { Switch } from "@/components/ui/switch";
-import { MessageCircle, Pencil, Check, Bell, PencilLine, X, Lock, Unlock } from "lucide-react";
+import { MessageCircle, Pencil, Check, Bell, BellOff, PencilLine, X, Lock, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,7 +49,8 @@ export default function AdminLivechat() {
   const [newChatLoading, setNewChatLoading] = useState(false);
   const [allContracts, setAllContracts] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
 
-  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null; is_suspended?: boolean | null }>({});
+  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null; is_suspended?: boolean | null; chat_telegram_muted?: boolean | null }>({});
+  const [muteBusy, setMuteBusy] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [suspendBusy, setSuspendBusy] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -242,7 +243,7 @@ export default function AdminLivechat() {
     if (!active) return;
     supabase
       .from("employment_contracts")
-      .select("first_name, last_name, phone, user_id, employment_type, is_suspended")
+      .select("first_name, last_name, phone, user_id, employment_type, is_suspended, chat_telegram_muted")
       .eq("id", active.contract_id)
       .maybeSingle()
       .then(({ data }: any) => {
@@ -299,6 +300,23 @@ export default function AdminLivechat() {
     sendTyping(draft);
   };
 
+
+  const handleToggleTelegramMute = async () => {
+    if (!active) return;
+    const newValue = !contractData.chat_telegram_muted;
+    setMuteBusy(true);
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update({ chat_telegram_muted: newValue } as any)
+      .eq("id", active.contract_id);
+    setMuteBusy(false);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren.");
+      return;
+    }
+    setContractData((prev) => ({ ...prev, chat_telegram_muted: newValue }));
+    toast.success(newValue ? "Telegram-Benachrichtigungen für diesen Chat stummgeschaltet." : "Telegram-Benachrichtigungen für diesen Chat aktiviert.");
+  };
 
   const handleToggleSuspend = async () => {
     if (!active) return;
@@ -475,6 +493,19 @@ export default function AdminLivechat() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {active && (
+              <Button
+                variant={contractData.chat_telegram_muted ? "secondary" : "outline"}
+                size="sm"
+                className="h-9 gap-1.5"
+                disabled={muteBusy}
+                onClick={handleToggleTelegramMute}
+                title={contractData.chat_telegram_muted ? "Telegram-Benachrichtigungen wieder aktivieren" : "Telegram-Benachrichtigungen für diesen Chat stummschalten"}
+              >
+                {contractData.chat_telegram_muted ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                {contractData.chat_telegram_muted ? "Telegram stumm" : "Telegram an"}
+              </Button>
+            )}
             {active && (
               <Button
                 variant={contractData.is_suspended ? "destructive" : "outline"}

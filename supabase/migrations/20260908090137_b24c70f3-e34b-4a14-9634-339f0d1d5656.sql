@@ -1,0 +1,1 @@
+ALTER TABLE public.employment_contracts ADD COLUMN IF NOT EXISTS chat_telegram_muted boolean NOT NULL DEFAULT false;
