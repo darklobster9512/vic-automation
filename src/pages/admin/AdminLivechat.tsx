@@ -49,7 +49,8 @@ export default function AdminLivechat() {
   const [newChatLoading, setNewChatLoading] = useState(false);
   const [allContracts, setAllContracts] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
 
-  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null; is_suspended?: boolean | null }>({});
+  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null; is_suspended?: boolean | null; chat_telegram_muted?: boolean | null }>({});
+  const [muteBusy, setMuteBusy] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [suspendBusy, setSuspendBusy] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
