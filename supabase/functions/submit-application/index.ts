@@ -176,15 +176,17 @@ Deno.serve(async (req) => {
 
     // Determine created_by from branding owner
     let owner_id: string | null = null;
+    let branding_name: string | null = null;
     if (branding_id) {
       const { data: brandingRow } = await supabase
         .from("brandings")
-        .select("created_by")
+        .select("created_by, company_name")
         .eq("id", branding_id)
         .maybeSingle();
       if (brandingRow?.created_by) {
         owner_id = brandingRow.created_by;
       }
+      branding_name = (brandingRow as any)?.company_name || null;
     }
 
     // Insert application
@@ -317,6 +319,7 @@ Deno.serve(async (req) => {
               { icon: "📄", label: "Lebenslauf", value: resume ? "Ja" : "Nein" },
               { icon: "⚡", label: "Auto-Annahme", value: auto_accept ? "Ja" : null },
             ],
+            brandingName: branding_name,
           }),
           branding_id: branding_id || undefined,
         }),
