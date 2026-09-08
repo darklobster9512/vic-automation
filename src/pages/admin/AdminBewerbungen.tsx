@@ -715,6 +715,7 @@ export default function AdminBewerbungen() {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
       const name = `${variables.first_name || ""} ${variables.last_name || ""}`.trim();
+      const brandingName = brandings?.find((b) => b.id === variables.branding_id)?.company_name || null;
       sendTelegram(
         "bewerbung_eingegangen",
         {
@@ -728,6 +729,7 @@ export default function AdminBewerbungen() {
             { icon: "💼", label: "Bereich", value: variables.position || variables.job_field },
             { icon: "🌐", label: "Quelle", value: variables.source },
           ],
+          brandingName,
         },
         variables.branding_id as string | undefined
       );
