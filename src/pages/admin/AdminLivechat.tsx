@@ -301,6 +301,23 @@ export default function AdminLivechat() {
   };
 
 
+  const handleToggleTelegramMute = async () => {
+    if (!active) return;
+    const newValue = !contractData.chat_telegram_muted;
+    setMuteBusy(true);
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update({ chat_telegram_muted: newValue } as any)
+      .eq("id", active.contract_id);
+    setMuteBusy(false);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren.");
+      return;
+    }
+    setContractData((prev) => ({ ...prev, chat_telegram_muted: newValue }));
+    toast.success(newValue ? "Telegram-Benachrichtigungen für diesen Chat stummgeschaltet." : "Telegram-Benachrichtigungen für diesen Chat aktiviert.");
+  };
+
   const handleToggleSuspend = async () => {
     if (!active) return;
     const newValue = !contractData.is_suspended;
