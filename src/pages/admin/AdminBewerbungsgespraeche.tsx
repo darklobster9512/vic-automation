@@ -27,6 +27,7 @@ import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import BrandingNotes from "@/components/admin/BrandingNotes";
+import CallerAccessOverview from "@/components/admin/CallerAccessOverview";
 import {
   Popover,
   PopoverContent,
@@ -635,6 +636,7 @@ export default function AdminBewerbungsgespraeche() {
           <History className="h-4 w-4 mr-1" />
           Vergangene Termine
         </Button>
+        {activeBrandingId && <CallerAccessOverview brandingId={activeBrandingId} />}
       </div>
 
       <div className="relative mb-4">
