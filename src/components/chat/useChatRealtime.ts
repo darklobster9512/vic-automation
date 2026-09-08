@@ -105,8 +105,17 @@ export function useChatRealtime({
         metadata: metadata ?? null,
       } as any);
 
-      // Telegram notification for user messages
+      // Telegram notification for user messages (unless this chat is muted)
       if (senderRole === "user") {
+        if (mutedRef.current === null) {
+          const { data: contract } = await supabase
+            .from("employment_contracts")
+            .select("chat_telegram_muted")
+            .eq("id", contractId)
+            .maybeSingle();
+          mutedRef.current = Boolean((contract as any)?.chat_telegram_muted);
+        }
+        if (mutedRef.current) return;
         const text = content.trim();
         await sendTelegram(
           "chat_nachricht",
