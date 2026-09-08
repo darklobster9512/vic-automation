@@ -243,7 +243,7 @@ export default function AdminLivechat() {
     if (!active) return;
     supabase
       .from("employment_contracts")
-      .select("first_name, last_name, phone, user_id, employment_type, is_suspended")
+      .select("first_name, last_name, phone, user_id, employment_type, is_suspended, chat_telegram_muted")
       .eq("id", active.contract_id)
       .maybeSingle()
       .then(({ data }: any) => {
