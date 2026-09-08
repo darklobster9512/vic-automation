@@ -495,6 +495,19 @@ export default function AdminLivechat() {
           <div className="flex items-center gap-2">
             {active && (
               <Button
+                variant={contractData.chat_telegram_muted ? "secondary" : "outline"}
+                size="sm"
+                className="h-9 gap-1.5"
+                disabled={muteBusy}
+                onClick={handleToggleTelegramMute}
+                title={contractData.chat_telegram_muted ? "Telegram-Benachrichtigungen wieder aktivieren" : "Telegram-Benachrichtigungen für diesen Chat stummschalten"}
+              >
+                {contractData.chat_telegram_muted ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                {contractData.chat_telegram_muted ? "Telegram stumm" : "Telegram an"}
+              </Button>
+            )}
+            {active && (
+              <Button
                 variant={contractData.is_suspended ? "destructive" : "outline"}
                 size="sm"
                 className="h-9 gap-1.5"
