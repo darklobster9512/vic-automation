@@ -813,6 +813,7 @@ export type Database = {
           birth_place: string | null
           branding_id: string | null
           chat_active_at: string | null
+          chat_telegram_muted: boolean
           city: string | null
           contract_dismissed: boolean
           contract_pdf_url: string | null
@@ -857,6 +858,7 @@ export type Database = {
           birth_place?: string | null
           branding_id?: string | null
           chat_active_at?: string | null
+          chat_telegram_muted?: boolean
           city?: string | null
           contract_dismissed?: boolean
           contract_pdf_url?: string | null
@@ -901,6 +903,7 @@ export type Database = {
           birth_place?: string | null
           branding_id?: string | null
           chat_active_at?: string | null
+          chat_telegram_muted?: boolean
           city?: string | null
           contract_dismissed?: boolean
           contract_pdf_url?: string | null
