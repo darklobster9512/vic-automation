@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.fw_appointment_no_double_booking() FROM PUBLIC, anon, authenticated;
