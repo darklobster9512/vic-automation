@@ -174,6 +174,18 @@ export default function AdminBrandings() {
                           </TooltipTrigger>
                           <TooltipContent>Störungs-Info senden</TooltipContent>
                         </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setWebsiteAnnounceBrandingId(b.id)}
+                            >
+                              <Globe className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Wieder-erreichbar Info senden</TooltipContent>
+                        </Tooltip>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -202,6 +214,11 @@ export default function AdminBrandings() {
         brandingId={announceBrandingId}
         open={!!announceBrandingId}
         onOpenChange={(v) => !v && setAnnounceBrandingId(null)}
+      />
+      <WebsiteAnnouncementDialog
+        brandingId={websiteAnnounceBrandingId}
+        open={!!websiteAnnounceBrandingId}
+        onOpenChange={(v) => !v && setWebsiteAnnounceBrandingId(null)}
       />
     </>
   );
