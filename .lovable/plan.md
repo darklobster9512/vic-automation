@@ -1,14 +1,14 @@
 # „Wir sind wieder erreichbar“ an alle Codebricks-Mitarbeiter (E-Mail + SMS)
 
 ## Ziel
-Einmaliger Versand an alle aktiven Mitarbeiter des Brandings Codebricks: E-Mail und SMS mit dem Hinweis, dass die Website unter der neuen Domain **https://codebricks.solutions** wieder erreichbar ist.
+Einmaliger Versand an alle aktiven Mitarbeiter des Brandings Codebricks: E-Mail und SMS mit dem Hinweis, dass die Website unter der neuen Domain **https://app.codebricks.solutions** wieder erreichbar ist.
 
 ## Umsetzung
 1. **Neuer Dialog** `src/components/admin/WebsiteAnnouncementDialog.tsx` (angelehnt an den bestehenden `DomainAnnouncementDialog`, aber ohne Passwort-Inhalte):
    - E-Mail-Vorschau im bestehenden Premium-E-Mail-Layout (`buildEmailHtml`) mit Codebricks-Branding.
    - Betreff: „Unsere Website ist wieder erreichbar – Codebricks"
-   - Text: Entschuldigung für die technischen Probleme + Hinweis auf neue Domain `https://codebricks.solutions` + Button „Zur Website" → `https://codebricks.solutions`.
-   - Editierbarer SMS-Text, Standard: „Hallo {vorname}, wir entschuldigen uns für die technischen Probleme. Unsere Website ist wieder erreichbar: {link}" (Link = `https://codebricks.solutions`).
+   - Text: Entschuldigung für die technischen Probleme + Hinweis auf neue Domain `https://app.codebricks.solutions` + Button „Zur Website" → `https://app.codebricks.solutions`.
+   - Editierbarer SMS-Text, Standard: „Hallo {vorname}, wir entschuldigen uns für die technischen Probleme. Unsere Website ist wieder erreichbar: {link}" (Link = `https://app.codebricks.solutions`).
    - Anzeige der Empfängerzahl, Fortschrittsbalken beim Versand, Abschluss-Toast mit Anzahl E-Mails/SMS/Fehler.
 
 2. **Empfänger**: alle `employment_contracts` des Codebricks-Brandings mit Status offen/eingereicht/genehmigt/unterzeichnet, `is_suspended = false`. E-Mail an alle mit E-Mail-Adresse, SMS an alle mit Telefonnummer; Duplikate werden entfernt (E-Mail lowercase, Telefon normalisiert).
