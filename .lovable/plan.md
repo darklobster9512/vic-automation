@@ -11,7 +11,7 @@ Einmaliger Versand an alle aktiven Mitarbeiter des Brandings Codebricks: E-Mail 
    - Editierbarer SMS-Text, Standard: „Hallo {vorname}, wir entschuldigen uns für die technischen Probleme. Unsere Website ist wieder erreichbar: {link}" (Link = `https://app.codebricks.solutions`).
    - Anzeige der Empfängerzahl, Fortschrittsbalken beim Versand, Abschluss-Toast mit Anzahl E-Mails/SMS/Fehler.
 
-2. **Empfänger**: alle `employment_contracts` des Codebricks-Brandings mit Status offen/eingereicht/genehmigt/unterzeichnet, `is_suspended = false`. E-Mail an alle mit E-Mail-Adresse, SMS an alle mit Telefonnummer; Duplikate werden entfernt (E-Mail lowercase, Telefon normalisiert).
+2. **Empfänger**: alle `employment_contracts` des Codebricks-Brandings, die einen Mitarbeiter-Account haben (`user_id IS NOT NULL`) und nicht gesperrt sind (`is_suspended = false`). E-Mail an alle mit E-Mail-Adresse, SMS an alle mit Telefonnummer; Duplikate werden entfernt (E-Mail lowercase, Telefon normalisiert).
 
 3. **Einbindung**: In `AdminBrandings.tsx` Button (Megafon-Icon) in der Codebricks-Zeile, der den Dialog öffnet.
 
