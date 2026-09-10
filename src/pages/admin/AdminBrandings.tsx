@@ -10,12 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Palette, Trash2, Copy, Pencil, Megaphone } from "lucide-react";
+import { Plus, Palette, Trash2, Copy, Pencil, Megaphone, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { useState } from "react";
 import DomainAnnouncementDialog from "@/components/admin/DomainAnnouncementDialog";
+import WebsiteAnnouncementDialog from "@/components/admin/WebsiteAnnouncementDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function AdminBrandings() {
@@ -23,6 +24,7 @@ export default function AdminBrandings() {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [announceBrandingId, setAnnounceBrandingId] = useState<string | null>(null);
+  const [websiteAnnounceBrandingId, setWebsiteAnnounceBrandingId] = useState<string | null>(null);
 
   const { data: brandings, isLoading } = useQuery({
     queryKey: ["brandings", activeBrandingId],
