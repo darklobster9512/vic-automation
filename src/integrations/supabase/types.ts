@@ -419,6 +419,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_accept_runs: {
+        Row: {
+          attempts: Json
+          branding_ids: string[]
+          created_at: string
+          failed: number
+          failed_ids: string[]
+          finished_at: string | null
+          id: string
+          processed: number
+          skipped: number
+          skipped_ids: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: Json
+          branding_ids?: string[]
+          created_at?: string
+          failed?: number
+          failed_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          processed?: number
+          skipped?: number
+          skipped_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: Json
+          branding_ids?: string[]
+          created_at?: string
+          failed?: number
+          failed_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          processed?: number
+          skipped?: number
+          skipped_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       caller_activity_log: {
         Row: {
           action: string
