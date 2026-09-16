@@ -1,30 +1,32 @@
-# Restliche Blacklist-Bewerbungen zu LIMEX
+# Vendis: Slot-3-Termine auf Slot 1 und 2 verteilen
 
-## Stand (geprüft)
+## Ausgangslage (geprüft)
 
-Bei Codebricks, PointView, Topscale und Vendis gibt es **keine** Blacklist-Bewerbung mit Status „neu" mehr — der Transfer von 161 Bewerbungen hat vollständig funktioniert.
+Bei Vendis Development Services gibt es ab heute (16.09.2026) noch **9 Termine auf Slot 3** — verteilt auf den 16., 17. und 18.09. Slot 1 und 2 laufen jeweils 09:00–17:00 (Mittagspause 12:00–13:00, 20-Minuten-Takt).
 
-Was du in der Übersicht noch siehst, sind 37 Bewerbungen mit einem **weiter fortgeschrittenen Status**:
+## Regeln
 
-| Branding | angenommen | Termin gebucht |
-|---|---|---|
-| Codebricks | 1 | 11 |
-| PointView | 4 | 7 |
-| Topscale | 0 | 7 |
-| Vendis | 3 | 4 |
+1. Termin bleibt auf seiner Uhrzeit, wenn zu dieser Zeit Slot 1 oder Slot 2 frei ist.
+2. Sind beide belegt, rutscht der Termin um **10 Minuten** nach hinten und wird dort auf die freie Spur gesetzt.
+3. Es werden **keine** E-Mails, SMS oder Telegram-Nachrichten verschickt.
+4. Status, Erinnerungs-Zähler und alle übrigen Daten bleiben unverändert.
 
-Die waren beim letzten Mal bewusst ausgenommen, weil die Vorgabe „nur offene Bewerbungen" lautete.
+## Geplante Zuordnung (9 Termine)
 
-## Was jetzt passieren soll
+| Datum | Name | Alt | Neu |
+|---|---|---|---|
+| Mi 16.09. | Stefanie Paetzold | 09:00 Slot 3 | 09:10 Slot 1 |
+| Mi 16.09. | Heiko Spieker | 10:00 Slot 3 | 10:10 Slot 2 |
+| Mi 16.09. | Jasmin Schwab | 11:40 Slot 3 | 11:50 Slot 1 |
+| Mi 16.09. | Carina Faßler-Ruf | 13:00 Slot 3 | 13:10 Slot 2 |
+| Mi 16.09. | Sate Abbou | 13:20 Slot 3 | 13:30 Slot 1 |
+| Mi 16.09. | Sonja Ibert | 14:00 Slot 3 | 14:00 Slot 2 (frei, keine Verschiebung) |
+| Do 17.09. | Shatarupa Ganguly | 09:00 Slot 3 | 09:10 Slot 1 |
+| Fr 18.09. | Kurt Gruber | 10:00 Slot 3 | 10:10 Slot 2 |
+| Fr 18.09. | Celine Heeger | 11:00 Slot 3 | 11:10 Slot 1 |
 
-Diese 37 Bewerbungen ebenfalls dem Branding LIMEX zuordnen:
-
-- Status bleibt unverändert (angenommen bzw. Termin gebucht)
-- Bereits gebuchte Gesprächstermine bleiben bestehen und unverändert
-- Alle Daten, Lebensläufe und Zeitstempel bleiben erhalten
-- Es werden **keine** E-Mails, SMS oder Telegram-Nachrichten verschickt
-- Keine Änderungen am Code
+Alle neuen Zeiten wurden gegen die bestehenden Slot-1- und Slot-2-Termine geprüft: keine Kollision, alles innerhalb der Arbeitszeiten und außerhalb der Mittagspause. Danach ist Slot 3 bei Vendis ab heute leer.
 
 ## Technisch
 
-Ein einzelnes Update auf `applications`: `branding_id` = LIMEX (`086e5c75-5ae6-439d-8ff4-a3b63bdaed3c`) für alle Rows der vier Brandings, bei denen dieselbe E-Mail in einem anderen Branding existiert (identische Blacklist-Definition wie im Admin-Badge). Danach Kontrollabfrage, dass bei den vier Brandings keine Blacklist-Treffer mehr übrig sind.
+9 gezielte `UPDATE`s auf `interview_appointments` (`slot_index` 1 bzw. 2, ggf. neue `appointment_time`) über die genannten Termin-IDs. Keine Code- oder Schemaänderung, keine Benachrichtigungen.
