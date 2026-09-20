@@ -56,6 +56,7 @@ const brandingSchema = z.object({
   estimated_salary_vollzeit: z.string().optional(),
   spoof_credits: z.string().optional(),
   email_logo_enabled: z.boolean(),
+  auto_distribution_enabled: z.boolean(),
   email_logo_url: z.string().max(500).optional(),
   project_manager_name: z.string().max(200).optional(),
   project_manager_title: z.string().max(200).optional(),
@@ -109,6 +110,7 @@ const initialForm: BrandingForm = {
   estimated_salary_vollzeit: "",
   spoof_credits: "",
   email_logo_enabled: false,
+  auto_distribution_enabled: false,
   email_logo_url: "",
   project_manager_name: "",
   project_manager_title: "",
@@ -220,6 +222,7 @@ export default function AdminBrandingForm() {
         estimated_salary_vollzeit: (branding as any).estimated_salary_vollzeit?.toString() || "",
         spoof_credits: (branding as any).spoof_credits?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
+        auto_distribution_enabled: (branding as any).auto_distribution_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
         project_manager_name: (branding as any).project_manager_name || "",
         project_manager_title: (branding as any).project_manager_title || "",
@@ -427,6 +430,22 @@ export default function AdminBrandingForm() {
                 <span className="text-xs text-muted-foreground">Aktuelles Favicon</span>
               </div>
             )}
+          </div>
+
+          {/* Automatische Auftragsverteilung */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Automatische Auftragsverteilung</Label>
+                <p className="text-xs text-muted-foreground">
+                  Verteilt werktags um 08:00 Uhr (Berliner Zeit) automatisch die offenen Tagesaufträge an alle Mitarbeiter.
+                </p>
+              </div>
+              <Switch
+                checked={form.auto_distribution_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, auto_distribution_enabled: checked }))}
+              />
+            </div>
           </div>
 
           {/* E-Mail Logo Toggle */}

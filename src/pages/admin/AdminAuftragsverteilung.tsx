@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, PackageOpen, Send } from "lucide-react";
@@ -168,6 +169,47 @@ export default function AdminAuftragsverteilung() {
     },
   });
 
+  const { data: autoData } = useQuery({
+    queryKey: ["auto-distribution", activeBrandingId, today],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { data: branding } = await supabase
+        .from("brandings")
+        .select("auto_distribution_enabled")
+        .eq("id", activeBrandingId!)
+        .maybeSingle();
+      const { data: run } = await supabase
+        .from("auto_distribution_runs" as any)
+        .select("employees_served, assignments_created, warnings")
+        .eq("branding_id", activeBrandingId!)
+        .eq("run_date", today)
+        .maybeSingle();
+      return {
+        enabled: (branding as any)?.auto_distribution_enabled ?? false,
+        run: (run as any) ?? null,
+      };
+    },
+  });
+  const autoEnabled = autoData?.enabled ?? false;
+  const autoRun = autoData?.run ?? null;
+
+  const toggleAuto = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { error } = await supabase
+        .from("brandings")
+        .update({ auto_distribution_enabled: value } as any)
+        .eq("id", activeBrandingId!);
+      if (error) throw error;
+    },
+    onSuccess: (_d, value) => {
+      queryClient.invalidateQueries({ queryKey: ["auto-distribution"] });
+      queryClient.invalidateQueries({ queryKey: ["brandings"] });
+      toast({ title: value ? "Automatische Verteilung aktiviert" : "Automatische Verteilung deaktiviert" });
+    },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+
   const saveTarget = useMutation({
     mutationFn: async ({ hours, value }: { hours: number; value: number }) => {
       const { error } = await supabase
@@ -207,6 +249,33 @@ export default function AdminAuftragsverteilung() {
           Tägliche Verteilung von Platzhalteraufträgen – Montag bis Freitag.
         </p>
       </div>
+
+      <Card>
+        <CardContent className="p-4 flex flex-wrap items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium">Automatische Auftragsverteilung</div>
+            <p className="text-xs text-muted-foreground">
+              Läuft werktags um 08:00 Uhr (Berliner Zeit) und weist allen Mitarbeitern mit offenen Zuweisungen
+              automatisch ihre Aufträge zu.
+            </p>
+            {autoRun ? (
+              <p className="text-xs text-emerald-700 mt-1">
+                Heute automatisch verteilt: {autoRun.employees_served} Mitarbeiter · {autoRun.assignments_created} Aufträge
+                {Array.isArray(autoRun.warnings) && autoRun.warnings.length > 0
+                  ? ` · ${autoRun.warnings.length} Hinweis(e)`
+                  : ""}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Heute noch kein automatischer Lauf.</p>
+            )}
+          </div>
+          <Switch
+            checked={!!autoEnabled}
+            onCheckedChange={(v) => toggleAuto.mutate(v)}
+            disabled={toggleAuto.isPending}
+          />
+        </CardContent>
+      </Card>
 
       {isWeekend && (
         <Card className="border-amber-300 bg-amber-50">
