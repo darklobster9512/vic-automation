@@ -432,6 +432,22 @@ export default function AdminBrandingForm() {
             )}
           </div>
 
+          {/* Automatische Auftragsverteilung */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Automatische Auftragsverteilung</Label>
+                <p className="text-xs text-muted-foreground">
+                  Verteilt werktags um 08:00 Uhr (Berliner Zeit) automatisch die offenen Tagesaufträge an alle Mitarbeiter.
+                </p>
+              </div>
+              <Switch
+                checked={form.auto_distribution_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, auto_distribution_enabled: checked }))}
+              />
+            </div>
+          </div>
+
           {/* E-Mail Logo Toggle */}
           <div className="space-y-3 pt-2 border-t border-border">
             <div className="flex items-center justify-between">
