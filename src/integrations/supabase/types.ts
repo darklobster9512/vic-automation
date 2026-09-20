@@ -112,6 +112,44 @@ export type Database = {
           },
         ]
       }
+      auto_distribution_runs: {
+        Row: {
+          assignments_created: number
+          branding_id: string
+          created_at: string
+          employees_served: number
+          id: string
+          run_date: string
+          warnings: Json
+        }
+        Insert: {
+          assignments_created?: number
+          branding_id: string
+          created_at?: string
+          employees_served?: number
+          id?: string
+          run_date: string
+          warnings?: Json
+        }
+        Update: {
+          assignments_created?: number
+          branding_id?: string
+          created_at?: string
+          employees_served?: number
+          id?: string
+          run_date?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_distribution_runs_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branding_notes: {
         Row: {
           author_email: string
@@ -224,6 +262,7 @@ export type Database = {
       brandings: {
         Row: {
           additional_domains: string[]
+          auto_distribution_enabled: boolean
           blacklist_block_public_booking: boolean
           brand_color: string | null
           chat_avatar_url: string | null
@@ -289,6 +328,7 @@ export type Database = {
         }
         Insert: {
           additional_domains?: string[]
+          auto_distribution_enabled?: boolean
           blacklist_block_public_booking?: boolean
           brand_color?: string | null
           chat_avatar_url?: string | null
@@ -354,6 +394,7 @@ export type Database = {
         }
         Update: {
           additional_domains?: string[]
+          auto_distribution_enabled?: boolean
           blacklist_block_public_booking?: boolean
           brand_color?: string | null
           chat_avatar_url?: string | null
