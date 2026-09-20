@@ -1,11 +1,11 @@
 # Automatische Auftragsverteilung pro Branding
 
-Pro Branding lässt sich einstellen, ob die täglichen Platzhalteraufträge automatisch verteilt werden. Ist es aktiv, bekommen alle Mitarbeiter mit offenen Zuweisungen werktags morgens zwischen 08:00 und 08:30 Uhr (Berliner Zeit) ihre Aufträge automatisch – inklusive der gewohnten E-Mail/SMS-Benachrichtigung (eine Sammelnachricht pro Mitarbeiter).
+Pro Branding lässt sich einstellen, ob die täglichen Platzhalteraufträge automatisch verteilt werden. Ist es aktiv, bekommen alle Mitarbeiter mit offenen Zuweisungen werktags um Punkt 08:00 Uhr Berliner Zeit ihre Aufträge automatisch – inklusive der gewohnten E-Mail/SMS-Benachrichtigung (eine Sammelnachricht pro Mitarbeiter).
 
 ## 1. Schalter pro Branding
 
 - Neues Feld „Automatische Auftragsverteilung" (an/aus, Standard: aus) im Branding-Formular unter `/admin/brandings`.
-- Zusätzlich derselbe Schalter oben auf `/admin/auftragsverteilung`, damit man ihn dort direkt für das aktive Branding umlegen kann, samt Hinweis „Läuft werktags zwischen 08:00 und 08:30 Uhr" und Anzeige, ob heute schon automatisch verteilt wurde.
+- Zusätzlich derselbe Schalter oben auf `/admin/auftragsverteilung`, damit man ihn dort direkt für das aktive Branding umlegen kann, samt Hinweis „Läuft werktags um 08:00 Uhr" und Anzeige, ob heute schon automatisch verteilt wurde.
 
 ## 2. Was der automatische Lauf macht
 
