@@ -169,6 +169,47 @@ export default function AdminAuftragsverteilung() {
     },
   });
 
+  const { data: autoData } = useQuery({
+    queryKey: ["auto-distribution", activeBrandingId, today],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { data: branding } = await supabase
+        .from("brandings")
+        .select("auto_distribution_enabled")
+        .eq("id", activeBrandingId!)
+        .maybeSingle();
+      const { data: run } = await supabase
+        .from("auto_distribution_runs" as any)
+        .select("employees_served, assignments_created, warnings")
+        .eq("branding_id", activeBrandingId!)
+        .eq("run_date", today)
+        .maybeSingle();
+      return {
+        enabled: (branding as any)?.auto_distribution_enabled ?? false,
+        run: (run as any) ?? null,
+      };
+    },
+  });
+  const autoEnabled = autoData?.enabled ?? false;
+  const autoRun = autoData?.run ?? null;
+
+  const toggleAuto = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { error } = await supabase
+        .from("brandings")
+        .update({ auto_distribution_enabled: value } as any)
+        .eq("id", activeBrandingId!);
+      if (error) throw error;
+    },
+    onSuccess: (_d, value) => {
+      queryClient.invalidateQueries({ queryKey: ["auto-distribution"] });
+      queryClient.invalidateQueries({ queryKey: ["brandings"] });
+      toast({ title: value ? "Automatische Verteilung aktiviert" : "Automatische Verteilung deaktiviert" });
+    },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+
   const saveTarget = useMutation({
     mutationFn: async ({ hours, value }: { hours: number; value: number }) => {
       const { error } = await supabase
