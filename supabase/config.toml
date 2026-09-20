@@ -1,3 +1,1 @@
 project_id = "gzgfyuftjvezqjkosntu"
-[functions.tmp-upload-branding-asset]
-verify_jwt = false
