@@ -208,6 +208,33 @@ export default function AdminAuftragsverteilung() {
         </p>
       </div>
 
+      <Card>
+        <CardContent className="p-4 flex flex-wrap items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium">Automatische Auftragsverteilung</div>
+            <p className="text-xs text-muted-foreground">
+              Läuft werktags um 08:00 Uhr (Berliner Zeit) und weist allen Mitarbeitern mit offenen Zuweisungen
+              automatisch ihre Aufträge zu.
+            </p>
+            {autoRun ? (
+              <p className="text-xs text-emerald-700 mt-1">
+                Heute automatisch verteilt: {autoRun.employees_served} Mitarbeiter · {autoRun.assignments_created} Aufträge
+                {Array.isArray(autoRun.warnings) && autoRun.warnings.length > 0
+                  ? ` · ${autoRun.warnings.length} Hinweis(e)`
+                  : ""}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Heute noch kein automatischer Lauf.</p>
+            )}
+          </div>
+          <Switch
+            checked={!!autoEnabled}
+            onCheckedChange={(v) => toggleAuto.mutate(v)}
+            disabled={toggleAuto.isPending}
+          />
+        </CardContent>
+      </Card>
+
       {isWeekend && (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="p-4 flex items-center gap-3 text-amber-800 text-sm">
