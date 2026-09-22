@@ -10,7 +10,7 @@ In `src/pages/KarriereRedirect.tsx`:
 
 ```text
 Alt: https://voeller-it.solutions/karriere/onlineprozess-tester
-Neu: https://denaro-consult.solutions/karriere
+Neu: https://denaro-consult.solutions/karriere/onlineprozess-tester
 ```
 
 Nur die Konstante `TARGET` wird geändert; keine weiteren Anpassungen nötig.
