@@ -230,7 +230,7 @@ export default function AdminBewerbungsgespraeche() {
 
   // Blacklist: gleiche E-Mail in einem anderen Branding
   const { data: blacklistMap } = useQuery({
-    queryKey: ["blacklist-emails-gespraeche", activeBrandingId, data?.items?.length],
+    queryKey: ["blacklist-emails-gespraeche", activeBrandingId, data?.items?.length, isAdmin],
     enabled: ready && !!activeBrandingId && !!data?.items?.length,
     queryFn: async () => {
       const emails = Array.from(
