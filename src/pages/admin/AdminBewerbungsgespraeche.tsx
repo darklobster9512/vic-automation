@@ -68,6 +68,7 @@ const dayLabel = (iso: string) => {
 };
 
 export default function AdminBewerbungsgespraeche() {
+  const { isAdmin } = useUserRole();
   const [viewMode, setViewMode] = useState<ViewMode>("upcoming");
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
