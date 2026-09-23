@@ -2493,6 +2493,7 @@ export type Database = {
           appointment_time: string
         }[]
       }
+      check_blacklist_emails: { Args: { _emails: string[] }; Returns: string[] }
       claim_email_batch: {
         Args: { _limit?: number }
         Returns: {
