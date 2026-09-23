@@ -242,6 +242,21 @@ export default function AdminBewerbungsgespraeche() {
       );
       const map: Record<string, string[]> = {};
       const CHUNK = 100;
+
+      if (!isAdmin) {
+        // Kunde/Caller: nur E-Mail-Liste, keine Branding-Namen
+        for (let i = 0; i < emails.length; i += CHUNK) {
+          const chunk = emails.slice(i, i + CHUNK);
+          const { data: rows, error } = await supabase.rpc("check_blacklist_emails", { _emails: chunk });
+          if (error) throw error;
+          for (const email of (rows ?? []) as unknown as string[]) {
+            const key = String(email ?? "").toLowerCase();
+            if (key) map[key] = [];
+          }
+        }
+        return map;
+      }
+
       for (let i = 0; i < emails.length; i += CHUNK) {
         const chunk = emails.slice(i, i + CHUNK);
         const { data: rows, error } = await supabase
