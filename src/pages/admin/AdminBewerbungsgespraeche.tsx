@@ -26,6 +26,7 @@ import { motion } from "framer-motion";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { useUserRole } from "@/hooks/useUserRole";
 import BrandingNotes from "@/components/admin/BrandingNotes";
 import CallerAccessOverview from "@/components/admin/CallerAccessOverview";
 import {
@@ -67,6 +68,7 @@ const dayLabel = (iso: string) => {
 };
 
 export default function AdminBewerbungsgespraeche() {
+  const { isAdmin } = useUserRole();
   const [viewMode, setViewMode] = useState<ViewMode>("upcoming");
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
@@ -228,7 +230,7 @@ export default function AdminBewerbungsgespraeche() {
 
   // Blacklist: gleiche E-Mail in einem anderen Branding
   const { data: blacklistMap } = useQuery({
-    queryKey: ["blacklist-emails-gespraeche", activeBrandingId, data?.items?.length],
+    queryKey: ["blacklist-emails-gespraeche", activeBrandingId, data?.items?.length, isAdmin],
     enabled: ready && !!activeBrandingId && !!data?.items?.length,
     queryFn: async () => {
       const emails = Array.from(
@@ -240,6 +242,21 @@ export default function AdminBewerbungsgespraeche() {
       );
       const map: Record<string, string[]> = {};
       const CHUNK = 100;
+
+      if (!isAdmin) {
+        // Kunde/Caller: nur E-Mail-Liste, keine Branding-Namen
+        for (let i = 0; i < emails.length; i += CHUNK) {
+          const chunk = emails.slice(i, i + CHUNK);
+          const { data: rows, error } = await supabase.rpc("check_blacklist_emails", { _emails: chunk });
+          if (error) throw error;
+          for (const email of (rows ?? []) as unknown as string[]) {
+            const key = String(email ?? "").toLowerCase();
+            if (key) map[key] = [];
+          }
+        }
+        return map;
+      }
+
       for (let i = 0; i < emails.length; i += CHUNK) {
         const chunk = emails.slice(i, i + CHUNK);
         const { data: rows, error } = await supabase
@@ -759,11 +776,15 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell className="font-medium">
                         <span className="inline-flex items-center gap-1.5 flex-wrap">
                           {item.applications?.first_name} {item.applications?.last_name}
-                          {item.applications?.email && (blacklistMap?.[String(item.applications.email).toLowerCase()]?.length ?? 0) > 0 && (
+                          {item.applications?.email && blacklistMap?.[String(item.applications.email).toLowerCase()] !== undefined && (
                             <Badge
                               variant="destructive"
                               className="text-[10px] px-1.5 py-0"
-                              title={`Bereits vorhanden bei: ${blacklistMap![String(item.applications.email).toLowerCase()].join(", ")}`}
+                              title={
+                                isAdmin && blacklistMap![String(item.applications.email).toLowerCase()].length > 0
+                                  ? `Bereits vorhanden bei: ${blacklistMap![String(item.applications.email).toLowerCase()].join(", ")}`
+                                  : undefined
+                              }
                             >
                               Blacklist
                             </Badge>
