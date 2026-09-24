@@ -109,15 +109,18 @@ export default function AdminCaller() {
   const toggleBranding = useMutation({
     mutationFn: async ({ callerId, brandingId, assign }: { callerId: string; brandingId: string; assign: boolean }) => {
       if (assign) {
-        const { error } = await supabase.from("kunde_brandings" as any).insert({ user_id: callerId, branding_id: brandingId } as any);
+        const { error } = await supabase
+          .from("kunde_brandings" as any)
+          .upsert({ user_id: callerId, branding_id: brandingId } as any, { onConflict: "user_id,branding_id" });
         if (error) throw error;
       } else {
         const { error } = await supabase.from("kunde_brandings" as any).delete().eq("user_id", callerId).eq("branding_id", brandingId);
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["caller-brandings", expandedCaller] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["caller-brandings", variables.callerId] });
+      toast({ title: variables.assign ? "Branding zugewiesen" : "Branding entfernt" });
     },
     onError: (e: any) => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
@@ -339,6 +342,7 @@ export default function AdminCaller() {
                             <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors">
                               <Checkbox
                                 checked={isAssigned}
+                                disabled={toggleBranding.isPending}
                                 onCheckedChange={(checked) => {
                                   toggleBranding.mutate({
                                     callerId: c.id,
