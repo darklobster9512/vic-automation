@@ -84,29 +84,27 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // Delete auto-created 'user' role, insert 'caller'
-    await adminClient.from("user_roles").delete().eq("user_id", userId);
-    await adminClient.from("user_roles").insert({ user_id: userId, role: "caller" });
+    const paths = callerType === "probetag"
+      ? ["/admin/probetag", "/admin/erster-arbeitstag"]
+      : ["/admin/bewerbungsgespraeche", "/admin/bewerbungen"];
+    const brandingInserts = brandingIds.map((brandingId: string) => ({ user_id: userId, branding_id: brandingId }));
 
-    // Insert admin_permissions for allowed path(s)
-    if (callerType === "probetag") {
-      await adminClient.from("admin_permissions").insert([
-        { user_id: userId, allowed_path: "/admin/probetag" },
-        { user_id: userId, allowed_path: "/admin/erster-arbeitstag" },
-      ]);
-    } else {
-      await adminClient.from("admin_permissions").insert([
-        { user_id: userId, allowed_path: "/admin/bewerbungsgespraeche" },
-        { user_id: userId, allowed_path: "/admin/bewerbungen" },
-      ]);
+    const steps = [
+      () => adminClient.from("user_roles").delete().eq("user_id", userId),
+      () => adminClient.from("user_roles").insert({ user_id: userId, role: "caller" }),
+      () => adminClient.from("admin_permissions").insert(paths.map((p) => ({ user_id: userId, allowed_path: p }))),
+      () => adminClient.from("kunde_brandings").insert(brandingInserts),
+    ];
+    for (const step of steps) {
+      const { error } = await step();
+      if (error) {
+        await adminClient.auth.admin.deleteUser(userId);
+        return new Response(JSON.stringify({ error: `Fehler beim Speichern: ${error.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
-
-    // Insert branding assignments
-    const brandingInserts = brandingIds.map((brandingId: string) => ({
-      user_id: userId,
-      branding_id: brandingId,
-    }));
-    await adminClient.from("kunde_brandings").insert(brandingInserts);
 
     return new Response(
       JSON.stringify({ success: true, user_id: userId }),

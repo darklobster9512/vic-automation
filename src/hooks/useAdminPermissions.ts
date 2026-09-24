@@ -21,17 +21,19 @@ export const useAdminPermissions = (): AdminPermissions => {
     }
 
     const fetch = async () => {
-      const { data, error } = await supabase
-        .from("admin_permissions" as any)
-        .select("allowed_path")
-        .eq("user_id", user.id);
+      const [{ data, error }, { data: roleRow }] = await Promise.all([
+        supabase.from("admin_permissions" as any).select("allowed_path").eq("user_id", user.id),
+        supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
+      ]);
+      const isCaller = (roleRow as any)?.role === "caller";
+      const CALLER_DEFAULT = ["/admin/bewerbungsgespraeche", "/admin/bewerbungen"];
 
       if (error) {
         console.error("Error fetching admin permissions:", error);
-        setAllowedPaths(null);
+        setAllowedPaths(isCaller ? CALLER_DEFAULT : null);
       } else if (!data || data.length === 0) {
-        // No entries = full access
-        setAllowedPaths(null);
+        // No entries = full access (never for callers)
+        setAllowedPaths(isCaller ? CALLER_DEFAULT : null);
       } else {
         setAllowedPaths((data as any[]).map((d) => d.allowed_path));
       }
