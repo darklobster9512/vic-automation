@@ -11,11 +11,9 @@
 1. SMS und E-Mail laufen unabhängig voneinander. Scheitert die E-Mail, geht die SMS trotzdem raus, und umgekehrt.
 2. Die Sperre gegen doppelten Versand zählt nur noch erfolgreich verschickte Nachrichten, getrennt für E-Mail und SMS.
 3. Nach der Genehmigung zeigt eine Meldung an, wenn die E-Mail oder die SMS nicht rausging, damit das nicht mehr unbemerkt bleibt.
-4. Die SMS für die 10 Betroffenen wird einmalig nachgeschickt, direkt nach dem Umbau.
-
-## Was du selbst tun musst
-- Bei Resend die Domain von Codebricks bestätigen oder im Branding einen gültigen Schlüssel eintragen. Solange das fehlt, scheitern alle Codebricks-E-Mails. Danach kann ich die 10 E-Mails auch nachschicken.
+4. Einmaliges Nachsenden an die 10 Betroffenen: E-Mail und SMS mit demselben Text und Link wie sonst. Du hast den Resend-Schlüssel bei Codebricks schon geändert. Zuerst geht eine einzelne E-Mail raus, um den Schlüssel zu testen. Klappt das, folgen die restlichen, jeweils mit ein paar Sekunden Abstand.
+5. Danach zeige ich dir pro Person, ob E-Mail und SMS angekommen sind.
 
 ## Technische Details
 - `src/lib/starterJobSuccessEmail.ts`: `sendEmail` in einen eigenen try/catch packen. Die Dedupe-Prüfung für die Mail läuft auf `email_logs` mit `status='sent'` plus `email_queue`. Die SMS bekommt eine eigene Dedupe-Prüfung auf `sms_logs` (`event_type='gespraech_erfolgreich'`, `status='sent'`, Telefonnummer-Suffix). Rückgabe als `{ emailSent, smsSent, errors }`, und die Aufrufer in `AdminBewertungen.tsx` zeigen bei Fehlern einen Toast.
-- Das Nachsenden läuft einmalig über die bestehende `send-sms`-Funktion für die 10 Verträge, mit Branding-Shortlink wie bisher.
+- Das Nachsenden läuft einmalig über die bestehenden Funktionen `send-email` und `send-sms` (Event `gespraech_erfolgreich`, Branding Codebricks, Portal-Shortlink) für die 10 Empfänger aus `email_logs` mit `status='failed'` seit 25.09. 14:25 UTC.
