@@ -38,6 +38,7 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/auftragsverteilung",
   "/admin/bd-status",
   "/admin/backups",
+  "/admin/json-analyse",
 ];
 
 const navGroups = [
