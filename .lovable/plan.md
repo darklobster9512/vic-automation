@@ -1,29 +1,21 @@
-# Speicherordner für Uploads anlegen (Logo-Upload reparieren)
+# Zugriffsregeln für die 6 Speicherordner (Logo-Upload reparieren)
 
-## Problem
-Der Logo-Upload bei Brandings schlägt fehl, weil in der neuen Datenbank keine Speicherordner (Storage-Buckets) existieren. Das Anlegen wurde von einer Lovable-Arbeitsbereich-Richtlinie blockiert, die öffentliche Speicherordner verbietet.
+## Ausgangslage
+Die 6 Speicherordner sind vom Nutzer selbst angelegt und öffentlich geschaltet:
+`branding-logos`, `contract-documents`, `avatars`, `application-documents`, `chat-attachments`, `order-attachments`.
 
-## Wichtig: Die Einstellung ist bei Lovable, nicht bei Supabase
-Die Blockierung kommt aus den **Lovable Workspace-Einstellungen**, nicht aus dem Supabase-Dashboard:
-1. In Lovable oben auf den Arbeitsbereich/das Profil klicken
-2. **Settings → Privacy & Security** öffnen
-3. Die Option für öffentliche Speicherordner (public storage buckets) erlauben
+Es fehlen noch die Zugriffsregeln (Policies auf `storage.objects`) – ohne sie schlägt der Upload weiter fehl.
 
-## Vorgehen (nach Freischaltung)
-1. Erneut versuchen, die 6 Speicherordner anzulegen:
-   - `branding-logos` (öffentlich) – Branding-Logos, PM-/Recruiter-Fotos
-   - `contract-documents` (öffentlich) – Ausweise, Meldebescheinigungen
-   - `avatars` (öffentlich) – Profilbilder
-   - `application-documents` (öffentlich) – Bewerbungsunterlagen
-   - `chat-attachments` (öffentlich) – Chat-Dateien
-   - `order-attachments` (öffentlich) – Auftrags-Anhänge
-2. Zugriffsregeln (RLS auf `storage.objects`) pro Ordner setzen: Lesen öffentlich, Schreiben für angemeldete Nutzer bzw. Admins.
-3. Logo-Upload bei Brandings testen.
-
-## Fallback, falls öffentliche Ordner nicht freigegeben werden können
-Ordner privat anlegen und die Anzeige auf signierte URLs umstellen. Das wäre ein größerer Eingriff (alle Stellen, die Logos/Dokumente anzeigen, müssten angepasst werden) – nur falls nötig.
+## Vorgehen
+1. Vorher prüfen: Existieren die 6 Ordner wirklich und sind sie öffentlich (Kurze Datenbank-Abfrage auf `storage.buckets`).
+2. Migration anlegen mit Policies auf `storage.objects` für jeden der 6 Ordner:
+   - **Lesen:** öffentlich (`anon` + `authenticated`), da Ordner öffentlich sind
+   - **Hochladen/Aktualisieren/Löschen:** angemeldete Nutzer (`authenticated`) und Service-Role (Edge Functions)
+   - Ordner für sensible Dokumente (Verträge, Bewerbungen, Aufträge, Chat) zusätzlich: Lesen nur für den Besitzer bzw. Admins, wo die App es bisher vorgesehen hat – orientiert an den ursprünglichen Policies der alten Datenbank, soweit aus den Migrationen rekonstruierbar.
+3. Logo-Upload bei Brandings testen (Upload eines Bildes über die App bzw. direkter Storage-Test).
+4. Fertig – Nutzer lädt seine Logos einmal neu hoch.
 
 ## Technische Details
-- Bucket-Anlage über das Storage-Tool (nicht per SQL, da `storage.buckets`-Writes abgelehnt werden)
-- RLS-Policies auf `storage.objects` per Migration
-- Keine E-Mails/SMS, keine Datenänderungen
+- Nur SQL-Migration auf `storage.objects` – keine Änderung an den Bucket-Zeilen selbst (die gehören zum Storage-Tool).
+- Falls die App Dateien über öffentliche URLs liest, genügt die öffentliche Lese-Policy.
+- Keine E-Mails/SMS, keine sonstigen Datenänderungen.
