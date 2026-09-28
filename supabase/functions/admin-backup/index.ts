@@ -125,7 +125,8 @@ Deno.serve(async (req) => {
     if (action === "import") {
       const t = find(body.table);
       if (!t) return json({ error: "Unbekannte Tabelle" }, 400);
-      const rows = body.rows;
+      let rows = body.rows;
+      if (typeof rows === "string") { try { rows = JSON.parse(rows); } catch (_) { /* invalid */ } }
       if (!Array.isArray(rows)) return json({ error: "rows fehlt" }, 400);
       if (rows.length === 0) return json({ inserted: 0 });
       const overwrite = body.mode === "overwrite";
@@ -146,7 +147,7 @@ Deno.serve(async (req) => {
       const result = await sql.begin(async (tx) => {
         try { await tx.unsafe("SET LOCAL session_replication_role = replica"); } catch (_) { /* ignore */ }
         const r = await tx.unsafe(
-          `INSERT INTO ${target} (${colList}) SELECT ${colList} FROM json_populate_recordset(NULL::${target}, $1::json) ${conflict}`,
+          `INSERT INTO ${target} (${colList}) SELECT ${colList} FROM json_populate_recordset(NULL::${target}, $1::text::json) ${conflict}`,
           [JSON.stringify(rows)],
         );
         return r.count;
