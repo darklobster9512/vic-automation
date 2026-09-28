@@ -6,7 +6,8 @@ Deno.serve(async (req) => {
   if (!key || req.headers.get("x-replay-key") !== key) {
     return new Response("forbidden", { status: 403 });
   }
-  const sqlText = await req.text();
+  const b64 = (await req.text()).trim();
+  const sqlText = new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
   const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { max: 1, prepare: false });
   try {
     await sql.unsafe(sqlText).simple();
