@@ -2579,7 +2579,6 @@ export type Database = {
           slot_total: number
         }[]
       }
-      is_admin: { Args: never; Returns: boolean }
       is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
       release_tan_forward: {
