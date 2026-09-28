@@ -1,24 +1,28 @@
-# Nachhol-Logik für die automatische Auftragsverteilung
+# JSON-Analyse-Werkzeug im Admin-Bereich
 
-## Hintergrund
-Die Datenbank ruhte seit dem Neuaufbau (23.09.) und wurde heute um 06:46 Uhr (UTC) reaktiviert. Das Verteilungsfenster (08:00–08:15 Berliner Zeit) wurde dadurch verpasst. Die Edge Function `auto-distribute-orders` und die beiden pg_cron-Zeitpläne (Sommer 06:00 UTC / Winter 07:00 UTC, Mo–Fr) sind korrekt eingerichtet; der Schalter ist bei Codebricks, Topscale, Vendis und PointView aktiv.
+## Ziel
+Neue Admin-Seite `/admin/json-analyse`: JSON-Dateien hochladen, einlesen und auswerten. Rein lesend – es wird nichts in die Datenbank geschrieben und es gehen keine E-Mails/SMS raus.
 
-## Problem
-Wird die Datenbank nach 08:15 Uhr Berliner Zeit reaktiviert (Ruhezustand, Wartung, Pausierung), entfällt die Verteilung für den ganzen Tag, obwohl Mitarbeiter dann leer ausgehen.
+## Funktionen
+- **Upload:** Mehrere `.json`-Dateien per Dateiauswahl oder Drag & Drop. Verarbeitung komplett im Browser (kein Upload zum Server, keine Speicherung).
+- **Struktur-Erkennung:** Automatische Erkennung des JSON-Aufbaus (Array, Objekt, verschachtelte Listen). Ungültige Dateien werden mit klarer Fehlermeldung übersprungen.
+- **Übersicht:** Kennzahlen pro Datei – Anzahl Einträge, erkannte Felder, Werteverteilungen (z. B. Häufigkeit pro Feldwert), Zeitbereich falls Datumsfelder vorhanden.
+- **Tabellenansicht:** Alle Einträge als durchsuchbare, sortierbare Tabelle mit Spaltenauswahl. Freitextsuche über alle Felder.
+- **Filter:** Beliebige Feld-Wert-Filter (gleich, enthält, Datumsbereich), kombinierbar.
+- **Export der Ansicht:** Gefilterte Ergebnisse als CSV herunterladen (nur lokaler Download, keine Datenbank).
+- **Zusammenführen:** Mehrere Dateien können zu einer Gesamtansicht kombiniert werden, mit Duplikat-Erkennung über wählbare Schlüsselfelder.
 
-## Änderung (nur `supabase/functions/auto-distribute-orders/index.ts`)
-Im Fenster-Check (`now.hour !== 8 || now.minute > 14`) einen Nachhol-Pfad ergänzen:
+## Technische Umsetzung
+- Neue Seite `src/pages/admin/AdminJsonAnalyse.tsx`, Route in `src/App.tsx` unter dem Admin-Layout, Eintrag in `src/components/admin/AdminSidebar.tsx` (Bereich „System" nahe Backups).
+- Parsing mit `JSON.parse` im Browser; große Dateien werden in Teilen verarbeitet, damit die Seite nicht einfriert.
+- Flachklopfen verschachtelter Objekte (Punkt-Notation) für die Tabellenspalten.
+- Kein neuer API-Endpunkt, keine Edge Function, keine Migration – keine Datenbankänderungen.
+- Styling passend zum bestehenden Admin-Panel (Premium-Card-Layout).
 
-- Normales Fenster bleibt: Stunde 8, Minute ≤ 14 → verteilen.
-- Neu: Wenn es ein Werktag ist, Berliner Stunde zwischen 9 und 20 liegt und für das Branding an diesem Tag noch kein Lauf existiert, ebenfalls verteilen (Nachhol-Lauf).
-- Der bestehende Schutz gegen Doppelverteilung (ein Lauf pro Branding/Tag, Sperr-Insert) bleibt unverändert — ein Nachhol-Lauf kann also nicht doppelt senden.
-- Kein Start vor 08:00: Werktage vor 8 Uhr bleiben übersprungen, damit nicht mitten in der Nacht verteilt wird.
-- Verhalten der Sammel-E-Mail/SMS pro Mitarbeiter bleibt wie gehabt (Normalfall des Features, kein Wartungs-Sonderfall).
-
-## Nicht geändert
-- Zeitpläne (Sommer/Winter-Umschaltung) bleiben, sie sind korrekt.
-- Bereits heute: Es gab keinen Lauf, daher würde beim nächsten manuellen oder geplanten Anstoß heute noch nachgeholt — das passiert nur, wenn die Funktion zwischen 09:00 und 20:00 Berliner Zeit erneut aufgerufen wird. Der morgen 08:00 geplante Lauf verteilt dann wie üblich.
+## Grenzen
+- Kein Schreiben in die Datenbank, kein Abgleich mit dem Datenbankstand, keine Benachrichtigungen.
+- Dateien verlassen den Browser nicht; nach einem Seitenwechsel ist die Auswertung weg (bewusst ohne Speicherung).
 
 ## Verifikation
-- Direkter Testaufruf der Funktion während des Nachhol-Fensters (Antwort prüfen: `results` mit `employees`/`assignments`, Eintrag in `auto_distribution_runs`).
-- Zweiter Aufruf direkt danach muss `already_ran` liefern.
+- `bunx tsgo` nach den Änderungen.
+- Test mit einer Beispiel-JSON: Upload, Kennzahlen, Suche, Filter, CSV-Export.
