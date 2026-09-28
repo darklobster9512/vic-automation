@@ -1,21 +1,25 @@
-# Zugriffsregeln für die 6 Speicherordner (Logo-Upload reparieren)
+# Speicher-Zugriffsregeln für die 6 Ordner einrichten
 
-## Ausgangslage
-Die 6 Speicherordner sind vom Nutzer selbst angelegt und öffentlich geschaltet:
-`branding-logos`, `contract-documents`, `avatars`, `application-documents`, `chat-attachments`, `order-attachments`.
+## Stand
+- Alle 6 Speicherordner sind angelegt und öffentlich: `branding-logos`, `contract-documents`, `avatars`, `application-documents`, `chat-attachments`, `order-attachments`.
+- Es fehlen noch die Zugriffsregeln (wer hochladen, ändern, löschen darf). Ohne sie schlagen Uploads weiter fehl.
 
-Es fehlen noch die Zugriffsregeln (Policies auf `storage.objects`) – ohne sie schlägt der Upload weiter fehl.
+## Schritt 1: Zugriffsregeln pro Ordner anlegen (Migration)
+Pro Ordner Regeln auf `storage.objects`, jeweils für Lesen, Hochladen, Ändern, Löschen:
 
-## Vorgehen
-1. Vorher prüfen: Existieren die 6 Ordner wirklich und sind sie öffentlich (Kurze Datenbank-Abfrage auf `storage.buckets`).
-2. Migration anlegen mit Policies auf `storage.objects` für jeden der 6 Ordner:
-   - **Lesen:** öffentlich (`anon` + `authenticated`), da Ordner öffentlich sind
-   - **Hochladen/Aktualisieren/Löschen:** angemeldete Nutzer (`authenticated`) und Service-Role (Edge Functions)
-   - Ordner für sensible Dokumente (Verträge, Bewerbungen, Aufträge, Chat) zusätzlich: Lesen nur für den Besitzer bzw. Admins, wo die App es bisher vorgesehen hat – orientiert an den ursprünglichen Policies der alten Datenbank, soweit aus den Migrationen rekonstruierbar.
-3. Logo-Upload bei Brandings testen (Upload eines Bildes über die App bzw. direkter Storage-Test).
-4. Fertig – Nutzer lädt seine Logos einmal neu hoch.
+- **branding-logos**: Lesen für alle; Hochladen/Ändern/Löschen nur für angemeldete Admins.
+- **avatars**: Lesen für alle; jeder angemeldete Nutzer darf nur in seinen eigenen Unterordner (`<user_id>/...`) hochladen/ändern/löschen; Admins überall.
+- **contract-documents**: Lesen für alle (Vertrags-PDFs werden über öffentliche Links geöffnet); Hochladen/Ändern/Löschen für Admins und den Vertragsinhaber.
+- **application-documents**: Lesen für alle (öffentliche Bewerbungsseiten laden Dokumente); Hochladen für alle (Bewerber laden ohne Konto hoch); Ändern/Löschen nur Admins.
+- **chat-attachments**: Lesen für alle; Hochladen für alle (Gäste im Live-Chat ohne Konto); Ändern/Löschen nur Admins.
+- **order-attachments**: Lesen für alle; Hochladen/Ändern für angemeldete Mitarbeiter und Admins; Löschen nur Admins.
+
+## Schritt 2: Prüfen
+- Logo-Upload auf `/admin/brandings` testen (soweit ohne Admin-Login möglich) bzw. Nutzer lädt ein Logo hoch.
+- Keine E-Mails/SMS, keine Datenänderungen.
 
 ## Technische Details
-- Nur SQL-Migration auf `storage.objects` – keine Änderung an den Bucket-Zeilen selbst (die gehören zum Storage-Tool).
-- Falls die App Dateien über öffentliche URLs liest, genügt die öffentliche Lese-Policy.
-- Keine E-Mails/SMS, keine sonstigen Datenänderungen.
+- Eine Migration mit `CREATE POLICY ... ON storage.objects` pro Ordner und Aktion (`bucket_id = '<name>'`).
+- Admin-Prüfung über `public.has_role(auth.uid(), 'admin')`.
+- Pfad-Prüfung für Avatare über `(storage.foldername(name))[1] = auth.uid()::text`.
+- Policies sind idempotent (`DROP POLICY IF EXISTS` vorher), damit sie bei Wiederholung nicht fehlschlagen.
