@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound, Banknote, BarChart3, LifeBuoy, DatabaseBackup } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase, KeyRound, Banknote, BarChart3, LifeBuoy, DatabaseBackup, FileJson } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -89,6 +89,7 @@ const navGroups = [
       { title: "Caller", url: "/admin/caller", icon: Phone },
       { title: "Caller-Zugänge", url: "/admin/caller-zugaenge", icon: KeyRound },
       { title: "Backups", url: "/admin/backups", icon: DatabaseBackup },
+      { title: "JSON-Analyse", url: "/admin/json-analyse", icon: FileJson },
     ],
   },
 ];
