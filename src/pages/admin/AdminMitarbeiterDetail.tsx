@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/publicClient";
 import { computeNextPayout } from "@/lib/computeNextPayout";
 import { extractIdData } from "@/lib/extractIdData";
 
@@ -791,13 +792,13 @@ export default function AdminMitarbeiterDetail() {
       }
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `https://gzgfyuftjvezqjkosntu.supabase.co/functions/v1/create-employee-account`,
+        `${SUPABASE_URL}/functions/v1/create-employee-account`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
-            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb3p2bmF1cGRlY2VycHZ3em1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzEwNjUsImV4cCI6MjA5NDM0NzA2NX0.uXLnpeKILEDBoC8yCcX1ZL-hdlhFPUl-bVYcoxHKu2Y",
+            apikey: SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ contract_id: contract.id }),
         }
