@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/dialog";
 import { FileText, PenTool, Trash2, Loader2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/publicClient";
 import { toast } from "sonner";
 
 interface ContractSigningViewProps {
