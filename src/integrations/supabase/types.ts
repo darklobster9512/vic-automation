@@ -2466,6 +2466,26 @@ export type Database = {
         Returns: undefined
       }
       apps_for_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      backup_check_token: { Args: { _token: string }; Returns: boolean }
+      backup_export_table: {
+        Args: {
+          _limit: number
+          _offset: number
+          _schema: string
+          _table: string
+        }
+        Returns: Json
+      }
+      backup_list_tables: {
+        Args: never
+        Returns: {
+          key: string
+          pk: string[]
+          row_count: number
+          schema_name: string
+          table_name: string
+        }[]
+      }
       book_first_workday_public: {
         Args: {
           _appointment_date: string
