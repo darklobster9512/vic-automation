@@ -39,7 +39,6 @@ import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
 import AdminTelegram from "./pages/admin/AdminTelegram";
 import AdminZeitplan from "./pages/admin/AdminZeitplan";
 import AdminBackups from "./pages/admin/AdminBackups";
-import AdminJsonAnalyse from "./pages/admin/AdminJsonAnalyse";
 import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
@@ -114,7 +113,6 @@ const AuthenticatedRoutes = () => (
         <Route path="telegram" element={<AdminTelegram />} />
         <Route path="zeitplan" element={<AdminZeitplan />} />
         <Route path="backups" element={<AdminBackups />} />
-        <Route path="json-analyse" element={<AdminJsonAnalyse />} />
         <Route path="telefonnummern" element={<AdminTelefonnummern />} />
         <Route path="sms-spoof" element={<AdminSmsSpoof />} />
         <Route path="sms-history" element={<AdminSmsHistory />} />
