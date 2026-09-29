@@ -93,13 +93,13 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
       if (!session) throw new Error("Nicht eingeloggt");
 
       const res = await fetch(
-        `https://gzgfyuftjvezqjkosntu.supabase.co/functions/v1/sign-contract`,
+        `${SUPABASE_URL}/functions/v1/sign-contract`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
-            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb3p2bmF1cGRlY2VycHZ3em1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzEwNjUsImV4cCI6MjA5NDM0NzA2NX0.uXLnpeKILEDBoC8yCcX1ZL-hdlhFPUl-bVYcoxHKu2Y",
+            apikey: SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ contract_id: contractId, signature_data: base64 }),
         }
