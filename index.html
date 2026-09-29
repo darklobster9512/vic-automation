@@ -9,18 +9,33 @@
     <script>
       (function(){
         try {
-          var h = window.location.hostname;
+          var link = document.getElementById('app-favicon');
+          var DEFAULT_ICON = "/favicon.png";
+          // Guard: if any branding favicon fails to load (e.g. file gone), fall back to default icon.
+          var check = function(){
+            var url = link.getAttribute('href');
+            if (!url || url === DEFAULT_ICON) return;
+            var img = new Image();
+            img.onerror = function(){ if (link.getAttribute('href') === url) link.setAttribute('href', DEFAULT_ICON); };
+            img.src = url;
+          };
+          new MutationObserver(check).observe(link, { attributes: true, attributeFilter: ['href'] });
+
+          var h = window.location.hostname.toLowerCase().replace(/^www\./, "");
           if (!h || h === 'localhost') return;
-          var SB_URL = "https://gzgfyuftjvezqjkosntu.supabase.co";
-          var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6Z2Z5dWZ0anZlenFqa29zbnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDg2MTksImV4cCI6MjEwNDMyNDYxOX0.4bgK_e0ODXR1Jr-WXwIViMAtx6Ok7_4omAJOsC0r8BU";
+          var SB_URL = "%VITE_SUPABASE_URL%";
+          var SB_KEY = "%VITE_SUPABASE_PUBLISHABLE_KEY%";
           var parts = h.split(".");
-          var domain = parts.length > 2 ? parts.slice(-2).join(".") : h;
-          fetch(SB_URL + "/rest/v1/brandings?domain=eq." + encodeURIComponent(domain) + "&select=favicon_url", {
+          var root = parts.length > 2 ? parts.slice(-2).join(".") : h;
+          var hosts = [h]; if (root !== h) hosts.push(root);
+          var list = hosts.map(function(x){ return '"' + x + '"'; }).join(",");
+          var q = "or=(domain.in.(" + list + "),additional_domains.ov.{" + list + "})";
+          fetch(SB_URL + "/rest/v1/brandings?select=domain,favicon_url&" + encodeURI(q), {
             headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
           }).then(function(r){ return r.json(); }).then(function(d){
-            if (d && d[0] && d[0].favicon_url) {
-              document.getElementById('app-favicon').href = d[0].favicon_url;
-            }
+            if (!Array.isArray(d) || !d.length) return;
+            var best = d.find(function(b){ return b.domain === h; }) || d.find(function(b){ return b.domain === root; }) || d[0];
+            if (best && best.favicon_url) link.setAttribute('href', best.favicon_url);
           }).catch(function(){});
         } catch(e){}
       })();
