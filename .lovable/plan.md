@@ -1,29 +1,18 @@
-# Statistik 28.09.–07.10.2026 (nur Auswertung, keine Änderungen)
+# Statistik Vendis, Slot 2, 05.10.–11.10.2026 (nur Auswertung, keine Änderungen)
 
-## Codebricks, Slot 1
-Bewerbungsgespräche gesamt 42
-davon erfolgreich 18
-davon Mailbox 10
-davon fehlgeschlagen 11
-davon offen 3
-Erfolgreiche mit Account 15 (83 %)
-Erfolgreiche mit Vertrag eingereicht 7 (39 %)
-Erfolgreiche mit Vertrag genehmigt 7 (39 %)
-Starteraufträge beide erledigt 13 (72 %)
-Starteraufträge einer erledigt 0 (0 %)
-Starteraufträge zugewiesen, aber 0 erledigt 2 (11 %)
-
-## Vendis, Slot 1
-Bewerbungsgespräche gesamt 80
-davon erfolgreich 34
-davon Mailbox 37
-davon fehlgeschlagen 8
+Bewerbungsgespräche gesamt 36
+davon erfolgreich 21
+davon Mailbox 4
+davon fehlgeschlagen 10
 davon offen 1
-Erfolgreiche mit Account 29 (85 %)
-Erfolgreiche mit Vertrag eingereicht 10 (29 %)
-Erfolgreiche mit Vertrag genehmigt 9 (26 %)
-Starteraufträge beide erledigt 15 (44 %)
-Starteraufträge einer erledigt 3 (9 %)
-Starteraufträge zugewiesen, aber 0 erledigt 11 (32 %)
+Erfolgreiche mit Account 20 (95 %)
+Erfolgreiche mit Vertrag eingereicht 6 (29 %)
+Erfolgreiche mit Vertrag genehmigt 5 (24 %)
+Starteraufträge beide erledigt 6 (29 %)
+Starteraufträge einer erledigt 1 (5 %)
+Starteraufträge zugewiesen, aber 0 erledigt 13 (62 %)
+
+Registriert, aber kein Vertrag eingereicht (erledigte Starteraufträge):
+Ayse Kasikci (0), Denis Berisha (1), Franziska Dorn (0), Hannah Najeh (0), Ina Senzel (2), Jana Heinze (0), Josef Lampl (0), Lars Jedicke (0), Mhammed Haddi (0), Patrick Ruhland (2), Patrick Tchuente (0), Peter Chisamba (0), Sandra Struebig (0), Tanja Deinlein (0)
 
 Zuordnung über Name, E-Mail oder Telefonnummer. Prozente beziehen sich auf die erfolgreichen Gespräche.
