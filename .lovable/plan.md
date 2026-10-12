@@ -1,18 +1,28 @@
-# Statistik Vendis, Slot 2, 05.10.–11.10.2026 (nur Auswertung, keine Änderungen)
+# Vendis: heutige Slot-1-Termine auf Slot 2 (+10 Minuten)
 
-Bewerbungsgespräche gesamt 36
-davon erfolgreich 21
-davon Mailbox 4
-davon fehlgeschlagen 10
-davon offen 1
-Erfolgreiche mit Account 20 (95 %)
-Erfolgreiche mit Vertrag eingereicht 6 (29 %)
-Erfolgreiche mit Vertrag genehmigt 5 (24 %)
-Starteraufträge beide erledigt 6 (29 %)
-Starteraufträge einer erledigt 1 (5 %)
-Starteraufträge zugewiesen, aber 0 erledigt 13 (62 %)
+Heute (Mo, 12.10.2026) liegen 14 Termine auf Slot 1. Alle Slot-2-Termine liegen auf :00/:20/:40, die neuen Zeiten auf :10/:30/:50, es gibt also keine Kollision.
 
-Registriert, aber kein Vertrag eingereicht (erledigte Starteraufträge):
-Ayse Kasikci (0), Denis Berisha (1), Franziska Dorn (0), Hannah Najeh (0), Ina Senzel (2), Jana Heinze (0), Josef Lampl (0), Lars Jedicke (0), Mhammed Haddi (0), Patrick Ruhland (2), Patrick Tchuente (0), Peter Chisamba (0), Sandra Struebig (0), Tanja Deinlein (0)
+| Name | Alt (Slot 1) | Neu (Slot 2) |
+|---|---|---|
+| Julian Rößner | 09:00 | 09:10 |
+| Jens Dreßler | 09:20 | 09:30 |
+| Martin Uhlenbrock | 09:40 | 09:50 |
+| Aarav Bharti | 10:00 | 10:10 |
+| Paton Crisci | 10:20 | 10:30 |
+| Mario Marschner | 11:00 | 11:10 |
+| Sena Cil-Bayrak | 11:20 | 11:30 |
+| Pascal Zabalawi | 11:40 | 11:50 |
+| Deric Njeik | 12:00 | 12:10 |
+| Sandra Greifeneder | 12:20 | 12:30 |
+| Emre Erdem | 12:40 | 12:50 |
+| Angelika Rohrmoser | 13:20 | 13:30 |
+| Alexandra Kornek | 13:40 | 13:50 |
+| Sebastian Hege | 14:00 | 14:10 |
 
-Zuordnung über Name, E-Mail oder Telefonnummer. Prozente beziehen sich auf die erfolgreichen Gespräche.
+Hinweis: Drei Termine (12:10, 12:30, 12:50) fallen in die Slot-2-Mittagspause (12:00–13:00). Sie werden trotzdem so verschoben, wenn du nichts anderes sagst.
+
+- Status und alle übrigen Daten bleiben unverändert.
+- Es gehen keine E-Mails, SMS oder Telegram-Nachrichten raus.
+
+## Technisch
+Ein Update auf `interview_appointments` für die 14 Termin-IDs: `slot_index = 2`, `appointment_time + 10 Minuten`. Danach prüfe ich, dass es keine Doppelbelegung gibt.
