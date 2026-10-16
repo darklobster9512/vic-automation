@@ -1,25 +1,23 @@
-# Problem-Aufträge (Tickets + Livechat, letzte 3 Wochen)
+# Problem-Aufträge in allen Brandings löschen
 
-## Ergebnis der Analyse
+## Was gelöscht wird
+Alle Aufträge "Bewertung / Analyse Onlineshop ..." für: Brand, Peaktime, Heinrich-Handel, Zwillingsherz, Boden, Hema, Glamour, Adler, Outletcity, Reserved, Sonepar – in allen Brandings.
 
-| Auftrag (Onlineshop) | Betroffene Mitarbeiter | Meldungen | Problem |
-|---|---|---|---|
-| Brand | 4 | 7 | Keine Webseite im Auftrag, bei Suche mehrere Seiten |
-| Peaktime | 4 | 6 | Keine Webseite im Auftrag |
-| Heinrich-Handel | 4 | 4 | heinrich-handel.com gibt es nicht ("Sales Channel Not Found", Warnhinweise) |
-| Zwillingsherz | 3 | 3 | Seite ist kein Onlineshop |
-| Boden | 3 | 3 | boden.de zeigt "503 Service Unavailable" |
-| Hema | 2 | 4 | Angegebene URL passt nicht |
-| Glamour | 2 | 3 | Keine Webseite im Auftrag |
-| Adler, Queedo, Outletcity, Reserved, Sonepar | je 1 | je 1 | URL nicht passend / nicht erreichbar / Registrierung bricht ab |
-| Identprozess Deutsche Bank, BBVA | 1–2 | 1–2 | Prozess nicht möglich |
+- 108 Aufträge
+- dazu 1.140 Zuweisungen (davon 589 bereits erfolgreich erledigt)
+- 2.353 Bewertungen, sowie zugehörige Anhänge und Bewertungs-Entwürfe
 
-Hauptproblem: Bei Brand, Peaktime und Glamour fehlt der Link komplett; bei Heinrich-Handel, Hema und Boden ist der Link falsch oder die Seite down.
+Queedo gibt es als Auftrag nicht – da wird nichts gelöscht.
+Deutsche Bank und BBVA bleiben unangetastet.
 
-## Vorschlag (optional)
+## Wichtig
+- Erledigte Aufträge und Bewertungen der Mitarbeiter verschwinden aus deren Übersicht und Bewertungsliste. Das lässt sich nicht rückgängig machen.
+- Es gehen keine E-Mails, SMS oder Telegram-Nachrichten raus.
 
-1. Bei allen Aufträgen "Brand", "Peaktime", "Glamour" (alle Brandings) die richtige Onlineshop-URL in die Beschreibung eintragen.
-2. "Heinrich-Handel", "Hema", "Zwillingsherz", "Adler" mit korrekter URL versehen oder – wenn es keinen echten Shop gibt – als nicht mehr verteilbar markieren, damit sie nicht neu zugewiesen werden.
-3. "Boden" nur prüfen (Seite war zeitweise down), nichts ändern, wenn sie wieder läuft.
+## Ablauf
+1. Abhängige Einträge (Bewertungen, Entwürfe, Anhänge, Termine, Zuweisungen) zu diesen 108 Aufträgen löschen.
+2. Die 108 Aufträge löschen.
+3. Nachprüfen, dass keiner der 11 Shops mehr existiert und Deutsche Bank/BBVA unverändert sind.
 
-Es werden keine E-Mails/SMS verschickt; bestehende Zuweisungen bleiben.
+## Technische Details
+Auswahl per `orders.title ~* 'Onlineshop\s*[-–]?\s*(Brand|Peaktime|Heinrich-Handel|Zwillingsherz|Boden|Hema|Glamour|Adler|Outletcity|Reserved|Sonepar)\s*$'`; Löschung in einer Transaktion über `order_reviews`, `order_review_drafts`, `order_attachments`, `order_appointments`, `first_workday_preparations.order_id`/`ident_sessions.order_id` (auf NULL), `order_assignments`, dann `orders`.
