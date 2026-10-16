@@ -1,23 +1,21 @@
 # Problem-Aufträge in allen Brandings löschen
 
-## Was gelöscht wird
-Alle Aufträge "Bewertung / Analyse Onlineshop ..." für: Brand, Peaktime, Heinrich-Handel, Zwillingsherz, Boden, Hema, Glamour, Adler, Outletcity, Reserved, Sonepar – in allen Brandings.
+## Was gelöscht wird (geprüft)
+Nur die Aufträge "Bewertung / Analyse Onlineshop ..." für: Brand, Peaktime, Heinrich-Handel, Zwillingsherz, Boden, Hema, Glamour, Adler, Outletcity, Reserved, Sonepar – in allen Brandings (108 Aufträge).
 
-- 108 Aufträge
-- dazu 1.140 Zuweisungen (davon 589 bereits erfolgreich erledigt)
-- 2.353 Bewertungen, sowie zugehörige Anhänge und Bewertungs-Entwürfe
+Daran hängt:
+- 1.140 Zuweisungen (davon 589 erledigt)
+- 2.353 Bewertungen
+- 6 Bewertungs-Entwürfe
+- Anhänge, Termine, Ident-Sessions, 1.-Arbeitstag-Vorbereitungen: **keine** – da wird nichts angefasst
 
-Queedo gibt es als Auftrag nicht – da wird nichts gelöscht.
-Deutsche Bank und BBVA bleiben unangetastet.
+Queedo gibt es nicht. Alle anderen Aufträge, auch Deutsche Bank und BBVA, bleiben unverändert.
 
 ## Wichtig
-- Erledigte Aufträge und Bewertungen der Mitarbeiter verschwinden aus deren Übersicht und Bewertungsliste. Das lässt sich nicht rückgängig machen.
-- Es gehen keine E-Mails, SMS oder Telegram-Nachrichten raus.
+- Erledigte Aufträge und Bewertungen verschwinden aus der Übersicht der Mitarbeiter. Nicht rückgängig zu machen.
+- Keine E-Mails, SMS oder Telegram-Nachrichten.
 
 ## Ablauf
-1. Abhängige Einträge (Bewertungen, Entwürfe, Anhänge, Termine, Zuweisungen) zu diesen 108 Aufträgen löschen.
+1. Bewertungen, Entwürfe und Zuweisungen dieser 108 Aufträge löschen.
 2. Die 108 Aufträge löschen.
-3. Nachprüfen, dass keiner der 11 Shops mehr existiert und Deutsche Bank/BBVA unverändert sind.
-
-## Technische Details
-Auswahl per `orders.title ~* 'Onlineshop\s*[-–]?\s*(Brand|Peaktime|Heinrich-Handel|Zwillingsherz|Boden|Hema|Glamour|Adler|Outletcity|Reserved|Sonepar)\s*$'`; Löschung in einer Transaktion über `order_reviews`, `order_review_drafts`, `order_attachments`, `order_appointments`, `first_workday_preparations.order_id`/`ident_sessions.order_id` (auf NULL), `order_assignments`, dann `orders`.
+3. Nachprüfen: Anzahl aller übrigen Aufträge = vorher minus 108, die 11 Shops sind weg.
