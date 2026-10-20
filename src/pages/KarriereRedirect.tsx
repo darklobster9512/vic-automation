@@ -1,4 +1,4 @@
-const TARGET = "https://denaro-consult.solutions/karriere/onlineprozess-tester";
+const TARGET = "https://bbm-consult.de/karriere/onlineprozess-tester";
 
 const KarriereRedirect = () => {
   return (
