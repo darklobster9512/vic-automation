@@ -1,12 +1,11 @@
-# Fehler "Blocked request" bei bbm-consult.de beheben
+# Fehler "Blocked request" bei bbm-consult.de beheben (nginx + pm2)
 
 ## Ursache
-Diese App erlaubt bereits alle Domains. Die Meldung kommt also nicht von hier, sondern von der Website **bbm-consult.de** selbst, also dem Projekt "BBN Consulting Website". Die Karriere-Seite zeigt diese Website im Rahmen an. Dort wird die Domain gerade von einer Entwicklungs-Vorschau statt von der veröffentlichten Version beantwortet, und diese Vorschau sperrt fremde Domains.
+In dieser App ist die Domain-Sperre nur für den Entwicklungsmodus (`vite` / `npm run dev`) aufgehoben. Wenn pm2 die App mit `vite preview` (`npm run preview`) startet, gilt eine eigene Einstellung, und dort ist bbm-consult.de nicht freigegeben. Genau dann kommt die Meldung "Blocked request". Möglich ist auch, dass der Server noch einen älteren Stand des Codes hat.
 
-## Lösung (im Projekt "BBN Consulting Website")
-1. Dort in den Einstellungen `server.allowedHosts: true` eintragen, damit bbm-consult.de nicht mehr gesperrt wird.
-2. Das Projekt veröffentlichen und prüfen, dass bbm-consult.de auf die veröffentlichte Version zeigt (Domains-Seite: Status "Active").
-3. Danach /karriere hier noch einmal öffnen und prüfen, ob die Seite angezeigt wird.
+## Änderung
+1. In `vite.config.ts` zusätzlich den Bereich `preview` ergänzen: `preview: { host: "::", allowedHosts: true }`. Damit sind alle Domains in beiden Modi freigegeben.
+2. Auf dem Server: neuesten Code holen, `npm run build` ausführen und den pm2-Prozess neu starten (`pm2 restart <name>`).
 
-## In dieser App
-Hier ändert sich nichts. Die Karriere-Seite zeigt weiterhin bbm-consult.de/karriere/onlineprozess-tester an.
+## Empfehlung (optional)
+Für den Live-Betrieb ist es stabiler, wenn nginx die gebauten Dateien aus `dist/` direkt ausliefert (`root .../dist; try_files $uri /index.html;`) statt eines Vite-Prozesses über pm2. Dann gibt es diese Sperre gar nicht.
