@@ -1,11 +1,20 @@
-# Fehler "Blocked request" bei bbm-consult.de beheben (nginx + pm2)
+# bbm-consult.de zeigt die falsche Seite
 
 ## Ursache
-In dieser App ist die Domain-Sperre nur für den Entwicklungsmodus (`vite` / `npm run dev`) aufgehoben. Wenn pm2 die App mit `vite preview` (`npm run preview`) startet, gilt eine eigene Einstellung, und dort ist bbm-consult.de nicht freigegeben. Genau dann kommt die Meldung "Blocked request". Möglich ist auch, dass der Server noch einen älteren Stand des Codes hat.
+Dieses Projekt erlaubt in seinen Einstellungen schon jede Domain (`allowedHosts: true`). Die Meldung "Blocked request ... bbm-consult.de" kann also nicht von diesem Projekt kommen. Sie kommt von einem **anderen** Vite-Prozess. Das heißt: Die Anfrage an bbm-consult.de landet gar nicht in deinem nginx-Block mit dem richtigen Port, sondern in einem anderen Block (meist dem Standard-Block oder dem einer anderen Domain).
 
-## Änderung
-1. In `vite.config.ts` zusätzlich den Bereich `preview` ergänzen: `preview: { host: "::", allowedHosts: true }`. Damit sind alle Domains in beiden Modi freigegeben.
-2. Auf dem Server: neuesten Code holen, `npm run build` ausführen und den pm2-Prozess neu starten (`pm2 restart <name>`).
+Typische Gründe dafür:
+- Der Block greift nur für HTTP (Port 80), aber du rufst https auf. Der Block für 443 fehlt oder zeigt auf einen anderen Port.
+- `server_name` passt nicht genau (zum Beispiel fehlt `www.bbm-consult.de` oder es gibt einen Tippfehler).
+- Die Datei liegt nur in `sites-available` und ist nicht in `sites-enabled` verlinkt, oder nginx wurde danach nicht neu geladen.
+- Ein anderer Block hat dieselbe Domain oder ist `default_server`.
+- Der pm2-Prozess auf dem Port ist gar nicht dieses Projekt (falscher Ordner), oder der Server hat noch einen alten Stand.
 
-## Empfehlung (optional)
-Für den Live-Betrieb ist es stabiler, wenn nginx die gebauten Dateien aus `dist/` direkt ausliefert (`root .../dist; try_files $uri /index.html;`) statt eines Vite-Prozesses über pm2. Dann gibt es diese Sperre gar nicht.
+## Prüfschritte auf dem Server
+1. `sudo nginx -T | grep -n "bbm-consult\|listen\|proxy_pass"`: Zeigt, welche Blöcke die Domain enthalten und auf welche Ports sie zeigen, für 80 **und** 443.
+2. `pm2 list` und `pm2 describe <name>`: Prüfen, ob der Prozess auf diesem Port im Ordner dieses Projekts läuft.
+3. `curl -I -H "Host: bbm-consult.de" http://127.0.0.1:<port>`: Kommt hier die richtige App, liegt der Fehler in nginx.
+4. Fehler beheben (443-Block ergänzen oder `server_name` korrigieren), dann `sudo nginx -t && sudo systemctl reload nginx`.
+
+## In dieser App
+Es ist keine Änderung am Code nötig. Wenn du mir die Ausgabe von Schritt 1 schickst, sage ich dir genau, welche Zeile falsch ist.
