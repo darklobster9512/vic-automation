@@ -37,6 +37,10 @@ interface AvatarUploadProps {
   editable?: boolean;
   onUploaded?: (url: string) => void;
   className?: string;
+  /** If set, file is stored as `${user.id}/${fileKey}-${timestamp}.png` instead of the shared avatar.png */
+  fileKey?: string;
+  /** Update the logged-in user's profile avatar (default true) */
+  updateProfile?: boolean;
 }
 
 export function AvatarUpload({
@@ -46,6 +50,8 @@ export function AvatarUpload({
   editable = false,
   onUploaded,
   className,
+  fileKey,
+  updateProfile = true,
 }: AvatarUploadProps) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
@@ -61,7 +67,7 @@ export function AvatarUpload({
 
     setUploading(true);
     try {
-      const path = `${user.id}/avatar.png`;
+      const path = fileKey ? `${user.id}/${fileKey}-${Date.now()}.png` : `${user.id}/avatar.png`;
       const { error: uploadErr } = await supabase.storage
         .from("avatars")
         .upload(path, file, { upsert: true });
@@ -70,7 +76,7 @@ export function AvatarUpload({
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
       const cleanUrl = data.publicUrl;
 
-      await supabase.from("profiles").update({ avatar_url: cleanUrl } as any).eq("id", user.id);
+      if (updateProfile) await supabase.from("profiles").update({ avatar_url: cleanUrl } as any).eq("id", user.id);
       onUploaded?.(`${cleanUrl}?t=${Date.now()}`);
       toast.success("Profilbild aktualisiert");
       setOpen(false);
