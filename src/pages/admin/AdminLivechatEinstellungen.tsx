@@ -104,6 +104,8 @@ export default function AdminLivechatEinstellungen() {
                 name={displayName || "Chat"}
                 size={64}
                 editable
+                fileKey={`branding-${activeBrandingId}`}
+                updateProfile={false}
                 onUploaded={(url) => setAvatarUrl(url)}
               />
               <p className="text-xs text-muted-foreground">
