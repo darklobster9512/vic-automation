@@ -290,6 +290,7 @@ export type Database = {
           hourly_rate_teilzeit: number | null
           hourly_rate_vollzeit: number | null
           id: string
+          karriere_iframe_url: string | null
           logo_url: string | null
           main_job_title: string | null
           managing_director: string | null
@@ -356,6 +357,7 @@ export type Database = {
           hourly_rate_teilzeit?: number | null
           hourly_rate_vollzeit?: number | null
           id?: string
+          karriere_iframe_url?: string | null
           logo_url?: string | null
           main_job_title?: string | null
           managing_director?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           hourly_rate_teilzeit?: number | null
           hourly_rate_vollzeit?: number | null
           id?: string
+          karriere_iframe_url?: string | null
           logo_url?: string | null
           main_job_title?: string | null
           managing_director?: string | null
