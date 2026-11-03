@@ -30,6 +30,7 @@ const brandingSchema = z.object({
   blacklist_block_public_booking: z.boolean(),
   meta_pixel_enabled: z.boolean(),
   meta_pixel_id: z.string().max(2000).optional(),
+  karriere_iframe_url: z.string().max(1000).optional(),
   custom_email_link: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   main_job_title: z.string().max(300).optional(),
@@ -84,6 +85,7 @@ const initialForm: BrandingForm = {
   blacklist_block_public_booking: false,
   meta_pixel_enabled: false,
   meta_pixel_id: "",
+  karriere_iframe_url: "",
   custom_email_link: "",
   email: "",
   main_job_title: "",
@@ -196,6 +198,7 @@ export default function AdminBrandingForm() {
         blacklist_block_public_booking: (branding as any).blacklist_block_public_booking ?? false,
         meta_pixel_enabled: (branding as any).meta_pixel_enabled ?? false,
         meta_pixel_id: (branding as any).meta_pixel_id || "",
+        karriere_iframe_url: (branding as any).karriere_iframe_url || "",
         custom_email_link: (branding as any).custom_email_link || "",
         email: branding.email || "",
         main_job_title: (branding as any).main_job_title || "",
@@ -620,6 +623,15 @@ export default function AdminBrandingForm() {
                 <p className="text-xs text-muted-foreground">Du kannst den kompletten Code einfügen – die Pixel-ID wird automatisch erkannt und gespeichert.</p>
               </div>
             )}
+          </div>
+          <div className="space-y-2 rounded-xl border p-4">
+            <Label className="text-sm font-semibold">Karriere-Seite (Iframe-URL)</Label>
+            <Input
+              value={form.karriere_iframe_url}
+              onChange={(e) => updateField("karriere_iframe_url", e.target.value)}
+              placeholder="https://beispiel.de/karriere/onlineprozess-tester"
+            />
+            <p className="text-xs text-muted-foreground">Wird auf <span className="font-mono">/karriere</span> dieser Domain angezeigt.</p>
           </div>
 
 
