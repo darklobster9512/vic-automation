@@ -105,26 +105,36 @@ export default function AdminIdents() {
     return () => { supabase.removeChannel(channel); };
   }, [activeBrandingId, queryClient]);
 
-  const contractIds = [...new Set(sessions.map(s => s.contract_id))];
+  const contractIds = [...new Set(sessions.map(s => s.contract_id).filter(Boolean))] as string[];
   const { data: contracts = [] } = useQuery({
     queryKey: ["ident-contracts", contractIds],
     enabled: contractIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("employment_contracts")
-        .select("id, first_name, last_name")
-        .in("id", contractIds);
-      return data ?? [];
+      const out: any[] = [];
+      for (let i = 0; i < contractIds.length; i += 100) {
+        const { data, error } = await supabase
+          .from("employment_contracts")
+          .select("id, first_name, last_name")
+          .in("id", contractIds.slice(i, i + 100));
+        if (error) throw error;
+        out.push(...(data ?? []));
+      }
+      return out;
     },
   });
 
-  const orderIds = [...new Set(sessions.map(s => s.order_id))];
+  const orderIds = [...new Set(sessions.map(s => s.order_id).filter(Boolean))] as string[];
   const { data: orders = [] } = useQuery({
     queryKey: ["ident-orders", orderIds],
     enabled: orderIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("orders").select("id, title").in("id", orderIds);
-      return data ?? [];
+      const out: any[] = [];
+      for (let i = 0; i < orderIds.length; i += 100) {
+        const { data, error } = await supabase.from("orders").select("id, title").in("id", orderIds.slice(i, i + 100));
+        if (error) throw error;
+        out.push(...(data ?? []));
+      }
+      return out;
     },
   });
 
@@ -133,7 +143,8 @@ export default function AdminIdents() {
     return c ? `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unbekannt" : "...";
   };
 
-  const getOrderTitle = (orderId: string) => {
+  const getOrderTitle = (orderId: string | null) => {
+    if (!orderId) return "Kein Auftrag";
     const o = orders.find(o => o.id === orderId);
     return o?.title ?? "...";
   };
