@@ -585,13 +585,13 @@ const MeineDaten = () => {
                   Gehaltsauszahlungen
                 </h4>
                 <div className="rounded-xl bg-muted/50 p-5 space-y-3">
-                  <p className="text-xs text-muted-foreground">Anstehende Gehaltsauszahlung am</p>
+                  <p className="text-xs text-muted-foreground">Startdatum</p>
                   <p className="text-lg font-bold text-foreground">
-                    {format(computeNextPayout({ firstWorkdayDate: contractExtra?.first_workday_date, desiredStartDate: contractExtra?.desired_start_date, submittedAt: contractExtra?.submitted_at }), "dd.MM.yyyy", { locale: de })}
+                    {contractExtra?.desired_start_date ? format(new Date(contractExtra.desired_start_date), "dd.MM.yyyy", { locale: de }) : "-"}
                   </p>
                   <div className="border-t border-border pt-3">
-                    <p className="text-xs text-muted-foreground">{isFixedSalary && !isHourlyRate ? "Betrag" : "Voraussichtlicher Betrag"}</p>
-                    <p className="text-2xl font-bold text-primary">€{isHourlyRate ? estimatedSalary.toFixed(2) : isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">Betrag</p>
+                    <p className="text-2xl font-bold text-primary">{templateSalary && templateSalary > 0 ? `€${templateSalary.toFixed(2)}` : "-"}</p>
                   </div>
                 </div>
               </div>
