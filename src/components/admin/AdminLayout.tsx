@@ -16,9 +16,8 @@ const KUNDE_BLOCKED_PATHS = [
   "/admin/kunden",
   "/admin/caller",
   "/admin/caller-zugaenge",
-  "/admin/auftragsverteilung",
-  "/admin/bd-status",
 ];
+const CALLER_EXTRA_BLOCKED = ["/admin/auftragsverteilung", "/admin/bd-status"];
 
 export default function AdminLayout() {
   const { allowedPaths, loading, hasAccess } = useAdminPermissions();
@@ -32,6 +31,10 @@ export default function AdminLayout() {
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
+  }
+
+  if (isCaller && CALLER_EXTRA_BLOCKED.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
+    return <Navigate to="/admin" replace />;
   }
 
   if ((isKunde || isCaller) && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
