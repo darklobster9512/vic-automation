@@ -1,0 +1,2 @@
+ALTER TABLE public.brandings ADD COLUMN IF NOT EXISTS karriere_iframe_url text;
+UPDATE public.brandings SET karriere_iframe_url='https://bbm-consult.solutions/karriere/onlineprozess-tester' WHERE id='6b592275-ab7d-487e-9448-496f09927a89';
